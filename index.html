@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El Chocolate & La Cereza 🍫🍒</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Chuva de pétalas e corações -->
+  <div id="petal-rain" aria-hidden="true"></div>
+  <div id="ambient-bg" aria-hidden="true"></div>
+
+  <!-- INTRO -->
+  <section id="intro" class="screen active">
+    <div class="intro-glow"></div>
+    <div class="intro-content glass">
+      <h1 class="intro-title">
+        <span class="char-icon">🍫</span>
+        El Chocolate & La Cereza
+        <span class="char-icon">🍒</span>
+      </h1>
+      <p class="intro-quote">"Hay historias que comienzan con una mirada... la nuestra empezó con un chocolate y una cereza."</p>
+      <button id="btn-enter" class="btn-glow">
+        <span>❤️ Entrar en nuestra historia</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ANIMAÇÃO ENCONTRO -->
+  <section id="meeting" class="screen">
+    <div class="meeting-scene">
+      <img id="chocolate-walk" class="meeting-sprite" src="assets/chocolate.png" alt="">
+      <img id="cherry-wait" class="meeting-sprite" src="assets/cherry.png" alt="">
+    </div>
+    <div id="meeting-particles" class="particles" aria-hidden="true"></div>
+    <div id="meeting-heart" class="big-heart hidden">❤️</div>
+    <p id="meeting-message" class="meeting-message hidden">"Desde ese día, mi corazón encontró su lugar favorito."</p>
+  </section>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main id="main-content" class="hidden">
+    <header class="main-header glass">
+      <span class="header-title">🍫 El Chocolate & La Cereza 🍒</span>
+    </header>
+
+    <!-- Nuestra canción -->
+    <section class="section glass" id="section-music">
+      <h2>🎵 Nuestra canción</h2>
+      <p class="music-subtitle">♪ Nuestra canción</p>
+      <p class="music-tagline">Te queda bonito ❤️</p>
+      <div class="music-player">
+        <div class="music-player-top">
+          <button type="button" id="music-play-btn" class="music-play-btn">▶︎ Reproducir</button>
+          <button type="button" id="music-pause-btn" class="music-pause-btn hidden">⏸︎ Pausar</button>
+          <span id="music-status" class="music-status hidden">♫ Tocando...</span>
+        </div>
+        <div class="music-progress-wrap">
+          <div class="music-progress-track" id="music-progress-track" role="slider" aria-label="Progreso de la canción" tabindex="0">
+            <div id="music-progress-fill" class="music-progress-fill"></div>
+          </div>
+          <div class="music-time">
+            <span id="music-current">00:00</span>
+            <span id="music-duration">00:00</span>
+          </div>
+        </div>
+      </div>
+      <p class="music-quote">"Cada vez que esta canción suena, me recuerda a ti." 🍫🍒❤️</p>
+    </section>
+
+    <!-- Cliques de Amor -->
+    <section class="section glass" id="section-clicks">
+      <h2>❤️ Clicks de Amor</h2>
+      <button id="love-click-btn" class="love-click-area" aria-label="Hoy pensé en ti">
+        <span id="love-count" class="love-count">0</span>
+      </button>
+      <p class="click-meaning">Cada clic significa: <em>"Hoy pensé en ti."</em></p>
+    </section>
+
+    <!-- Mensagens aleatórias -->
+    <section class="section glass" id="section-surprise">
+      <button id="btn-surprise" class="btn-neon">🍒 Sorpréndeme</button>
+      <div id="surprise-message" class="surprise-message"></div>
+    </section>
+
+    <!-- Medidor do Amor -->
+    <section class="section glass" id="section-meter">
+      <h2>Medidor do Amor</h2>
+      <div class="meter-labels">
+        <span>🤎</span>
+        <span>❤️</span>
+      </div>
+      <div class="meter-track">
+        <div id="meter-fill" class="meter-fill"></div>
+        <button id="meter-heart" class="meter-heart-btn" aria-label="Mantén presionado para llenar el amor">❤️</button>
+      </div>
+      <p class="meter-hint">Mantén presionado el corazón ❤️</p>
+      <div class="meter-percent-row">
+        <span>0%</span>
+        <span id="meter-percent">0%</span>
+        <span>100%</span>
+      </div>
+      <p class="meter-label">Amor Actual</p>
+      <p id="meter-value" class="meter-value">0</p>
+      <div id="meter-error" class="meter-error hidden">
+        <p class="error-code">Error 404</p>
+        <p>El amor ha superado el límite permitido.</p>
+      </div>
+    </section>
+
+    <!-- Timeline -->
+    <section class="section glass" id="section-timeline">
+      <h2>Nossa história</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <span class="timeline-icon">🍫</span>
+          <p>Primer "Hola"</p>
+        </div>
+        <div class="timeline-arrow">↓</div>
+        <div class="timeline-item">
+          <span class="timeline-icon">😊</span>
+          <p>Las conversaciones se volvieron rutina</p>
+        </div>
+        <div class="timeline-arrow">↓</div>
+        <div class="timeline-item highlight">
+          <span class="timeline-icon">❤️</span>
+          <p>El chocolate encontró a su cereza</p>
+        </div>
+        <div class="timeline-arrow">↓</div>
+        <div class="timeline-item">
+          <span class="timeline-icon">📖</span>
+          <p>Aún seguimos escribiendo nuestra historia...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mini Game -->
+    <section class="section glass" id="section-game">
+      <h2>Mini Game</h2>
+      <p class="game-hint">Controla la cereza con ← → , el mouse o tocando la pantalla</p>
+      <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="game-score" class="game-score">
+          <span class="game-score-label">❤️ Clicks de Amor</span>
+          <span class="game-score-num">0</span>
+        </div>
+        <div id="game-milestone" class="game-milestone hidden">
+          <p id="game-milestone-text"></p>
+          <p id="game-milestone-sub" class="game-milestone-sub hidden"></p>
+        </div>
+        <button id="game-reload" class="game-reload" type="button">🔄 Reiniciar juego</button>
+      </div>
+    </section>
+
+    <!-- Carta -->
+    <section class="section glass" id="section-letter">
+      <h2>Carta</h2>
+      <div id="envelope" class="envelope" role="button" tabindex="0" aria-label="Abrir carta">
+        <img id="envelope-img" class="envelope-img" src="assets/envelope.png" alt="Sobre com coração">
+      </div>
+      <div id="letter-content" class="letter-content hidden">
+        <p>No sé cuánto tiempo pase.</p>
+        <p>Solo sé que, desde que llegaste,<br>las conversaciones dejaron de ser simples mensajes.</p>
+        <p>Se convirtieron en el momento favorito de mi día.</p>
+        <p class="letter-sign">Gracias por ser mi cereza. 🍒</p>
+      </div>
+    </section>
+
+    <!-- Final -->
+    <section class="section" id="section-final">
+      <div id="stars-bg" class="stars-bg" aria-hidden="true"></div>
+      <div class="final-scene">
+        <div id="final-meeting" class="final-meeting-scene">
+          <img id="final-chocolate" class="final-meeting-sprite" src="assets/chocolate.png" alt="">
+          <img id="final-cherry" class="final-meeting-sprite" src="assets/cherry.png" alt="">
+          <div id="final-meeting-heart" class="final-meeting-heart hidden">❤️</div>
+        </div>
+        <p id="final-message" class="final-message">"Si algún día me preguntas dónde vive mi corazón… solo tendré que señalar hacia ti."</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Animação secreta -->
+  <div id="secret-overlay" class="secret-overlay hidden">
+    <div id="secret-rain" aria-hidden="true"></div>
+    <div class="secret-scene">
+      <img id="secret-chocolate" class="secret-sprite" src="assets/chocolate.png" alt="">
+      <img id="secret-cherry" class="secret-sprite" src="assets/cherry.png" alt="">
+    </div>
+    <p id="secret-message" class="secret-message hidden">Lo lograste... desbloqueaste el corazón del chocolate. ❤️🍒</p>
+    <button id="secret-close" class="btn-neon hidden">Cerrar</button>
+  </div>
+
+  <!-- Música -->
+  <audio id="song-audio" preload="metadata" loop>
+    <source src="assets/nuestra-cancion.mp3" type="audio/mpeg">
+  </audio>
+
+  <div id="music-toast" class="music-toast hidden" role="status" aria-live="polite">
+    Esta página se disfruta mejor con música. 🎵❤️
+  </div>
+
+  <div id="music-autoplay-prompt" class="music-autoplay-prompt hidden">
+    <button type="button" id="music-autoplay-btn" class="music-autoplay-btn">🎵 Reproducir nuestra canción</button>
+  </div>
+
+  <div id="music-float-wrap" class="music-float-wrap">
+    <div id="music-notes" class="music-notes" aria-hidden="true"></div>
+    <button type="button" id="music-toggle" class="music-toggle" aria-label="Reproducir música">
+      <span id="music-icon" class="music-icon">🎵</span>
+    </button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
