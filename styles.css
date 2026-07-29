@@ -310,7 +310,11 @@ p {
 /* Meeting animation */
 #meeting {
   background: var(--black);
-  padding-inline: var(--space-x);
+  padding: var(--space-x);
+  padding-bottom: max(5rem, env(safe-area-inset-bottom, 0px) + 4rem);
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(0.75rem, 3vw, 1.25rem);
 }
 
 .meeting-scene {
@@ -424,19 +428,30 @@ p {
 }
 
 .meeting-message {
-  position: absolute;
-  bottom: 20%;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  z-index: 2;
+  width: min(100%, 420px);
+  margin: clamp(0.5rem, 3vw, 1rem) auto 0;
+  padding-inline: var(--space-x);
   font-family: 'Playfair Display', serif;
   font-style: italic;
-  font-size: clamp(0.95rem, 3.2vw, 1.2rem);
+  font-size: clamp(0.9rem, 3.8vw, 1.2rem);
+  line-height: 1.55;
   text-align: center;
-  width: min(92%, 420px);
-  padding-inline: var(--space-x);
   color: var(--pink-vivid);
-  animation: fade-up 1s ease 0.5s both;
+  animation: meeting-message-in 1s ease 0.5s both;
   text-shadow: 0 0 18px rgba(255, 88, 168, 0.45);
+}
+
+@keyframes meeting-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Main content */
@@ -1527,6 +1542,19 @@ body.music-playing .glass {
 }
 
 @media (max-width: 768px) {
+  .meeting-scene {
+    height: clamp(140px, 42vw, 190px);
+  }
+
+  .big-heart {
+    top: 32%;
+  }
+
+  .meeting-message {
+    margin-top: clamp(0.75rem, 4vw, 1.25rem);
+    padding-inline: clamp(12px, 4vw, 20px);
+  }
+
   .glass {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
