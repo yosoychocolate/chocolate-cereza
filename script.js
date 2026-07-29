@@ -179,7 +179,7 @@ sessionStorage.removeItem(STORAGE.secretUnlocked);
 localStorage.removeItem(STORAGE.meterClicks);
 localStorage.removeItem(STORAGE.secretUnlocked);
 
-const LAUNCH_RESET_LOVE_CLICKS = 'chocolateCereza_loveClicks_launchReset_v2';
+const LAUNCH_RESET_LOVE_CLICKS = 'chocolateCereza_loveClicks_launchReset_v3';
 if (!localStorage.getItem(LAUNCH_RESET_LOVE_CLICKS)) {
   save(STORAGE.loveClicks, 0);
   localStorage.setItem(LAUNCH_RESET_LOVE_CLICKS, 'done');
