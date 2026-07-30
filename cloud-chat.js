@@ -15,7 +15,7 @@ import {
   orderBy,
   limit,
   serverTimestamp,
-} from './firebase-manager.js';
+} from './firebase-manager.js?v=__APP_VERSION__';
 
 const ROOMS_COLLECTION = 'rooms';
 const CHAT_SUBCOLLECTION = 'chat';

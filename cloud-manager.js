@@ -17,8 +17,8 @@ import {
   isFirebaseReady,
   isFirebaseConfigValid,
   getFirebaseInitError,
-} from './firebase-manager.js';
-import { getSession, saveSession, clearSession, hasSession } from './room-session.js';
+} from './firebase-manager.js?v=__APP_VERSION__';
+import { getSession, saveSession, clearSession, hasSession } from './room-session.js?v=__APP_VERSION__';
 import {
   playerRootRef,
   profileRef,
@@ -32,15 +32,15 @@ import {
   stopPresenceLifecycle,
   getPresenceLabel,
   formatLastSeen,
-} from './cloud-presence.js';
-import { createRoomListener } from './cloud-listener.js';
+} from './cloud-presence.js?v=__APP_VERSION__';
+import { createRoomListener } from './cloud-listener.js?v=__APP_VERSION__';
 import {
   createChatListener,
   sendPlayerMessage,
   sendSystemMessage,
   normalizeChatText,
   MAX_CHAT_LENGTH,
-} from './cloud-chat.js';
+} from './cloud-chat.js?v=__APP_VERSION__';
 import {
   coupleRef,
   createDefaultCoupleStats,
@@ -50,7 +50,7 @@ import {
   playerStatsRef,
   playerStatsFromSnapshot,
   transactionDeleteCouple,
-} from './cloud-couple.js';
+} from './cloud-couple.js?v=__APP_VERSION__';
 
 /** @typedef {'ready' | 'config_invalid' | 'error' | 'disconnected'} ConnectionStatusCode */
 /** @typedef {'waiting' | 'full' | 'closed'} RoomStatus */

@@ -7,9 +7,9 @@ import {
   collection,
   query,
   onSnapshot,
-} from './firebase-manager.js';
-import { profileRef, presenceRef } from './cloud-presence.js';
-import { coupleRef, coupleFromSnapshot } from './cloud-couple.js';
+} from './firebase-manager.js?v=__APP_VERSION__';
+import { profileRef, presenceRef } from './cloud-presence.js?v=__APP_VERSION__';
+import { coupleRef, coupleFromSnapshot } from './cloud-couple.js?v=__APP_VERSION__';
 
 const ROOMS_COLLECTION = 'rooms';
 const PLAYERS_SUBCOLLECTION = 'players';

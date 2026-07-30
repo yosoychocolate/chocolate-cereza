@@ -1,9 +1,9 @@
 /**
  * CoupleUI — interface do modo online (Jugar en Pareja).
  */
-import CloudManager from './cloud-manager.js';
-import PlayerIdentity from './player-identity.js';
-import CoupleMascots from './couple-mascots.js';
+import CloudManager from './cloud-manager.js?v=__APP_VERSION__';
+import PlayerIdentity from './player-identity.js?v=__APP_VERSION__';
+import CoupleMascots from './couple-mascots.js?v=__APP_VERSION__';
 
 const {
   resolveMascotType,
