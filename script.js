@@ -640,8 +640,8 @@ function loadSprite(key) {
 }
 
 function initGame() {
-  const canvas = document.getElementById('game-canvas');
-  const ctx = canvas.getContext('2d');
+  const gameContainer = document.getElementById('game-container');
+  const canvasStack = document.getElementById('game-canvas-stack');
   const scoreEl = document.querySelector('#game-score .game-score-num');
   const scoreBox = document.getElementById('game-score');
   const milestoneEl = document.getElementById('game-milestone');
@@ -654,7 +654,6 @@ function initGame() {
   const progressFill = document.getElementById('game-progress-fill');
   const progressMarkers = document.getElementById('game-progress-markers');
   const gameCursor = document.getElementById('game-cursor');
-  const gameContainer = canvas.parentElement;
   const pauseIcon = pauseBtn?.querySelector('.game-pause-icon');
   const pauseLabel = pauseBtn?.querySelector('.game-pause-label');
   const livesEl = document.getElementById('game-lives');
@@ -677,24 +676,11 @@ function initGame() {
   let toastCountdownInterval = null;
   const TOAST_READ_SECONDS = 8;
 
-  ctx.imageSmoothingEnabled = true;
-
-  let dpr = Math.min(window.devicePixelRatio || 1, 2);
-  let W = 0;
-  let H = 0;
-  let SPRITE_H = 85;
+  const TOAST_READ_SECONDS = 8;
 
   const perfLite = isMobileView();
-  ctx.imageSmoothingQuality = 'medium';
   const CHERRY_BOTTOM_NORM = perfLite ? 112 : 58;
   const SPRITE_NORM = perfLite ? 70 : 85;
-
-  function applyPlayfieldLayout() {
-    if (!H) return;
-    SPRITE_H = H * (SPRITE_NORM / 400);
-    cherry.y = H - H * (CHERRY_BOTTOM_NORM / 400);
-    cherry.speed = W * (6.5 / 360);
-  }
 
   const PERF = {
     maxChocolates: perfLite ? 5 : 7,
@@ -705,70 +691,61 @@ function initGame() {
     dprCap: perfLite ? 1 : 1.25,
     bgStars: perfLite ? 12 : 18,
     bgGlows: 2,
-    shadows: false,
-    cherryGlow: !perfLite,
   };
-  let spawnGraceUntil = 0;
-  let bgCache = null;
-  let bgCacheCtx = null;
-  let frameStress = 0;
-  let turboLite = perfLite;
-  let gameReady = false;
+
   const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  const engine = new MiniGameEngine({
+    container: gameContainer,
+    canvasIds: { bg: 'game-canvas-bg', game: 'game-canvas-game', fx: 'game-canvas-fx' },
+    perf: PERF,
+    perfLite,
+    cherryBottomNorm: CHERRY_BOTTOM_NORM,
+    spriteNorm: SPRITE_NORM,
+    isCoarsePointer,
+    profiling: new URLSearchParams(location.search).has('gameprofile'),
+  });
 
-  function trimPool(arr, max) {
-    if (arr.length > max) arr.splice(0, arr.length - max);
+  engine.bgStars = Array.from({ length: PERF.bgStars }, () => ({
+    x: 0, y: 0,
+    r: 0.5 + Math.random() * 1.1,
+    phase: Math.random() * Math.PI * 2,
+    speed: 0.001 + Math.random() * 0.002,
+  }));
+  engine.bgGlows = Array.from({ length: PERF.bgGlows }, () => ({
+    x: 0, y: 0,
+    r: 36 + Math.random() * 44,
+    phase: Math.random() * Math.PI * 2,
+  }));
+
+  function syncEngineBlocked() {
+    engine.setBlocked(isGameplayBlocked());
   }
 
-  function scaleGameState(sx, sy) {
-    if (!gameReady || !cherry) return;
-    cherry.x *= sx;
-    mouseX *= sx;
-    cherry.y = H - H * (CHERRY_BOTTOM_NORM / 400);
-    cherry.speed = W * (6.5 / 360);
-    chocolates.forEach((c) => {
-      c.x *= sx;
-      c.y *= sy;
-      c.size *= sy;
-    });
-    particles.forEach((p) => {
-      p.x *= sx;
-      p.y *= sy;
-    });
-    effects.forEach((e) => {
-      e.x *= sx;
-      e.y *= sy;
-    });
-    heartRain.forEach((h) => {
-      h.x *= sx;
-      h.y *= sy;
-    });
-    bgStars.forEach((s) => {
-      s.x *= sx;
-      s.y *= sy;
-    });
-    bgGlows.forEach((g) => {
-      g.x *= sx;
-      g.y *= sy;
-      g.r *= Math.min(sx, sy);
-    });
+  function resizeGame() {
+    if (!gameContainer) return;
+    const newW = Math.max(280, Math.min(gameContainer.clientWidth, 900));
+    const newH = Math.round(newW * (400 / 360));
+    const dpr = Math.min(window.devicePixelRatio || 1, PERF.dprCap);
+    engine.resize(newW, newH, dpr);
+    for (let i = 0; i < engine.bgStars.length; i++) {
+      if (engine.layers.W && !engine.bgStars[i].x) {
+        engine.bgStars[i].x = Math.random() * engine.layers.W;
+        engine.bgStars[i].y = Math.random() * engine.layers.H;
+      }
+    }
+    for (let i = 0; i < engine.bgGlows.length; i++) {
+      if (engine.layers.W && !engine.bgGlows[i].x) {
+        engine.bgGlows[i].x = Math.random() * engine.layers.W;
+        engine.bgGlows[i].y = Math.random() * engine.layers.H;
+      }
+    }
   }
 
-  function startGameLoop() {
-    if (running) return;
-    running = true;
-    lastTime = performance.now();
-    lastSpawn = lastTime;
-    animId = requestAnimationFrame(render);
-  }
-
-  function forceRestartGameLoop() {
-    cancelAnimationFrame(animId);
-    running = true;
-    lastTime = performance.now();
-    lastSpawn = lastTime;
-    animId = requestAnimationFrame(render);
-  }
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resizeGame, 250);
+  });
 
   function clearAllGameplayBlockers() {
     milestonePause = false;
@@ -776,9 +753,9 @@ function initGame() {
     gameOver = false;
     messagePause = false;
     endlessIntroPause = false;
-    heartRainActive = false;
-    camZoom = 1;
-    camZoomTarget = 1;
+    engine.heartRainActive = false;
+    engine.camZoom = 1;
+    engine.camZoomTarget = 1;
     clearCinematicUiTimer();
     if (endlessRewardTimer) {
       clearTimeout(endlessRewardTimer);
@@ -800,65 +777,11 @@ function initGame() {
     if (pauseLabel) pauseLabel.textContent = 'Pausar';
     pauseBtn?.setAttribute('aria-label', 'Pausar juego');
     updatePauseButtonState();
+    engine.heartPool.releaseAll();
+    syncEngineBlocked();
+    engine.markAllDirty();
   }
 
-  function resizeCanvas() {
-    const container = canvas.parentElement;
-    if (!container) return;
-
-    const newW = Math.max(280, Math.min(container.clientWidth, 900));
-    const newH = Math.round(newW * (400 / 360));
-
-    if (W > 0 && (newW !== W || newH !== H)) {
-      scaleGameState(newW / W, newH / H);
-    }
-
-    W = newW;
-    H = newH;
-    dpr = Math.min(window.devicePixelRatio || 1, PERF.dprCap);
-
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    canvas.style.width = '100%';
-    canvas.style.height = 'auto';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'medium';
-    if (gameReady) applyPlayfieldLayout();
-    if (gameReady) rebuildBgCache();
-  }
-
-  function rebuildBgCache() {
-    if (!W || !H || !gameReady) return;
-    if (!bgCache) {
-      bgCache = document.createElement('canvas');
-      bgCacheCtx = bgCache.getContext('2d');
-    }
-    bgCache.width = Math.round(W * dpr);
-    bgCache.height = Math.round(H * dpr);
-    bgCacheCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    bgCacheCtx.imageSmoothingEnabled = true;
-    bgCacheCtx.fillStyle = 'rgba(15, 10, 10, 0.35)';
-    bgCacheCtx.fillRect(0, 0, W, H);
-    for (let i = 0; i < PERF.bgGlows; i++) {
-      const g = bgGlows[i];
-      if (!g) continue;
-      const grad = bgCacheCtx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.r);
-      grad.addColorStop(0, 'rgba(108, 59, 255, 0.05)');
-      grad.addColorStop(1, 'rgba(108, 59, 255, 0)');
-      bgCacheCtx.fillStyle = grad;
-      bgCacheCtx.fillRect(g.x - g.r, g.y - g.r, g.r * 2, g.r * 2);
-    }
-  }
-
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      resizeCanvas();
-      if (gameReady) rebuildBgCache();
-    }, 120);
-  });
   const MILESTONE_INTERVAL = 10;
   const FINAL_MILESTONE = 50;
   const MAX_LIVES = 5;
@@ -957,32 +880,28 @@ function initGame() {
   function showEndlessIntro() {
     if (endlessRewardTimer) clearTimeout(endlessRewardTimer);
     endlessIntroPause = true;
-    heartRainActive = false;
-    heartRain.length = 0;
-    chocolates.length = 0;
-    particles.length = 0;
-    effects.length = 0;
-    camZoom = 1;
-    camZoomTarget = 1;
-    glowPower = 0;
-
+    engine.heartRainActive = false;
+    engine.clearEntities();
+    engine.camZoom = 1;
+    engine.camZoomTarget = 1;
+    engine.glowPower = 0;
     milestoneEl.classList.add('hidden');
     milestoneEl.classList.remove('cinematic');
     milestoneSub.classList.add('hidden');
     continueBtn?.classList.add('hidden');
-
     endlessReward?.classList.remove('hidden');
     endlessReward?.setAttribute('aria-hidden', 'false');
     updatePauseButtonState();
-    startGameLoop();
+    syncEngineBlocked();
+    engine.forceRestart();
   }
 
   function enterEndlessMode() {
     milestonePause = false;
     endlessIntroPause = false;
     messagePause = false;
-    heartRainActive = false;
-    heartRain.length = 0;
+    engine.heartRainActive = false;
+    engine.heartPool.releaseAll();
     hideEndlessIntro();
     continueBtn?.classList.add('hidden');
     milestoneEl?.classList.add('hidden');
@@ -996,9 +915,10 @@ function initGame() {
     showLivesHud(true);
     updateProgressBar();
     updatePauseButtonState();
-    spawnGraceUntil = performance.now() + 450;
-    lastSpawn = performance.now();
-    forceRestartGameLoop();
+    engine.spawnGraceUntil = performance.now() + 450;
+    engine.lastSpawn = performance.now();
+    syncEngineBlocked();
+    engine.forceRestart();
   }
 
   function clearEndlessModeUI() {
@@ -1063,6 +983,7 @@ function initGame() {
     gameOver = true;
     setPaused(false);
     updatePauseButtonState();
+    syncEngineBlocked();
     gameOverScreen?.classList.remove('hidden');
     gameOverScreen?.setAttribute('aria-hidden', 'false');
   }
@@ -1089,6 +1010,8 @@ function initGame() {
     pauseBtn?.setAttribute('aria-label', paused ? 'Reanudar juego' : 'Pausar juego');
     pauseScreen?.classList.toggle('hidden', !paused);
     pauseScreen?.setAttribute('aria-hidden', paused ? 'false' : 'true');
+    syncEngineBlocked();
+    engine.markAllDirty();
   }
 
   function togglePause() {
@@ -1102,73 +1025,47 @@ function initGame() {
   updateLivesDisplay();
   syncLivesHudVisibility(false);
 
-  let cherryImg = null;
-  let chocolateImg = null;
-  let spritesReady = false;
-
-  let gameMode = 'loading';
   let milestonePause = false;
   let gamePaused = false;
   let gameOver = false;
-  let running = false;
-  let animId = 0;
-  let lastTime = 0;
-  let lastSpawn = 0;
-  let glowPower = 0;
-  let heartRainActive = false;
-
-  const cherry = { x: 0, y: 0, speed: 0 };
-  const chocolates = [];
-  const particles = [];
-  const effects = [];
-  const heartRain = [];
-  let keys = {};
-  let mouseX = 0;
-
   let cinematicUiTimer = null;
-  let camZoom = 1;
-  let camZoomTarget = 1;
 
-  const bgStars = Array.from({ length: PERF.bgStars }, () => ({
-    x: 0,
-    y: 0,
-    r: 0.5 + Math.random() * 1.1,
-    phase: Math.random() * Math.PI * 2,
-    speed: 0.001 + Math.random() * 0.002,
-  }));
+  resizeGame();
+  for (let i = 0; i < engine.bgStars.length; i++) {
+    engine.bgStars[i].x = Math.random() * engine.layers.W;
+    engine.bgStars[i].y = Math.random() * engine.layers.H;
+  }
+  for (let i = 0; i < engine.bgGlows.length; i++) {
+    engine.bgGlows[i].x = Math.random() * engine.layers.W;
+    engine.bgGlows[i].y = Math.random() * engine.layers.H;
+  }
+  engine.buildBackground();
 
-  const bgGlows = Array.from({ length: PERF.bgGlows }, () => ({
-    x: 0,
-    y: 0,
-    r: 36 + Math.random() * 44,
-    phase: Math.random() * Math.PI * 2,
-  }));
+  engine.onCatch = () => {
+    score++;
+    engine.setScore(score);
+    saveGame(STORAGE.gameScore, score);
+    scoreEl.textContent = score;
+    updateProgressBar();
+    checkMilestones();
+    if (engine.quality.level < 2) {
+      scoreBox.classList.add('pulse');
+      setTimeout(() => scoreBox.classList.remove('pulse'), 280);
+    }
+  };
 
-  resizeCanvas();
-  cherry.x = W / 2;
-  mouseX = W / 2;
-  applyPlayfieldLayout();
-  bgStars.forEach((s) => {
-    s.x = Math.random() * W;
-    s.y = Math.random() * H;
-  });
-  bgGlows.forEach((g) => {
-    g.x = Math.random() * W;
-    g.y = Math.random() * H;
-  });
-  gameReady = true;
-  rebuildBgCache();
+  engine.onMiss = () => loseLife();
 
   Promise.all([
     loadSprite('cherry'),
     loadSprite('chocolate'),
   ]).then(([cherryLoaded, chocolateLoaded]) => {
-    cherryImg = cherryLoaded;
-    chocolateImg = chocolateLoaded;
-    spritesReady = true;
-    gameMode = 'playing';
-    console.log('[MiniGame] Sprites prontos — renderização via drawImage exclusivamente.');
-    forceRestartGameLoop();
+    engine.setSourceSprites(cherryLoaded, chocolateLoaded);
+    engine.setSprites(cherryLoaded, chocolateLoaded);
+    engine.setScore(score);
+    console.log('[MiniGame] Engine pronto — camadas + pools + sprites cacheados.');
+    syncEngineBlocked();
+    engine.start();
     if (score >= FINAL_MILESTONE && milestones[FINAL_MILESTONE]) {
       applyEndlessModeUI();
       syncLivesHudVisibility(false);
@@ -1186,12 +1083,6 @@ function initGame() {
     milestoneText.textContent = 'Error al cargar sprites. Abre index.html desde la carpeta del proyecto.';
     milestoneEl.classList.remove('hidden');
   });
-
-  function spriteSize(img, targetH) {
-    const { w, h } = spriteDimensions(img);
-    const aspect = w / h;
-    return { w: targetH * aspect, h: targetH };
-  }
 
   function saveMilestones() {
     saveGame(STORAGE.gameMilestones, milestones);
@@ -1215,23 +1106,20 @@ function initGame() {
     scoreEl.textContent = '0';
     lastToastScore = 0;
     lastEndlessToastScore = 0;
-    heartRain.length = 0;
-    chocolates.length = 0;
-    particles.length = 0;
-    effects.length = 0;
-    gameMode = spritesReady ? 'playing' : 'loading';
-    glowPower = 0;
-    spawnGraceUntil = 0;
-    cherry.x = W / 2;
-    mouseX = W / 2;
+    engine.clearEntities();
+    engine.glowPower = 0;
+    engine.spawnGraceUntil = 0;
+    engine.cherry.x = engine.layers.W / 2;
+    engine.mouseX = engine.layers.W / 2;
     clearEndlessModeUI();
     updateProgressBar();
     updateLivesDisplay();
     hideLivesHud();
     resetMeterSession();
-    frameStress = 0;
-    turboLite = perfLite;
-    forceRestartGameLoop();
+    engine.quality.reset();
+    engine.setScore(0);
+    syncEngineBlocked();
+    engine.forceRestart();
   }
 
   function clearCinematicUiTimer() {
@@ -1271,8 +1159,9 @@ function initGame() {
     milestoneSub.classList.add('hidden');
     toastDismissBtn?.classList.add('hidden');
     toastTimerEl?.classList.add('hidden');
-    lastSpawn = performance.now();
+    engine.lastSpawn = performance.now();
     updatePauseButtonState();
+    syncEngineBlocked();
   }
 
   function updateToastTimerDisplay(secondsLeft) {
@@ -1285,6 +1174,7 @@ function initGame() {
   function showReadableToast(text, subText) {
     clearToastTimers();
     messagePause = true;
+    syncEngineBlocked();
     milestoneText.textContent = text;
     milestoneSub.textContent = subText;
     milestoneSub.classList.remove('hidden');
@@ -1329,15 +1219,15 @@ function initGame() {
     milestonePause = true;
     setPaused(false);
     updatePauseButtonState();
-    heartRainActive = true;
-    camZoomTarget = 1.04;
-    chocolates.length = 0;
-    particles.length = 0;
-    effects.length = 0;
-    for (let i = 0; i < 6; i++) spawnHeartRain(true);
+    syncEngineBlocked();
+    engine.heartRainActive = true;
+    engine.camZoomTarget = 1.04;
+    engine.clearEntities();
+    for (let i = 0; i < 6; i++) engine.spawnHeartRain(true);
     setTimeout(() => {
-      heartRainActive = false;
-      heartRain.length = 0;
+      engine.heartRainActive = false;
+      engine.heartPool.releaseAll();
+      engine.markAllDirty();
     }, 3500);
 
     clearCinematicUiTimer();
@@ -1347,7 +1237,7 @@ function initGame() {
     continueBtn?.classList.remove('hidden');
     milestoneEl.classList.add('cinematic');
     milestoneEl.classList.remove('hidden');
-    startGameLoop();
+    engine.forceRestart();
   }
 
   function checkMilestones(announce = true) {
@@ -1369,344 +1259,33 @@ function initGame() {
     }
   }
 
-  function spawnHeartRain(initial = false) {
-    if (heartRain.length >= PERF.maxHeartRain) return;
-    heartRain.push({
-      x: Math.random() * W,
-      y: initial ? Math.random() * H : -16,
-      speed: 0.5 + Math.random() * 1.4,
-      size: 9 + Math.random() * 9,
-      opacity: 0.25 + Math.random() * 0.45,
-      wobble: Math.random() * Math.PI * 2,
-    });
-  }
-
-  function spawnCatchEffects(x, y, size) {
-    glowPower = 0.75;
-    if (!turboLite) {
-      scoreBox.classList.add('pulse');
-      setTimeout(() => scoreBox.classList.remove('pulse'), 280);
-    }
-
-    trimPool(effects, PERF.maxEffects - 1);
-    trimPool(particles, PERF.maxParticles - PERF.catchDots);
-
-    effects.push({ type: 'pop', x, y, life: 1, scale: 0.55, size });
-
-    for (let i = 0; i < PERF.catchDots; i++) {
-      const angle = (Math.PI * 2 * i) / PERF.catchDots + Math.random() * 0.35;
-      const speed = 1.4 + Math.random() * 2.2;
-      particles.push({
-        kind: 'dot',
-        x, y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 1,
-        color: ['#FF4FA3', '#D81B60', '#FF80AB'][i % 3],
-        size: 2 + Math.random() * 2.2,
-      });
-    }
-  }
-
-  function drawGlow(cx, cy, radius, color, alpha) {
-    ctx.save();
-    const g = ctx.createRadialGradient(cx, cy, radius * 0.15, cx, cy, radius);
-    g.addColorStop(0, color.replace('ALPHA', String(alpha)));
-    g.addColorStop(1, color.replace('ALPHA', '0'));
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function drawSprite(img, cx, cy, targetH, opts = {}) {
-    if (!img) return null;
-    const { w, h } = spriteSize(img, targetH * (opts.scale || 1));
-    const x = cx - w / 2;
-    const y = cy - h / 2 + (opts.floatY || 0);
-
-    if (opts.glowColor && opts.glowAlpha > 0) {
-      drawGlow(cx, cy + (opts.floatY || 0), Math.max(w, h) * 0.55, opts.glowColor, opts.glowAlpha);
-    }
-
-    ctx.save();
-    ctx.globalAlpha = opts.alpha ?? 1;
-
-    if (opts.rotate) {
-      ctx.translate(cx, cy + (opts.floatY || 0));
-      ctx.rotate(opts.rotate);
-      ctx.drawImage(img, -w / 2, -h / 2, w, h);
-    } else {
-      ctx.drawImage(img, x, y, w, h);
-    }
-
-    if (opts.shine) {
-      ctx.globalCompositeOperation = 'soft-light';
-      ctx.globalAlpha = (opts.alpha ?? 1) * 0.12;
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.ellipse(cx - w * 0.12, cy - h * 0.18 + (opts.floatY || 0), w * 0.2, h * 0.12, -0.4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.restore();
-    return { w, h };
-  }
-
-  function drawBackground(time) {
-    if (bgCache) {
-      ctx.drawImage(bgCache, 0, 0, W, H);
-    } else {
-      ctx.fillStyle = 'rgba(15, 10, 10, 0.35)';
-      ctx.fillRect(0, 0, W, H);
-    }
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-    for (let i = 0; i < bgStars.length; i++) {
-      const s = bgStars[i];
-      const a = 0.12 + Math.sin(time * s.speed + s.phase) * 0.1;
-      ctx.globalAlpha = a;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawCherryPlayer(time) {
-    const floatY = Math.sin(time * 0.0035) * 2.5;
-    const cx = cherry.x;
-    const cherryGlow = PERF.cherryGlow && !turboLite && glowPower > 0.12 ? 0.18 + glowPower * 0.28 : 0;
-    drawSprite(cherryImg, cx, cherry.y, SPRITE_H, {
-      floatY,
-      glowColor: cherryGlow > 0 ? 'rgba(255, 79, 163, ALPHA)' : null,
-      glowAlpha: cherryGlow,
-    });
-  }
-
-  function drawFallingChocolate(c) {
-    if (!chocolateImg || c.alpha <= 0) return;
-    drawSprite(chocolateImg, c.x, c.y, c.size, {
-      alpha: c.alpha,
-      rotate: c.rot,
-    });
-  }
-
-  function spawnChocolate() {
-    if (chocolates.length >= PERF.maxChocolates) return;
-    const scaleVar = 0.88 + Math.random() * 0.18;
-    chocolates.push({
-      x: 28 + Math.random() * (W - 56),
-      y: -50,
-      speed: 1.4 + Math.random() * 3.2,
-      rot: Math.random() * Math.PI * 2,
-      rotSpeed: 0.012 + Math.random() * 0.028,
-      size: SPRITE_H * scaleVar,
-      wobble: Math.random() * Math.PI * 2,
-      alpha: 1,
-      collecting: false,
-      collectStart: 0,
-    });
-  }
-
-  function updateParticles(dt) {
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.07;
-      p.life -= dt * 0.0055;
-      if (p.life <= 0) particles.splice(i, 1);
-    }
-
-    for (let i = effects.length - 1; i >= 0; i--) {
-      const e = effects[i];
-      e.life -= dt * 0.005;
-      if (e.type === 'pop') e.scale += dt * 0.006;
-      if (e.life <= 0) effects.splice(i, 1);
-    }
-
-    if (heartRainActive && heartRain.length < PERF.maxHeartRain && Math.random() < 0.006) {
-      spawnHeartRain(false);
-    }
-    for (let i = heartRain.length - 1; i >= 0; i--) {
-      const h = heartRain[i];
-      h.y += h.speed;
-      h.wobble += 0.025;
-      h.x += Math.sin(h.wobble) * 0.35;
-      if (h.y > H + 20) heartRain.splice(i, 1);
-    }
-  }
-
-  function drawHeartRainLayer() {
-    if (!heartRain.length) return;
-    ctx.save();
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    heartRain.forEach((h) => {
-      ctx.globalAlpha = h.opacity;
-      ctx.font = `${h.size}px serif`;
-      ctx.fillText('❤️', h.x, h.y);
-    });
-    ctx.restore();
-  }
-
-  function drawForegroundEffects() {
-    if (turboLite && particles.length === 0 && effects.length === 0) return;
-
-    ctx.save();
-    particles.forEach((p) => {
-      ctx.globalAlpha = p.life;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    effects.forEach((e) => {
-      ctx.globalAlpha = e.life * 0.85;
-      ctx.strokeStyle = '#FF4FA3';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, e.scale * 18, 0, Math.PI * 2);
-      ctx.stroke();
-    });
-    ctx.restore();
-  }
-
-  function updatePlaying(time, dt) {
-    if (isGameplayBlocked()) return;
-
-    if (keys['ArrowLeft'] || keys['a']) {
-      cherry.x = Math.max(SPRITE_H * 0.35, cherry.x - cherry.speed);
-    }
-    if (keys['ArrowRight'] || keys['d']) {
-      cherry.x = Math.min(W - SPRITE_H * 0.35, cherry.x + cherry.speed);
-    }
-    cherry.x += (mouseX - cherry.x) * (isCoarsePointer ? 0.14 : 0.09);
-    glowPower *= 0.93;
-
-    const spawnRate = score > 75 ? 780 : score > 50 ? 880 : 920;
-    if (time >= spawnGraceUntil && time - lastSpawn > spawnRate) {
-      spawnChocolate();
-      lastSpawn = time;
-    }
-
-    const hitW = SPRITE_H * 0.34;
-
-    for (let i = chocolates.length - 1; i >= 0; i--) {
-      const c = chocolates[i];
-
-      if (c.collecting) {
-        const elapsed = time - c.collectStart;
-        c.alpha = Math.max(0, 1 - elapsed / 200);
-        if (elapsed >= 200) {
-          chocolates.splice(i, 1);
-        }
-        continue;
-      }
-
-      c.y += c.speed;
-      c.rot += c.rotSpeed;
-      c.x += Math.sin(c.wobble + time * 0.002) * 0.28;
-      c.wobble += 0.018;
-
-      const dx = Math.abs(c.x - cherry.x);
-      const dy = Math.abs(c.y - cherry.y);
-      if (dx < hitW && dy < hitW) {
-        spawnCatchEffects(c.x, c.y, c.size);
-        c.collecting = true;
-        c.collectStart = time;
-        score++;
-        saveGame(STORAGE.gameScore, score);
-        scoreEl.textContent = score;
-        updateProgressBar();
-        checkMilestones();
-        continue;
-      }
-
-      if (c.y > H + 60) {
-        chocolates.splice(i, 1);
-        loseLife();
-      }
-    }
-  }
-
-  function render(time) {
-    if (!running) return;
-
-    const dt = Math.min(time - lastTime, 24);
-    lastTime = time;
-    frameStress = frameStress * 0.92 + (dt > 18 ? 1 : 0);
-    turboLite = perfLite || frameStress > 0.28;
-
-    if (Math.abs(camZoomTarget - camZoom) > 0.001) {
-      camZoom += (camZoomTarget - camZoom) * 0.06;
-    } else {
-      camZoom = camZoomTarget;
-    }
-
-    if (gameMode === 'playing' && spritesReady) updatePlaying(time, dt);
-
-    updateParticles(dt);
-
-    ctx.save();
-    ctx.clearRect(0, 0, W, H);
-
-    if (camZoom !== 1) {
-      ctx.translate(W / 2, H / 2);
-      ctx.scale(camZoom, camZoom);
-      ctx.translate(-W / 2, -H / 2);
-    }
-
-    drawBackground(time);
-    if (heartRainActive && heartRain.length) drawHeartRainLayer();
-
-    if (!spritesReady) {
-      ctx.restore();
-      animId = requestAnimationFrame(render);
-      return;
-    }
-
-    if (gameMode === 'playing') {
-      chocolates.forEach(drawFallingChocolate);
-      drawCherryPlayer(time);
-      drawForegroundEffects();
-    }
-
-    ctx.restore();
-    animId = requestAnimationFrame(render);
-  }
-
-  startGameLoop();
-
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-      running = false;
-      cancelAnimationFrame(animId);
-    } else if (spritesReady && !gameOver) {
-      forceRestartGameLoop();
+      engine.stop();
+    } else if (engine.spritesReady && !gameOver) {
+      engine.forceRestart();
     }
   });
 
   window.addEventListener('keydown', (e) => {
-    keys[e.key] = true;
+    engine.keys[e.key] = true;
     if (!e.repeat && (e.key === 'p' || e.key === 'P' || e.key === 'Escape') && !milestonePause && !gameOver) {
       e.preventDefault();
       togglePause();
     }
   });
-  window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+  window.addEventListener('keyup', (e) => { engine.keys[e.key] = false; });
 
   function setCherryTarget(clientX) {
-    const rect = canvas.getBoundingClientRect();
-    mouseX = ((clientX - rect.left) / rect.width) * W;
-    mouseX = Math.max(SPRITE_H * 0.35, Math.min(W - SPRITE_H * 0.35, mouseX));
+    const rect = canvasStack.getBoundingClientRect();
+    const W = engine.layers.W;
+    engine.mouseX = ((clientX - rect.left) / rect.width) * W;
+    const pad = engine.SPRITE_H * 0.35;
+    engine.mouseX = Math.max(pad, Math.min(W - pad, engine.mouseX));
   }
 
   function spawnTouchHearts(clientX, clientY) {
-    if (!touchFx || !gameContainer || isGameplayBlocked() || turboLite) return;
+    if (!touchFx || !gameContainer || isGameplayBlocked() || engine.quality.level >= 2) return;
     const now = performance.now();
     if (now - lastTouchHeartAt < 100) return;
     lastTouchHeartAt = now;
@@ -1743,36 +1322,36 @@ function initGame() {
     const rect = gameContainer.getBoundingClientRect();
     gameCursor.style.left = `${e.clientX - rect.left}px`;
     gameCursor.style.top = `${e.clientY - rect.top}px`;
-    const overCanvas = e.target === canvas;
+    const overCanvas = canvasStack?.contains(e.target);
     gameCursor.classList.toggle('hidden', !overCanvas);
   }
 
   gameContainer?.addEventListener('mousemove', updateGameCursor);
   gameContainer?.addEventListener('mouseleave', () => gameCursor?.classList.add('hidden'));
 
-  canvas.addEventListener('mousemove', (e) => {
+  canvasStack.addEventListener('mousemove', (e) => {
     setCherryTarget(e.clientX);
     updateGameCursor(e);
   });
 
-  canvas.addEventListener('touchstart', (e) => {
+  canvasStack.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (e.touches[0]) setCherryTarget(e.touches[0].clientX);
   }, { passive: false });
 
-  canvas.addEventListener('touchmove', (e) => {
+  canvasStack.addEventListener('touchmove', (e) => {
     e.preventDefault();
     if (e.touches[0]) setCherryTarget(e.touches[0].clientX);
   }, { passive: false });
 
-  canvas.addEventListener('pointerdown', (e) => {
+  canvasStack.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-      canvas.setPointerCapture(e.pointerId);
+      canvasStack.setPointerCapture(e.pointerId);
     }
     handleCanvasTap(e.clientX, e.clientY);
   });
 
-  canvas.addEventListener('pointermove', (e) => {
+  canvasStack.addEventListener('pointermove', (e) => {
     if (e.pointerType === 'touch' || e.pointerType === 'pen') {
       setCherryTarget(e.clientX);
     }

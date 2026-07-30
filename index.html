@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
 </head>
 <body>
   <!-- Chuva de pétalas e corações -->
@@ -157,7 +157,11 @@
       <h2>Mini Game</h2>
       <p class="game-hint">Controla la cereza con ← → , el mouse o tocando la pantalla</p>
       <div id="game-container">
-        <canvas id="game-canvas"></canvas>
+        <div id="game-canvas-stack" class="game-canvas-stack">
+          <canvas id="game-canvas-bg" class="game-layer-canvas"></canvas>
+          <canvas id="game-canvas-game" class="game-layer-canvas"></canvas>
+          <canvas id="game-canvas-fx" class="game-layer-canvas"></canvas>
+        </div>
         <div id="game-cursor" class="game-cursor hidden" aria-hidden="true">🍒</div>
         <div id="game-touch-fx" class="game-touch-fx" aria-hidden="true"></div>
         <div id="game-score" class="game-score">
@@ -273,6 +277,7 @@
     </button>
   </div>
 
-  <script src="script.js?v=25"></script>
+  <script src="game-engine.js?v=26"></script>
+  <script src="script.js?v=26"></script>
 </body>
 </html>

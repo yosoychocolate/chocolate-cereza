@@ -903,11 +903,45 @@ p {
   border: 1px solid rgba(255, 79, 163, 0.3);
 }
 
-#game-canvas {
+.game-canvas-stack {
+  position: relative;
+  width: 100%;
+  line-height: 0;
+}
+
+.game-layer-canvas {
+  display: block;
   width: 100%;
   height: auto;
-  display: block;
+  touch-action: none;
+}
+
+#game-canvas-bg {
+  position: relative;
+  z-index: 1;
   background: rgba(18, 11, 23, 0.9);
+}
+
+#game-canvas-game,
+#game-canvas-fx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#game-canvas-game {
+  z-index: 2;
+  cursor: none;
+}
+
+#game-canvas-fx {
+  z-index: 3;
+}
+
+#game-canvas-stack {
   cursor: none;
   touch-action: none;
 }
@@ -2283,7 +2317,8 @@ body.music-playing .glass {
     transform: none;
   }
 
-  #game-canvas {
+  #game-canvas-stack,
+  #game-canvas-game {
     cursor: default;
   }
 
