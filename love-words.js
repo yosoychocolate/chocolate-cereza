@@ -351,7 +351,7 @@
       const inCoupleRoom = !!ctx?.inCoupleRoom;
       const forcePity = now - state.lastSpawnAt >= PITY_MS;
 
-      if (!forcePity && Math.random() > SPAWN_ROLL) {
+      if (!forcePity && Math.random() > (ctx.mobile ? 0.26 : SPAWN_ROLL)) {
         return null;
       }
 

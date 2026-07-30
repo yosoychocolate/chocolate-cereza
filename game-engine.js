@@ -345,6 +345,11 @@
       this.missShield = false;
       this.fallSpeedMul = 1;
       this.heartRainActive = false;
+      this.cosmetics = {
+        cherryFilter: 'none',
+        theme: null,
+        catchColors: ['#FF4FA3', '#D81B60', '#FF80AB'],
+      };
       this.camZoom = 1;
       this.camZoomTarget = 1;
 
@@ -394,23 +399,38 @@
       this.spatial.cell = Math.max(48, this.SPRITE_H * 0.8);
     }
 
+    setCosmetics(partial) {
+      if (!partial) return;
+      if (partial.cherryFilter !== undefined) this.cosmetics.cherryFilter = partial.cherryFilter;
+      if (partial.theme !== undefined) this.cosmetics.theme = partial.theme;
+      if (partial.catchColors) this.cosmetics.catchColors = partial.catchColors.slice();
+      this.buildBackground();
+      this.markAllDirty();
+    }
+
+    _catchColors() {
+      return this.cosmetics.catchColors || ['#FF4FA3', '#D81B60', '#FF80AB'];
+    }
+
     buildBackground() {
       const W = this.layers.W;
       const H = this.layers.H;
       const dpr = this.layers.dpr;
+      const theme = this.cosmetics.theme;
       if (!this.bgStatic) this.bgStatic = document.createElement('canvas');
       this.bgStatic.width = Math.round(W * dpr);
       this.bgStatic.height = Math.round(H * dpr);
       const bctx = this.bgStatic.getContext('2d');
       bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       bctx.imageSmoothingEnabled = false;
-      bctx.fillStyle = 'rgba(15, 10, 10, 0.35)';
+      bctx.fillStyle = theme?.bg || 'rgba(15, 10, 10, 0.35)';
       bctx.fillRect(0, 0, W, H);
+      const glowInner = theme?.glow || 'rgba(108, 59, 255, 0.05)';
       for (let i = 0; i < this.bgGlows.length; i++) {
         const g = this.bgGlows[i];
         const grad = bctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.r);
-        grad.addColorStop(0, 'rgba(108, 59, 255, 0.05)');
-        grad.addColorStop(1, 'rgba(108, 59, 255, 0)');
+        grad.addColorStop(0, glowInner);
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         bctx.fillStyle = grad;
         bctx.fillRect(g.x - g.r, g.y - g.r, g.r * 2, g.r * 2);
       }
@@ -565,7 +585,7 @@
       while (this.particlePool.active.length >= maxPt - dots) {
         this.particlePool.release(this.particlePool.active[0]);
       }
-      const colors = ['#FF4FA3', '#FF80AB', '#FFD56A', '#FF6B9D'];
+      const colors = this._catchColors().slice(0, 4);
       for (let i = 0; i < dots; i++) {
         const angle = (Math.PI * 2 * i) / dots + Math.random() * 0.4;
         const speed = 1.2 + Math.random() * 2.4;
@@ -597,7 +617,7 @@
       while (this.particlePool.active.length >= maxPt - dots) {
         this.particlePool.release(this.particlePool.active[0]);
       }
-      const colors = ['#FF4FA3', '#D81B60', '#FF80AB'];
+      const colors = this._catchColors();
       for (let i = 0; i < dots; i++) {
         const angle = (Math.PI * 2 * i) / dots + Math.random() * 0.35;
         const speed = 1.4 + Math.random() * 2.2;
@@ -889,7 +909,8 @@
       if (this.bgStatic) ctx.drawImage(this.bgStatic, 0, 0, W, H);
 
       const starStep = this.quality.bgStars < 1 ? 2 : 1;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+      const starColor = this.cosmetics.theme?.star || 'rgba(255, 255, 255, 0.22)';
+      ctx.fillStyle = starColor;
       for (let i = 0; i < this.bgStars.length; i += starStep) {
         const s = this.bgStars[i];
         const a = 0.12 + Math.sin(time * s.speed + s.phase) * 0.1;
@@ -959,7 +980,7 @@
         this.dirty.game = true;
       }
 
-      this._drawCachedSprite(ctx, this.sprites.cherry, this.cherry.x, this.cherry.y + floatY, 1, 0);
+      this._drawCachedSprite(ctx, this.sprites.cherry, this.cherry.x, this.cherry.y + floatY, 1, 0, this.cosmetics.cherryFilter);
 
       if (this.camZoom !== 1) ctx.restore();
     }
@@ -1055,12 +1076,13 @@
       ctx.closePath();
     }
 
-    _drawCachedSprite(ctx, baked, cx, cy, alpha, rot) {
+    _drawCachedSprite(ctx, baked, cx, cy, alpha, rot, filter) {
       if (!baked) return;
       const w = baked._logicalW;
       const h = baked._logicalH;
       ctx.save();
       ctx.globalAlpha = alpha;
+      if (filter && filter !== 'none') ctx.filter = filter;
       if (rot) {
         ctx.translate(cx, cy);
         ctx.rotate(rot);

@@ -249,6 +249,10 @@
             <span class="meta-label-full">⚙️ Ajustes</span>
             <span class="meta-label-short">⚙️ Ajustes</span>
           </button>
+          <button id="game-shop-toggle" class="game-meta-btn game-shop-toggle" type="button" aria-expanded="false" aria-controls="game-shop-panel">
+            <span class="meta-label-full">🍫 Tienda</span>
+            <span class="meta-label-short">🍫 Tienda</span>
+          </button>
         </div>
         <div id="game-meta-backdrop" class="game-meta-backdrop hidden" aria-hidden="true"></div>
         <div id="game-stats-panel" class="game-meta-panel hidden" role="region" aria-label="Estadísticas del juego">
@@ -281,6 +285,21 @@
             <input id="game-sfx-toggle" class="game-setting-toggle" type="checkbox" checked>
           </label>
         </div>
+        <div id="game-shop-panel" class="game-meta-panel game-shop-panel hidden" role="region" aria-label="Tienda del chocolate">
+          <div class="game-shop-head">
+            <h3 class="game-meta-panel-title">🍫 Loja do Chocolate</h3>
+            <p class="game-shop-wallet">Saldo: <strong id="game-shop-wallet">0</strong> 🍫</p>
+          </div>
+          <nav id="game-shop-tabs" class="game-shop-tabs" aria-label="Categorías de la tienda">
+            <button type="button" class="game-shop-tab is-active" data-shop-tab="cherry">🍒</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="theme">🌈</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="effect">✨</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="mascot">🧸</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="album">💌</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="special">💍</button>
+          </nav>
+          <div id="game-shop-grid" class="game-shop-grid"></div>
+        </div>
       </div>
       <div id="game-container">
         <div id="game-canvas-stack" class="game-canvas-stack">
@@ -290,12 +309,16 @@
         </div>
         <div id="game-cursor" class="game-cursor hidden" aria-hidden="true">🍒</div>
         <div id="game-touch-fx" class="game-touch-fx" aria-hidden="true"></div>
+        <div id="game-mascot-buddy" class="game-mascot-buddy hidden" aria-hidden="true"></div>
         <div id="game-celebrate-fx" class="game-celebrate-fx" aria-hidden="true"></div>
         <div id="game-achievement-toast" class="game-achievement-toast hidden" role="status" aria-live="polite"></div>
+        <div id="game-shop-toast" class="game-shop-toast hidden" role="status" aria-live="polite"></div>
         <div id="couple-score-hud" class="couple-score-hud hidden" aria-hidden="true"></div>
         <div id="game-score" class="game-score">
           <span class="game-score-label" aria-hidden="true">🍫</span>
           <span class="game-score-num">0</span>
+          <span id="game-wallet-inline" class="game-wallet-inline" title="Chocolates para la tienda">🛒 <span>0</span></span>
+          <span id="game-ring-badge" class="game-ring-badge hidden" aria-hidden="true" title="Anel do Amor">💍</span>
           <span id="game-shield-badge" class="game-shield-badge hidden" aria-label="Escudo activo" title="Escudo — protege 1 chocolate perdido">🛡️</span>
           <span class="game-record-inline" aria-label="Récord">🏆 <span id="game-high-score-val">0</span></span>
           <span id="game-endless-badge" class="game-endless-badge hidden">✨ Modo Infinito</span>
@@ -426,6 +449,7 @@
   <script src="love-words.js?v=__APP_VERSION__"></script>
   <script src="game-engine.js?v=__APP_VERSION__"></script>
   <script src="game-meta.js?v=__APP_VERSION__"></script>
+  <script src="game-shop.js?v=__APP_VERSION__"></script>
   <script src="script.js?v=__APP_VERSION__"></script>
   <script type="module" src="couple-ui.js?v=__APP_VERSION__"></script>
 </body>

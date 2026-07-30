@@ -947,7 +947,17 @@ function initGame() {
     return online >= 2;
   }
 
+  function loveWordBlocksGame(word) {
+    if (perfLite) return false;
+    return word.noBlock !== true;
+  }
+
   function loveWordPauseDuration(word) {
+    if (perfLite) {
+      if (word?.kind === 'letter' || word?.kind === 'memory') return 1400;
+      if (word?.kind === 'easter' || word?.kind === 'ultra' || word?.kind === 'crown') return 900;
+      return 550;
+    }
     if (word?.pauseMs) return word.pauseMs;
     if (word?.kind === 'letter' || word?.kind === 'memory') return 2000;
     if (word?.kind === 'easter') return 1000;
@@ -1012,7 +1022,7 @@ function initGame() {
 
   function hideLoveWordPopup(instant = false) {
     if (!loveWordPopup) return;
-    loveWordPopup.classList.remove('visible', 'is-easter', 'is-memory', 'is-ultra');
+    loveWordPopup.classList.remove('visible', 'is-easter', 'is-memory', 'is-ultra', 'is-compact');
     if (instant) {
       loveWordPopup.classList.add('hidden');
       loveWordPopup.setAttribute('aria-hidden', 'true');
@@ -1072,19 +1082,20 @@ function initGame() {
     }
 
     if (word.fx === 'love') {
-      GameMeta.celebrate('love');
-    } else if (word.fx === 'milestone') {
+      if (!perfLite) GameMeta.celebrate('love');
+      else engine.glowPower = Math.max(engine.glowPower, 0.55);
+    } else if (word.fx === 'milestone' && !perfLite) {
       GameMeta.celebrate('milestone');
     }
 
-    if (word.sound === 'ultra') {
+    if (word.sound === 'ultra' && !perfLite) {
       GameMeta.sounds.playLoveUltra?.();
     } else {
       GameMeta.sounds.playCatch?.();
     }
 
     if (word.kind === 'ultra' || word.kind === 'crown') {
-      engine.glowPower = 1;
+      engine.glowPower = perfLite ? 0.65 : 1;
     }
 
     if (engine.missShield) syncShieldHud(true);
@@ -1095,7 +1106,7 @@ function initGame() {
 
   function showLoveWordPopup(word) {
     if (!loveWordPopup) return;
-    const blocksGame = word.noBlock !== true;
+    const blocksGame = loveWordBlocksGame(word);
     if (blocksGame && loveWordPause) return;
 
     if (blocksGame) {
@@ -1127,6 +1138,7 @@ function initGame() {
         || (window.LoveWords?.rewardLabel?.(word.reward) ?? '');
     }
 
+    loveWordPopup.classList.toggle('is-compact', perfLite);
     loveWordPopup.classList.toggle('is-easter', word.kind === 'easter');
     loveWordPopup.classList.toggle('is-memory', word.kind === 'memory');
     loveWordPopup.classList.toggle('is-ultra', word.kind === 'ultra' || word.kind === 'crown');
@@ -1407,6 +1419,26 @@ function initGame() {
   LoveWords.checkMemoryUnlocks?.(GameMeta.stats.gamesPlayed || 0, loveWordState);
   saveLoveWordState();
 
+  GameShop.init({
+    engine,
+    toggle: document.getElementById('game-shop-toggle'),
+    panel: document.getElementById('game-shop-panel'),
+    tabs: document.getElementById('game-shop-tabs'),
+    grid: document.getElementById('game-shop-grid'),
+    wallet: document.getElementById('game-shop-wallet'),
+    walletInline: document.querySelector('#game-wallet-inline span'),
+    toast: document.getElementById('game-shop-toast'),
+    mascot: document.getElementById('game-mascot-buddy'),
+    ringBadge: document.getElementById('game-ring-badge'),
+    backdrop: document.getElementById('game-meta-backdrop'),
+  });
+
+  window.addEventListener('gamemeta:panel-change', (event) => {
+    const open = !!event.detail?.open;
+    const id = event.detail?.id;
+    if (open && id !== 'shop' && GameShop._open) GameShop.closePanel();
+  });
+
   window.addEventListener('gamemeta:panel-change', (event) => {
     const open = !!event.detail?.open;
     if (open) {
@@ -1437,6 +1469,7 @@ function initGame() {
       state: loveWordState,
       gamesPlayed: GameMeta.stats.gamesPlayed || 0,
       inCoupleRoom: isCoupleOnline(),
+      mobile: perfLite,
     });
     if (entry) saveLoveWordState();
     return entry;
@@ -1448,6 +1481,7 @@ function initGame() {
 
   engine.onCatch = () => {
     score++;
+    GameShop.addCoins(1);
     engine.setScore(score);
     saveGameSession({ score });
     scoreEl.textContent = score;
