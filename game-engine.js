@@ -298,7 +298,7 @@
       x: 0, y: 0, speed: 0, wobble: 0, alpha: 1,
       text: '', display: '', popupText: '',
       reward: null, rewardLabel: '',
-      pauseMs: 0, fx: null, sound: null, isSpecial: false,
+      pauseMs: 0, fx: null, sound: null, isSpecial: false, noBlock: false,
       fontSize: 14, hitW: 40, hitH: 22,
       collecting: false, collectStart: 0,
       active: false, visible: false,
@@ -310,7 +310,7 @@
     w.x = 0; w.y = 0; w.speed = 0; w.wobble = 0; w.alpha = 1;
     w.text = ''; w.display = ''; w.popupText = '';
     w.reward = null; w.rewardLabel = '';
-    w.pauseMs = 0; w.fx = null; w.sound = null; w.isSpecial = false;
+    w.pauseMs = 0; w.fx = null; w.sound = null; w.isSpecial = false; w.noBlock = false;
     w.fontSize = 14; w.hitW = 40; w.hitH = 22;
     w.collecting = false; w.collectStart = 0;
     w.active = false; w.visible = false;
@@ -321,6 +321,7 @@
     constructor(options) {
       this.perf = options.perf;
       this.perfLite = options.perfLite;
+      this.mobileEase = options.perf?.mobileEase || null;
       this.cherryBottomNorm = options.cherryBottomNorm;
       this.spriteNorm = options.spriteNorm;
       this.isCoarsePointer = options.isCoarsePointer;
@@ -356,7 +357,7 @@
       this.lastTime = 0;
       this.lastSpawn = 0;
       this.lastLoveSpawn = 0;
-      this.loveSpawnInterval = 11000;
+      this.loveSpawnInterval = this.perfLite ? 14000 : 11000;
       this.spawnGraceUntil = 0;
       this.spritesReady = false;
 
@@ -496,12 +497,12 @@
       const max = this.perf.maxChocolates;
       if (this.chocoPool.active.length >= max) return;
       const c = this.chocoPool.get();
-      const df = this._difficultyFactor(this._score);
+      const df = this._effectiveDiff(this._score);
       c.active = true;
       c.visible = true;
       c.x = 28 + Math.random() * (this.layers.W - 56);
       c.y = -50;
-      c.speed = (1.4 + Math.random() * 3.2) * df;
+      c.speed = (1.4 + Math.random() * 3.2) * df * (this.mobileEase?.fallMul ?? 1);
       c.rot = Math.random() * Math.PI * 2;
       c.rotSpeed = (0.012 + Math.random() * 0.028) * Math.min(df, 1.35);
       c.size = this.SPRITE_H * (0.88 + Math.random() * 0.18);
@@ -528,9 +529,10 @@
       w.fx = entry.fx || null;
       w.sound = entry.sound || null;
       w.isSpecial = !!entry.isSpecial;
+      w.noBlock = !!entry.noBlock;
       w.x = 40 + Math.random() * (W - 80);
       w.y = -40;
-      w.speed = 0.75 + Math.random() * 0.55;
+      w.speed = (0.75 + Math.random() * 0.55) * (this.mobileEase?.fallMul ?? 1);
       w.wobble = Math.random() * Math.PI * 2;
       w.alpha = 1;
       w.collecting = false;
@@ -668,7 +670,7 @@
         const nx = Math.min(this.layers.W - this.SPRITE_H * 0.35, this.cherry.x + this.cherry.speed);
         if (nx !== this.cherry.x) { this.cherry.x = nx; moved = true; }
       }
-      const lerp = this.isCoarsePointer ? 0.14 : 0.09;
+      const lerp = this.isCoarsePointer ? 0.17 : 0.09;
       const mx = this.cherry.x + (this.mouseX - this.cherry.x) * lerp;
       if (Math.abs(mx - this.cherry.x) > 0.05) { this.cherry.x = mx; moved = true; }
 
@@ -678,8 +680,9 @@
       }
 
       const score = this._score;
-      const df = this._difficultyFactor(score);
-      const baseRate = score > 75 ? 780 : score > 50 ? 880 : 920;
+      const df = this._effectiveDiff(score);
+      const easeSpawn = this.mobileEase?.spawnMul ?? 1;
+      const baseRate = (score > 75 ? 780 : score > 50 ? 880 : 920) * easeSpawn;
       const spawnRate = baseRate / (this.quality.spawnMul * df);
       if (time >= this.spawnGraceUntil && time - this.lastSpawn > spawnRate) {
         this.spawnChocolate();
@@ -697,7 +700,7 @@
         c.visible = true;
         c.y += c.speed * this.fallSpeedMul;
         c.rot += c.rotSpeed;
-        c.x += Math.sin(c.wobble + time * 0.002) * 0.28;
+        c.x += Math.sin(c.wobble + time * 0.002) * (this.mobileEase ? 0.18 : 0.28);
         c.wobble += 0.018;
         moved = true;
       }
@@ -721,7 +724,8 @@
     collision(time) {
       if (this._blocked || !this.spritesReady) return;
 
-      const hitW = this.SPRITE_H * 0.34;
+      const hitMul = this.mobileEase?.hitMul ?? 1;
+      const hitW = this.SPRITE_H * 0.34 * hitMul;
       const cx = this.cherry.x;
       const cy = this.cherry.y;
       this.spatial.clear();
@@ -1103,6 +1107,13 @@
 
     _difficultyFactor(score) {
       return Math.min(1.75, 1 + score * 0.0035);
+    }
+
+    _effectiveDiff(score) {
+      const df = this._difficultyFactor(score);
+      if (!this.mobileEase) return df;
+      const scaled = 1 + (df - 1) * this.mobileEase.diffScale;
+      return Math.min(this.mobileEase.maxDiff ?? 1.75, scaled);
     }
   }
 

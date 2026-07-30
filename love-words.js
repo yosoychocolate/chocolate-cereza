@@ -126,6 +126,7 @@
       fx: entry.fx || null,
       sound: entry.sound || null,
       isSpecial: entry.isSpecial === true,
+      noBlock: entry.noBlock === true,
     };
   }
 
@@ -276,6 +277,8 @@
           popupText: '❤️ Bônus do Casal',
           reward: { type: 'points', value: 500 },
           rewardLabel: '+500 Puntos · Casal 💕',
+          pauseMs: 1600,
+          noBlock: true,
           isSpecial: true,
         });
       case 'memory':

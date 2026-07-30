@@ -29,6 +29,17 @@ let unsubscribeChat = null;
 /** @type {boolean} */
 let chatStickToBottom = true;
 
+/** @type {ReturnType<typeof setTimeout> | null} */
+let refreshRoomTimer = null;
+
+function scheduleRefreshRoomPanel() {
+  if (refreshRoomTimer) clearTimeout(refreshRoomTimer);
+  refreshRoomTimer = setTimeout(() => {
+    refreshRoomTimer = null;
+    refreshRoomPanel().catch(() => {});
+  }, 400);
+}
+
 /** @type {number} */
 let lastPlayerCount = 0;
 
@@ -409,7 +420,7 @@ async function handleRoomEvent(event) {
 
   if (event.type === 'couple_updated') {
     handleCoupleUpdated(event.couple);
-    await refreshRoomPanel();
+    scheduleRefreshRoomPanel();
     return;
   }
 
@@ -424,7 +435,7 @@ async function handleRoomEvent(event) {
     }
 
     lastPlayerCount = count;
-    await refreshRoomPanel();
+    scheduleRefreshRoomPanel();
   }
 }
 

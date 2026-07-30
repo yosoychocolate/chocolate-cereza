@@ -739,11 +739,11 @@ function initGame() {
   const TOAST_READ_SECONDS = 8;
 
   const perfLite = isMobileView();
-  const CHERRY_BOTTOM_NORM = perfLite ? 56 : 58;
-  const SPRITE_NORM = perfLite ? 62 : 85;
+  const CHERRY_BOTTOM_NORM = perfLite ? 58 : 58;
+  const SPRITE_NORM = perfLite ? 70 : 85;
 
   const PERF = {
-    maxChocolates: perfLite ? 5 : 7,
+    maxChocolates: perfLite ? 4 : 7,
     maxLoveWords: 1,
     maxParticles: perfLite ? 8 : 12,
     maxEffects: perfLite ? 3 : 5,
@@ -752,6 +752,13 @@ function initGame() {
     dprCap: perfLite ? 1 : 1.25,
     bgStars: perfLite ? 12 : 18,
     bgGlows: 2,
+    mobileEase: perfLite ? {
+      fallMul: 0.62,
+      spawnMul: 1.5,
+      diffScale: 0.5,
+      maxDiff: 1.4,
+      hitMul: 1.22,
+    } : null,
   };
 
   const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
@@ -784,11 +791,16 @@ function initGame() {
     engine.setBlocked(isGameplayBlocked());
   }
 
+  function ensureEngineRunning() {
+    if (!engine.spritesReady || gameOver) return;
+    if (!engine.running) engine.forceRestart();
+  }
+
   function resizeGame() {
     if (!gameContainer) return;
     invalidateGameLayoutCache();
     const newW = Math.max(280, Math.min(gameContainer.clientWidth, 900));
-    const aspect = perfLite ? (330 / 360) : (400 / 360);
+    const aspect = perfLite ? (400 / 360) : (400 / 360);
     const newH = Math.round(newW * aspect);
     const dpr = Math.min(window.devicePixelRatio || 1, PERF.dprCap);
     engine.resize(newW, newH, dpr);
@@ -864,6 +876,7 @@ function initGame() {
     engine.heartPool.releaseAll();
     syncEngineBlocked();
     engine.markAllDirty();
+    ensureEngineRunning();
   }
 
   const MILESTONE_INTERVAL = 10;
@@ -1081,9 +1094,14 @@ function initGame() {
   }
 
   function showLoveWordPopup(word) {
-    if (!loveWordPopup || loveWordPause) return;
-    loveWordPause = true;
-    syncEngineBlocked();
+    if (!loveWordPopup) return;
+    const blocksGame = word.noBlock !== true;
+    if (blocksGame && loveWordPause) return;
+
+    if (blocksGame) {
+      loveWordPause = true;
+      syncEngineBlocked();
+    }
     updatePauseButtonState();
 
     const emojiMap = {
@@ -1122,11 +1140,14 @@ function initGame() {
     const duration = loveWordPauseDuration(word);
     if (loveWordPauseTimer) clearTimeout(loveWordPauseTimer);
     loveWordPauseTimer = setTimeout(() => {
-      loveWordPause = false;
+      if (blocksGame) {
+        loveWordPause = false;
+      }
       loveWordPauseTimer = null;
       hideLoveWordPopup();
       syncEngineBlocked();
       updatePauseButtonState();
+      ensureEngineRunning();
       engine.markAllDirty();
     }, duration);
   }
@@ -1327,6 +1348,7 @@ function initGame() {
     pauseScreen?.setAttribute('aria-hidden', showOverlay ? 'false' : 'true');
     syncEngineBlocked();
     engine.markAllDirty();
+    if (!paused) ensureEngineRunning();
   }
 
   function togglePause() {
@@ -1389,7 +1411,7 @@ function initGame() {
     const open = !!event.detail?.open;
     if (open) {
       setGameFocus(false);
-      if (!gamePaused && !gameOver && !milestonePause && !messagePause && !endlessIntroPause) {
+      if (!gamePaused && !gameOver && !milestonePause && !messagePause && !endlessIntroPause && !loveWordPause) {
         metaPanelAutoPaused = true;
         setPaused(true, { silent: true });
       }
@@ -1398,6 +1420,7 @@ function initGame() {
     if (metaPanelAutoPaused) {
       metaPanelAutoPaused = false;
       setPaused(false, { silent: true });
+      ensureEngineRunning();
     }
   });
 
@@ -1569,6 +1592,7 @@ function initGame() {
     engine.lastSpawn = performance.now();
     updatePauseButtonState();
     syncEngineBlocked();
+    ensureEngineRunning();
   }
 
   function updateToastTimerDisplay(secondsLeft) {
@@ -1676,11 +1700,7 @@ function initGame() {
     if (document.hidden) {
       engine.stop();
     } else if (engine.spritesReady && !gameOver) {
-      if (gamePaused || isGameplayBlocked()) {
-        engine.stop();
-      } else {
-        engine.forceRestart();
-      }
+      ensureEngineRunning();
     }
   });
 

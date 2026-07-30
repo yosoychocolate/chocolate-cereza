@@ -3750,6 +3750,14 @@ body.game-meta-panel-open .game-achievements-gallery {
     margin-bottom: 1.5rem;
   }
 
+  #game-container.game-mobile {
+    min-height: min(72vw, 420px);
+  }
+
+  #game-container.game-mobile .game-canvas-stack {
+    min-height: inherit;
+  }
+
   #section-game > h2 {
     margin-bottom: 0.35rem;
   }
