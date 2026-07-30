@@ -7,7 +7,7 @@ import {
   collection,
   query,
   onSnapshot,
-} from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js';
+} from './firebase-manager.js';
 import { profileRef, presenceRef } from './cloud-presence.js';
 import { coupleRef, coupleFromSnapshot } from './cloud-couple.js';
 

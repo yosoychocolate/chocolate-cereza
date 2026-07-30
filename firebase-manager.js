@@ -3,7 +3,34 @@
  * Etapa 1: apenas inicialização. Sem leitura/escrita no banco.
  */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-app.js';
-import { getFirestore } from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js';
+import {
+  getFirestore,
+  doc,
+  collection,
+  query,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  runTransaction,
+  onSnapshot,
+  serverTimestamp,
+} from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js';
+
+export {
+  doc,
+  collection,
+  query,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  runTransaction,
+  onSnapshot,
+  serverTimestamp,
+};
 
 /** @type {import('firebase/app').FirebaseApp | null} */
 let app = null;

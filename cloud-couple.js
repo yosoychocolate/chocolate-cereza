@@ -5,7 +5,7 @@
  * Estrutura:
  * rooms/{code}/couple/data
  */
-import { doc, getDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js';
+import { doc, getDoc, serverTimestamp } from './firebase-manager.js';
 
 const ROOMS_COLLECTION = 'rooms';
 const PLAYERS_SUBCOLLECTION = 'players';

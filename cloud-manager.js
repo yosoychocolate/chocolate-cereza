@@ -12,13 +12,11 @@ import {
   query,
   runTransaction,
   serverTimestamp,
-} from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js';
-import {
+  getFirestoreDb,
   initFirebase,
   isFirebaseReady,
   isFirebaseConfigValid,
   getFirebaseInitError,
-  getFirestoreDb,
 } from './firebase-manager.js';
 import { getSession, saveSession, clearSession, hasSession } from './room-session.js';
 import {
@@ -235,6 +233,13 @@ async function fetchRoom(db, roomCode) {
   const playerIds = playersSnap.docs.map((d) => d.id);
   const players = await fetchCloudPlayers(db, roomCode, playerIds);
   return buildRoom(roomSnap, players);
+}
+
+function resolvePlayerCount(roomData, fallbackCount) {
+  if (typeof roomData.playerCount === 'number' && Number.isFinite(roomData.playerCount)) {
+    return Math.max(0, roomData.playerCount);
+  }
+  return Math.max(0, fallbackCount);
 }
 
 function persistSession(room, player) {
@@ -587,6 +592,7 @@ export async function createRoom(player) {
       updatedAt: serverTimestamp(),
       status: 'waiting',
       maxPlayers: MAX_PLAYERS,
+      playerCount: 1,
     });
 
     await setDoc(coupleRef(db, code), {
@@ -632,8 +638,11 @@ export async function joinRoom(code, player) {
   try {
     const db = requireDb();
     const roomRef = roomDocRef(db, roomCode);
-    const playersQuery = query(playersCollection(db, roomCode));
+    const rootRef = playerRootRef(db, roomCode, normalized.id);
     let joinedExisting = false;
+
+    const playersListSnap = await getDocs(query(playersCollection(db, roomCode)));
+    const listedPlayerCount = playersListSnap.size;
 
     await runTransaction(db, async (transaction) => {
       const roomSnap = await transaction.get(roomRef);
@@ -643,7 +652,6 @@ export async function joinRoom(code, player) {
 
       const data = roomSnap.data();
       const maxPlayers = typeof data.maxPlayers === 'number' ? data.maxPlayers : MAX_PLAYERS;
-      const rootRef = playerRootRef(db, roomCode, normalized.id);
       const existingPlayerSnap = await transaction.get(rootRef);
 
       if (existingPlayerSnap.exists()) {
@@ -651,15 +659,16 @@ export async function joinRoom(code, player) {
         return;
       }
 
-      const playersSnap = await transaction.get(playersQuery);
-      if (playersSnap.size >= maxPlayers) {
+      const currentCount = resolvePlayerCount(data, listedPlayerCount);
+      if (currentCount >= maxPlayers) {
         throw new Error('ROOM_FULL');
       }
 
       transactionCreatePlayer(transaction, db, roomCode, normalized);
 
-      const newCount = playersSnap.size + 1;
+      const newCount = currentCount + 1;
       transaction.update(roomRef, {
+        playerCount: newCount,
         status: newCount >= maxPlayers ? 'full' : 'waiting',
         updatedAt: serverTimestamp(),
       });
@@ -680,6 +689,9 @@ export async function joinRoom(code, player) {
 
     return ok(getCurrentRoom());
   } catch (err) {
+    console.error('[CloudManager] joinRoom error:', err);
+    if (err instanceof Error) console.error(err.stack);
+
     const message = err instanceof Error ? err.message : String(err);
     if (message === 'ROOM_NOT_FOUND') {
       return fail('ROOM_NOT_FOUND', 'Sala não encontrada.');
@@ -708,30 +720,27 @@ export async function leaveRoom() {
     await setPlayerOffline(db, roomId, playerId);
 
     const roomRef = roomDocRef(db, roomId);
-    const playersQuery = query(playersCollection(db, roomId));
+    const playersListSnap = await getDocs(query(playersCollection(db, roomId)));
+    const listedPlayerCount = playersListSnap.size;
 
     await runTransaction(db, async (transaction) => {
       const roomSnap = await transaction.get(roomRef);
       if (!roomSnap.exists()) return;
 
-      const playersSnap = await transaction.get(playersQuery);
+      const data = roomSnap.data();
+      const currentCount = resolvePlayerCount(data, listedPlayerCount);
       transactionDeletePlayer(transaction, db, roomId, playerId);
 
-      const remaining = playersSnap.docs.filter((d) => d.id !== playerId);
+      const newCount = Math.max(0, currentCount - 1);
 
-      if (remaining.length === 0) {
-        for (let i = 0; i < playersSnap.docs.length; i++) {
-          const docSnap = playersSnap.docs[i];
-          if (docSnap.id !== playerId) {
-            transactionDeletePlayer(transaction, db, roomId, docSnap.id);
-          }
-        }
+      if (newCount === 0) {
         transactionDeleteCouple(transaction, db, roomId);
         transaction.delete(roomRef);
         return;
       }
 
       transaction.update(roomRef, {
+        playerCount: newCount,
         status: 'waiting',
         updatedAt: serverTimestamp(),
       });

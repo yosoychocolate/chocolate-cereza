@@ -15,7 +15,7 @@ import {
   setDoc,
   deleteDoc,
   serverTimestamp,
-} from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js';
+} from './firebase-manager.js';
 
 const ROOMS_COLLECTION = 'rooms';
 const PLAYERS_SUBCOLLECTION = 'players';

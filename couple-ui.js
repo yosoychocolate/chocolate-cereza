@@ -167,6 +167,7 @@ async function onCreateRoom() {
     const result = await CloudManager.createRoom(player);
 
     if (!result.success) {
+      console.error('[CoupleUI] createRoom failed:', result.error, result.message);
       setStatus(result.message || 'No se pudo crear la sala.', true);
       return;
     }
@@ -176,6 +177,8 @@ async function onCreateRoom() {
     await refreshRoomPanel();
     showToast(`Sala ${result.room.code} creada — comparte el código`);
   } catch (err) {
+    console.error('[CoupleUI] createRoom error:', err);
+    if (err instanceof Error) console.error(err.stack);
     setStatus(err instanceof Error ? err.message : String(err), true);
   } finally {
     els.createBtn.disabled = false;
@@ -198,6 +201,7 @@ async function onJoinRoom() {
     const result = await CloudManager.joinRoom(code, player);
 
     if (!result.success) {
+      console.error('[CoupleUI] joinRoom failed:', result.error, result.message);
       setStatus(result.message || 'No se pudo entrar.', true);
       return;
     }
@@ -207,6 +211,8 @@ async function onJoinRoom() {
     await refreshRoomPanel();
     showToast(`Conectado a la sala ${code}`);
   } catch (err) {
+    console.error('[CoupleUI] joinRoom error:', err);
+    if (err instanceof Error) console.error(err.stack);
     setStatus(err instanceof Error ? err.message : String(err), true);
   } finally {
     els.joinBtn.disabled = false;
