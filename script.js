@@ -118,12 +118,18 @@ function initIntro() {
   const meeting = document.getElementById('meeting');
   const main = document.getElementById('main-content');
 
+  document.documentElement.classList.add('intro-lock');
+  window.scrollTo(0, 0);
+
   btnEnter.addEventListener('click', () => {
+    window.scrollTo(0, 0);
     intro.classList.remove('active');
     meeting.classList.add('active');
     playMeetingAnimation(() => {
       meeting.classList.remove('active');
       main.classList.remove('hidden');
+      document.documentElement.classList.remove('intro-lock');
+      window.scrollTo(0, 0);
       initMainSections();
     });
   });
@@ -1378,7 +1384,11 @@ function initGame() {
     if (document.hidden) {
       engine.stop();
     } else if (engine.spritesReady && !gameOver) {
-      engine.forceRestart();
+      if (gamePaused || isGameplayBlocked()) {
+        engine.stop();
+      } else {
+        engine.forceRestart();
+      }
     }
   });
 
@@ -1933,6 +1943,18 @@ function initMainSections() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  if (window.location.hash) {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+  window.scrollTo(0, 0);
+
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      window.scrollTo(0, 0);
+    }
+  });
+
   createAmbientBg();
   createRain();
   initIntro();

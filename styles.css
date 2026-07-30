@@ -135,6 +135,13 @@ p {
   display: none !important;
 }
 
+html.intro-lock,
+html.intro-lock body {
+  overflow: hidden;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
 /* Chuva de pétalas */
 #petal-rain {
   position: fixed;

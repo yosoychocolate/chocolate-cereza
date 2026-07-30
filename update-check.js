@@ -3,6 +3,9 @@
  * version.json é gerado no deploy com o hash do commit.
  */
 (function checkAppVersion() {
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
+
   var STORAGE_KEY = 'ChocolateCerezaAppVersion';
 
   fetch('version.json?_=' + Date.now(), { cache: 'no-store' })

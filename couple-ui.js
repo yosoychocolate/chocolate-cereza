@@ -283,7 +283,7 @@ async function sendChat(text) {
     setStatus('');
   } finally {
     setChatEnabled(true);
-    els.chatInput?.focus();
+    els.chatInput?.focus({ preventScroll: true });
   }
 }
 
