@@ -109,6 +109,9 @@ let currentCoupleStats = null;
 /** @type {Promise<unknown> | null} */
 let restorePromise = null;
 
+/** Incrementado ao limpar sessão — evita restore concluir depois de sair. */
+let restoreGeneration = 0;
+
 const roomListener = createRoomListener(fetchRoom);
 
 roomListener.subscribe((event) => {
@@ -257,12 +260,35 @@ function setLocalRoom(room, playerId) {
 }
 
 function clearLocalRoom() {
+  restoreGeneration += 1;
   stopRoomListener();
   stopPresenceLifecycle();
   currentRoom = null;
   currentPlayerId = null;
   currentCoupleStats = null;
   clearSession();
+}
+
+/**
+ * Remove estado local obsoleto (sessão órfã ou jogador já removido da nuvem).
+ */
+async function reconcileLocalRoomState() {
+  if (!currentRoom && hasSession()) {
+    clearSession();
+    return;
+  }
+
+  if (!currentRoom || !currentPlayerId) return;
+
+  try {
+    const db = requireDb();
+    const exists = await playerExistsInRoom(db, currentRoom.code, currentPlayerId);
+    if (!exists) {
+      clearLocalRoom();
+    }
+  } catch (err) {
+    console.warn('[CloudManager] reconcileLocalRoomState:', err);
+  }
 }
 
 /**
@@ -527,6 +553,7 @@ async function writePlayerCloud(db, roomCode, player) {
 }
 
 export async function restoreSession() {
+  const generation = restoreGeneration;
   const session = getSession();
   if (!session) {
     return fail('NO_SESSION', 'Nenhuma sessão de sala encontrada.');
@@ -541,23 +568,29 @@ export async function restoreSession() {
     const roomSnap = await getDoc(roomDocRef(db, session.roomCode));
     if (!roomSnap.exists()) {
       clearSession();
-      return fail('ROOM_NOT_FOUND', 'A sala não existe mais.');
+      return fail('ROOM_NOT_FOUND', 'La sala ya no existe.');
     }
 
     const exists = await playerExistsInRoom(db, session.roomCode, session.playerId);
     if (!exists) {
       clearSession();
-      return fail('PLAYER_NOT_FOUND', 'Você não está mais nesta sala.');
+      return fail('PLAYER_NOT_FOUND', 'Ya no estás en esta sala.');
     }
 
     const room = await fetchRoom(db, session.roomCode);
     if (!room) {
       clearSession();
-      return fail('ROOM_NOT_FOUND', 'A sala não existe mais.');
+      return fail('ROOM_NOT_FOUND', 'La sala ya no existe.');
+    }
+
+    if (generation !== restoreGeneration) {
+      return fail('RESTORE_CANCELLED', 'Restauración cancelada.');
     }
 
     setLocalRoom(room, session.playerId);
+    persistSession(room, { id: session.playerId, name: session.playerName, joinedAt: session.joinedAt });
     await activateLocalPresence();
+    startRoomListener();
     return { success: true, room: getCurrentRoom(), restored: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -574,11 +607,13 @@ export async function whenSessionReady() {
 export async function createRoom(player) {
   const normalized = normalizePlayer(player);
   if (!normalized) {
-    return fail('INVALID_PLAYER', 'Jogador inválido — informe ao menos um id.');
+    return fail('INVALID_PLAYER', 'Jugador inválido — indica un id.');
   }
 
+  await reconcileLocalRoomState();
+
   if (currentRoom) {
-    return fail('ALREADY_IN_ROOM', 'Você já está em uma sala. Saia antes de criar outra.');
+    return fail('ALREADY_IN_ROOM', 'Ya estás en una sala. Sal antes de crear otra.');
   }
 
   try {
@@ -628,11 +663,28 @@ export async function joinRoom(code, player) {
 
   const roomCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
   if (roomCode.length !== CODE_LENGTH) {
-    return fail('INVALID_CODE', 'Código inválido — use 6 caracteres.');
+    return fail('INVALID_CODE', 'Código inválido — usa 6 caracteres.');
   }
 
+  await reconcileLocalRoomState();
+
   if (currentRoom) {
-    return fail('ALREADY_IN_ROOM', 'Você já está em uma sala. Saia antes de entrar em outra.');
+    if (currentRoom.code === roomCode) {
+      try {
+        const db = requireDb();
+        const room = await fetchRoom(db, roomCode);
+        if (room) {
+          setLocalRoom(room, normalized.id);
+          persistSession(room, normalized);
+          await activateLocalPresence();
+          startRoomListener();
+          return ok(getCurrentRoom());
+        }
+      } catch (err) {
+        console.warn('[CloudManager] joinRoom rejoin:', err);
+      }
+    }
+    return fail('ALREADY_IN_ROOM', 'Ya estás en una sala. Sal antes de entrar en otra.');
   }
 
   try {
@@ -715,6 +767,8 @@ export async function leaveRoom() {
   stopRoomListener();
   stopPresenceLifecycle();
 
+  let cloudError = null;
+
   try {
     const db = requireDb();
     await setPlayerOffline(db, roomId, playerId);
@@ -745,13 +799,18 @@ export async function leaveRoom() {
         updatedAt: serverTimestamp(),
       });
     });
-
-    clearLocalRoom();
-    return { success: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return fail('LEAVE_FAILED', message);
+    cloudError = err instanceof Error ? err : new Error(String(err));
+    console.error('[CloudManager] leaveRoom cloud cleanup:', cloudError);
+  } finally {
+    clearLocalRoom();
   }
+
+  if (cloudError) {
+    return fail('LEAVE_FAILED', cloudError.message);
+  }
+
+  return { success: true };
 }
 
 /**

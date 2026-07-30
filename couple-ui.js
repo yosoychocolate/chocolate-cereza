@@ -222,13 +222,19 @@ async function onJoinRoom() {
 async function onLeaveRoom() {
   els.leaveBtn.disabled = true;
   try {
-    await CloudManager.leaveRoom();
-    showLobby();
-    setStatus('');
+    const result = await CloudManager.leaveRoom();
+
     if (unsubscribeRoom) {
       unsubscribeRoom();
       unsubscribeRoom = null;
     }
+
+    showLobby();
+    setStatus(
+      result.success
+        ? ''
+        : 'Saliste localmente; la sincronización con la nube puede tardar.'
+    );
   } finally {
     els.leaveBtn.disabled = false;
   }
