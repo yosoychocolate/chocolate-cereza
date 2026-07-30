@@ -1109,12 +1109,52 @@ function initGame() {
   }
   engine.buildBackground();
 
+  GameMeta.init({
+    perfLite,
+    initialScore: score,
+    endless: milestones[FINAL_MILESTONE],
+    endlessBonus: milestones[FINAL_MILESTONE] ? Math.max(0, score - FINAL_MILESTONE) : 0,
+    highScoreEl: document.getElementById('game-high-score-val'),
+    statsPanel: document.getElementById('game-stats-panel'),
+    statsToggle: document.getElementById('game-stats-toggle'),
+    achievementsPanel: document.getElementById('game-achievements-panel'),
+    achievementsToggle: document.getElementById('game-achievements-toggle'),
+    achievementsGallery: document.getElementById('game-achievements-gallery'),
+    achProgressFill: document.getElementById('game-ach-progress-fill'),
+    achCount: document.getElementById('game-ach-count'),
+    achPct: document.getElementById('game-ach-pct'),
+    settingsPanel: document.getElementById('game-settings-panel'),
+    settingsToggle: document.getElementById('game-settings-toggle'),
+    sfxToggle: document.getElementById('game-sfx-toggle'),
+    statChocolates: document.getElementById('game-stat-chocolates'),
+    statTime: document.getElementById('game-stat-time'),
+    statStreak: document.getElementById('game-stat-streak'),
+    statStreakCurrent: document.getElementById('game-stat-streak-current'),
+    achievementToast: document.getElementById('game-achievement-toast'),
+    celebrateFx: document.getElementById('game-celebrate-fx'),
+    gameContainer,
+  });
+
+  engine.onActiveTick = (dt) => {
+    if (gameFocusActive && !isGameplayBlocked() && !gameOver) {
+      GameMeta.addPlayTime(dt);
+    }
+  };
+
   engine.onCatch = () => {
     score++;
     engine.setScore(score);
     saveGame(STORAGE.gameScore, score);
     scoreEl.textContent = score;
     updateProgressBar();
+
+    const endless = !!milestones[FINAL_MILESTONE];
+    GameMeta.handleCatch({
+      score,
+      endless,
+      endlessBonus: endless ? score - FINAL_MILESTONE : 0,
+    });
+
     checkMilestones();
     if (engine.quality.level < 2) {
       scoreBox.classList.add('pulse');
@@ -1122,7 +1162,10 @@ function initGame() {
     }
   };
 
-  engine.onMiss = () => loseLife();
+  engine.onMiss = () => {
+    GameMeta.handleMiss();
+    loseLife();
+  };
 
   Promise.all([
     loadSprite('cherry'),
@@ -1186,6 +1229,8 @@ function initGame() {
     resetMeterSession();
     engine.quality.reset();
     engine.setScore(0);
+    GameMeta.resetSessionStreak();
+    GameMeta.renderStats();
     syncEngineBlocked();
     engine.forceRestart();
   }
@@ -1305,6 +1350,8 @@ function initGame() {
     continueBtn?.classList.remove('hidden');
     milestoneEl.classList.add('cinematic');
     milestoneEl.classList.remove('hidden');
+    GameMeta.sounds.playMilestone();
+    GameMeta.celebrate('milestone');
     engine.forceRestart();
   }
 
@@ -1317,6 +1364,8 @@ function initGame() {
       lastToastScore = score;
       const msgIndex = (score / MILESTONE_INTERVAL - 1) % TOAST_MESSAGES.length;
       showToast(TOAST_MESSAGES[msgIndex]);
+      GameMeta.sounds.playMilestone();
+      GameMeta.celebrate('milestone');
       return;
     }
     if (announce && milestones[FINAL_MILESTONE] && score > FINAL_MILESTONE && score % ENDLESS_INTERVAL === 0 && score !== lastEndlessToastScore) {
@@ -1324,6 +1373,8 @@ function initGame() {
       const msgIndex = (score / ENDLESS_INTERVAL - 1) % ENDLESS_MESSAGES.length;
       const bonus = score - FINAL_MILESTONE;
       showReadableToast(ENDLESS_MESSAGES[msgIndex], `Modo Infinito · ${bonus} chocolates extra ✨`);
+      GameMeta.sounds.playMilestone();
+      GameMeta.celebrate('milestone');
     }
   }
 

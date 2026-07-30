@@ -345,6 +345,7 @@
       this._score = 0;
       this.onCatch = null;
       this.onMiss = null;
+      this.onActiveTick = null;
     }
 
     get W() { return this.layers.W; }
@@ -455,13 +456,14 @@
       const max = this.perf.maxChocolates;
       if (this.chocoPool.active.length >= max) return;
       const c = this.chocoPool.get();
+      const df = this._difficultyFactor(this._score);
       c.active = true;
       c.visible = true;
       c.x = 28 + Math.random() * (this.layers.W - 56);
       c.y = -50;
-      c.speed = 1.4 + Math.random() * 3.2;
+      c.speed = (1.4 + Math.random() * 3.2) * df;
       c.rot = Math.random() * Math.PI * 2;
-      c.rotSpeed = 0.012 + Math.random() * 0.028;
+      c.rotSpeed = (0.012 + Math.random() * 0.028) * Math.min(df, 1.35);
       c.size = this.SPRITE_H * (0.88 + Math.random() * 0.18);
       c.wobble = Math.random() * Math.PI * 2;
       c.alpha = 1;
@@ -569,8 +571,9 @@
       }
 
       const score = this._score;
+      const df = this._difficultyFactor(score);
       const baseRate = score > 75 ? 780 : score > 50 ? 880 : 920;
-      const spawnRate = baseRate / this.quality.spawnMul;
+      const spawnRate = baseRate / (this.quality.spawnMul * df);
       if (time >= this.spawnGraceUntil && time - this.lastSpawn > spawnRate) {
         this.spawnChocolate();
         this.lastSpawn = time;
@@ -834,6 +837,7 @@
       this.lastTime = time;
       this.update(time, dt);
       this.render(time);
+      if (!this._blocked && this.onActiveTick) this.onActiveTick(dt);
       this.animId = requestAnimationFrame((t) => this.frame(t));
     }
 
@@ -860,6 +864,10 @@
     }
 
     setScore(v) { this._score = v; }
+
+    _difficultyFactor(score) {
+      return Math.min(1.75, 1 + score * 0.0035);
+    }
   }
 
   global.MiniGameEngine = MiniGameEngine;
