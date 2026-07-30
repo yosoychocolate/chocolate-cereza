@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=30">
+  <link rel="stylesheet" href="styles.css?v=31">
 </head>
 <body>
   <!-- Chuva de pétalas e corações -->
@@ -156,6 +156,53 @@
     <section class="section glass" id="section-game">
       <h2>Mini Game</h2>
       <p class="game-hint">Controla la cereza con ← → , el mouse o tocando la pantalla</p>
+      <div class="game-meta-wrap">
+        <div class="game-meta-bar">
+          <button id="game-stats-toggle" class="game-meta-btn" type="button" aria-expanded="false" aria-controls="game-stats-panel">
+            <span class="meta-label-full">📊 Estadísticas</span>
+            <span class="meta-label-short">📊 Stats</span>
+          </button>
+          <button id="game-achievements-toggle" class="game-meta-btn" type="button" aria-expanded="false" aria-controls="game-achievements-panel">
+            <span class="meta-label-full">🏆 Galería de Logros</span>
+            <span class="meta-label-short">🏆 Logros</span>
+          </button>
+          <button id="game-settings-toggle" class="game-meta-btn" type="button" aria-expanded="false" aria-controls="game-settings-panel">
+            <span class="meta-label-full">⚙️ Ajustes</span>
+            <span class="meta-label-short">⚙️ Ajustes</span>
+          </button>
+        </div>
+        <div id="game-meta-backdrop" class="game-meta-backdrop hidden" aria-hidden="true"></div>
+        <div id="game-stats-panel" class="game-meta-panel hidden" role="region" aria-label="Estadísticas del juego">
+          <h3 class="game-meta-panel-title">📊 Estadísticas</h3>
+          <div class="game-stats-grid">
+            <div class="game-stat"><span class="game-stat-label">Chocolates</span><span id="game-stat-chocolates" class="game-stat-val">0</span></div>
+            <div class="game-stat"><span class="game-stat-label">Tiempo</span><span id="game-stat-time" class="game-stat-val">0s</span></div>
+            <div class="game-stat"><span class="game-stat-label">Racha máx.</span><span id="game-stat-streak" class="game-stat-val">0</span></div>
+            <div class="game-stat"><span class="game-stat-label">Racha actual</span><span id="game-stat-streak-current" class="game-stat-val">0</span></div>
+          </div>
+        </div>
+        <div id="game-achievements-panel" class="game-meta-panel hidden" role="region" aria-label="Galería de logros">
+          <div class="game-ach-progress">
+            <h3 class="game-meta-panel-title">🏆 Galería de Logros</h3>
+            <div class="game-ach-progress-track" aria-hidden="true">
+              <div id="game-ach-progress-fill" class="game-ach-progress-fill"></div>
+            </div>
+            <p class="game-ach-progress-meta">
+              <span id="game-ach-count">0 / 4 desbloqueados</span>
+              <span class="game-ach-progress-sep">·</span>
+              <span id="game-ach-pct">0%</span>
+            </p>
+          </div>
+          <ul id="game-achievements-gallery" class="game-achievements-gallery"></ul>
+        </div>
+        <div id="game-settings-panel" class="game-meta-panel hidden" role="region" aria-label="Ajustes del juego">
+          <h3 class="game-meta-panel-title">⚙️ Ajustes</h3>
+          <label class="game-setting-row">
+            <span class="game-setting-label">Efectos de sonido</span>
+            <input id="game-sfx-toggle" class="game-setting-toggle" type="checkbox" checked>
+          </label>
+        </div>
+      </div>
       <div id="game-container">
         <div id="game-canvas-stack" class="game-canvas-stack">
           <canvas id="game-canvas-bg" class="game-layer-canvas"></canvas>
@@ -219,49 +266,6 @@
           </div>
         </div>
       </div>
-      <div class="game-meta-wrap">
-        <div class="game-meta-bar">
-          <button id="game-stats-toggle" class="game-meta-btn" type="button" aria-expanded="false" aria-controls="game-stats-panel">
-            📊 Estadísticas
-          </button>
-          <button id="game-achievements-toggle" class="game-meta-btn" type="button" aria-expanded="false" aria-controls="game-achievements-panel">
-            🏆 Galería de Logros
-          </button>
-          <button id="game-settings-toggle" class="game-meta-btn" type="button" aria-expanded="false" aria-controls="game-settings-panel">
-            ⚙️ Ajustes
-          </button>
-        </div>
-        <div id="game-stats-panel" class="game-meta-panel hidden" role="region" aria-label="Estadísticas del juego">
-          <h3 class="game-meta-panel-title">📊 Estadísticas</h3>
-          <div class="game-stats-grid">
-            <div class="game-stat"><span class="game-stat-label">Chocolates</span><span id="game-stat-chocolates" class="game-stat-val">0</span></div>
-            <div class="game-stat"><span class="game-stat-label">Tiempo</span><span id="game-stat-time" class="game-stat-val">0s</span></div>
-            <div class="game-stat"><span class="game-stat-label">Racha máx.</span><span id="game-stat-streak" class="game-stat-val">0</span></div>
-            <div class="game-stat"><span class="game-stat-label">Racha actual</span><span id="game-stat-streak-current" class="game-stat-val">0</span></div>
-          </div>
-        </div>
-        <div id="game-achievements-panel" class="game-meta-panel hidden" role="region" aria-label="Galería de logros">
-          <div class="game-ach-progress">
-            <h3 class="game-meta-panel-title">🏆 Galería de Logros</h3>
-            <div class="game-ach-progress-track" aria-hidden="true">
-              <div id="game-ach-progress-fill" class="game-ach-progress-fill"></div>
-            </div>
-            <p class="game-ach-progress-meta">
-              <span id="game-ach-count">0 / 4 desbloqueados</span>
-              <span class="game-ach-progress-sep">·</span>
-              <span id="game-ach-pct">0%</span>
-            </p>
-          </div>
-          <ul id="game-achievements-gallery" class="game-achievements-gallery"></ul>
-        </div>
-        <div id="game-settings-panel" class="game-meta-panel hidden" role="region" aria-label="Ajustes del juego">
-          <h3 class="game-meta-panel-title">⚙️ Ajustes</h3>
-          <label class="game-setting-row">
-            <span class="game-setting-label">Efectos de sonido</span>
-            <input id="game-sfx-toggle" class="game-setting-toggle" type="checkbox" checked>
-          </label>
-        </div>
-      </div>
     </section>
 
     <!-- Carta -->
@@ -323,9 +327,9 @@
     </button>
   </div>
 
-  <script src="game-audit.js?v=30"></script>
-  <script src="game-engine.js?v=30"></script>
-  <script src="game-meta.js?v=30"></script>
-  <script src="script.js?v=30"></script>
+  <script src="game-audit.js?v=31"></script>
+  <script src="game-engine.js?v=31"></script>
+  <script src="game-meta.js?v=31"></script>
+  <script src="script.js?v=31"></script>
 </body>
 </html>

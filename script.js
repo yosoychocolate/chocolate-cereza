@@ -714,7 +714,7 @@ function initGame() {
   const TOAST_READ_SECONDS = 8;
 
   const perfLite = isMobileView();
-  const CHERRY_BOTTOM_NORM = perfLite ? 112 : 58;
+  const CHERRY_BOTTOM_NORM = perfLite ? 68 : 58;
   const SPRITE_NORM = perfLite ? 70 : 85;
 
   const PERF = {
@@ -761,7 +761,8 @@ function initGame() {
     if (!gameContainer) return;
     invalidateGameLayoutCache();
     const newW = Math.max(280, Math.min(gameContainer.clientWidth, 900));
-    const newH = Math.round(newW * (400 / 360));
+    const aspect = perfLite ? (330 / 360) : (400 / 360);
+    const newH = Math.round(newW * aspect);
     const dpr = Math.min(window.devicePixelRatio || 1, PERF.dprCap);
     engine.resize(newW, newH, dpr);
     for (let i = 0; i < engine.bgStars.length; i++) {

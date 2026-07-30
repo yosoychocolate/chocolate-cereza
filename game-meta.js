@@ -165,6 +165,7 @@
     perfLite: false,
     _openPanelId: null,
     _justUnlockedIds: [],
+    _isMobileUI: false,
 
     init(options) {
       this.els = options || {};
@@ -208,6 +209,25 @@
       this.syncSettingsUI();
       this.bindPanelToggles();
       this.bindSettings();
+      this._isMobileUI = window.matchMedia('(max-width: 768px)').matches;
+      this.els.metaBackdrop = document.getElementById('game-meta-backdrop');
+      this.els.metaBackdrop?.addEventListener('click', () => {
+        if (this._openPanelId) this.closePanel(this._openPanelId);
+      });
+    },
+
+    _syncSheetOverlay() {
+      const mobile = window.matchMedia('(max-width: 768px)').matches;
+      const backdrop = this.els.metaBackdrop;
+      if (mobile && this._openPanelId) {
+        document.body.classList.add('game-meta-sheet-open');
+        backdrop?.classList.remove('hidden');
+        backdrop?.setAttribute('aria-hidden', 'false');
+      } else {
+        document.body.classList.remove('game-meta-sheet-open');
+        backdrop?.classList.add('hidden');
+        backdrop?.setAttribute('aria-hidden', 'true');
+      }
     },
 
     isUnlocked(id) {
@@ -258,6 +278,7 @@
         this.renderAchievementProgress();
       }
       if (id === 'stats') this.renderStats();
+      this._syncSheetOverlay();
     },
 
     closePanel(id, clearActive = true) {
@@ -271,7 +292,10 @@
           entry.panel.classList.add('hidden');
         }
       }, 200);
-      if (clearActive && this._openPanelId === id) this._openPanelId = null;
+      if (clearActive && this._openPanelId === id) {
+        this._openPanelId = null;
+        this._syncSheetOverlay();
+      }
     },
 
     bindSettings() {
@@ -453,9 +477,13 @@
       if (this.els.achProgressFill) {
         this.els.achProgressFill.style.width = `${pct}%`;
       }
-      if (this.els.achievementsToggle) {
-        const badge = unlocked > 0 ? ` (${unlocked}/${total})` : '';
-        this.els.achievementsToggle.textContent = `🏆 Galería de Logros${badge}`;
+      const countLabel = `${unlocked}/${total}`;
+      const btn = this.els.achievementsToggle;
+      if (btn) {
+        const full = btn.querySelector('.meta-label-full');
+        const short = btn.querySelector('.meta-label-short');
+        if (full) full.textContent = unlocked > 0 ? `🏆 Galería de Logros (${countLabel})` : '🏆 Galería de Logros';
+        if (short) short.textContent = unlocked > 0 ? `🏆 Logros (${countLabel})` : '🏆 Logros';
       }
     },
 
