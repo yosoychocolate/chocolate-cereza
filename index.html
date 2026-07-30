@@ -296,6 +296,7 @@
         <div id="game-score" class="game-score">
           <span class="game-score-label" aria-hidden="true">🍫</span>
           <span class="game-score-num">0</span>
+          <span id="game-shield-badge" class="game-shield-badge hidden" aria-label="Escudo activo" title="Escudo — protege 1 chocolate perdido">🛡️</span>
           <span class="game-record-inline" aria-label="Récord">🏆 <span id="game-high-score-val">0</span></span>
           <span id="game-endless-badge" class="game-endless-badge hidden">✨ Modo Infinito</span>
         </div>
@@ -308,6 +309,11 @@
           <p id="game-milestone-sub" class="game-milestone-sub hidden"></p>
           <p id="game-toast-timer" class="game-toast-timer hidden" aria-live="polite"></p>
           <button id="game-toast-dismiss" class="game-toast-dismiss hidden" type="button">▶ Continuar</button>
+        </div>
+        <div id="game-love-word-popup" class="game-love-word-popup hidden" aria-hidden="true" role="status">
+          <span id="game-love-word-emoji" class="game-love-word-emoji" aria-hidden="true">💖</span>
+          <p id="game-love-word-text" class="game-love-word-text"></p>
+          <p id="game-love-word-reward" class="game-love-word-reward"></p>
         </div>
         <div id="game-pause-screen" class="game-pause-screen hidden" aria-hidden="true">
           <p>⏸ Pausado</p>
@@ -417,6 +423,7 @@
   <script src="update-check.js?v=__APP_VERSION__"></script>
   <script src="save-manager.js?v=__APP_VERSION__"></script>
   <script src="game-audit.js?v=__APP_VERSION__"></script>
+  <script src="love-words.js?v=__APP_VERSION__"></script>
   <script src="game-engine.js?v=__APP_VERSION__"></script>
   <script src="game-meta.js?v=__APP_VERSION__"></script>
   <script src="script.js?v=__APP_VERSION__"></script>

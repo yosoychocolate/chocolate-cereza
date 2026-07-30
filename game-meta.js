@@ -165,6 +165,13 @@
     playRecord() {
       this._tone(523, 784, 0.22, 0.1, 'triangle');
     }
+
+    playLoveUltra() {
+      this._tone(392, 523, 0.18, 0.1, 'sine');
+      setTimeout(() => this._tone(523, 659, 0.2, 0.09, 'triangle'), 110);
+      setTimeout(() => this._tone(659, 880, 0.28, 0.08, 'sine'), 240);
+      setTimeout(() => this._tone(880, 1046, 0.32, 0.07, 'triangle'), 380);
+    }
   }
 
   function formatPlayTime(ms) {
@@ -609,25 +616,29 @@
       const fx = this.els.celebrateFx;
       if (!fx || this.perfLite && kind === 'catch') return;
 
-      const icons = kind === 'record'
+      const icons = kind === 'love'
+        ? ['❤️', '💕', '💖', '💗', '🩷', '✨', '💓', '🌸']
+        : kind === 'record'
         ? ['🏆', '✨', '⭐', '🍫', '💫']
         : kind === 'achievement'
           ? ['🎖️', '✨', '💖', '⭐']
           : ['🎉', '✨', '🍫', '⭐', '💕'];
 
-      const count = this.perfLite ? 3 : Math.min(5, icons.length);
+      const count = kind === 'love'
+        ? (this.perfLite ? 8 : 14)
+        : this.perfLite ? 3 : Math.min(5, icons.length);
       for (let i = 0; i < count; i++) {
         const el = document.createElement('span');
         el.className = 'game-celebrate-particle';
         el.textContent = icons[i % icons.length];
-        el.style.left = `${20 + Math.random() * 60}%`;
-        el.style.top = `${25 + Math.random() * 40}%`;
-        el.style.animationDelay = `${i * 0.06}s`;
+        el.style.left = `${15 + Math.random() * 70}%`;
+        el.style.top = `${15 + Math.random() * 55}%`;
+        el.style.animationDelay = `${i * 0.05}s`;
         fx.appendChild(el);
-        setTimeout(() => el.remove(), 900);
+        setTimeout(() => el.remove(), kind === 'love' ? 1200 : 900);
       }
 
-      while (fx.children.length > 8) fx.firstChild?.remove();
+      while (fx.children.length > (kind === 'love' ? 16 : 8)) fx.firstChild?.remove();
     },
 
     handleCatch(partial) {

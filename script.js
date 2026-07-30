@@ -709,6 +709,7 @@ function initGame() {
   const pauseLabel = pauseBtn?.querySelector('.game-pause-label');
   const livesEl = document.getElementById('game-lives');
   const livesHeartsEl = document.getElementById('game-lives-hearts');
+  const shieldBadge = document.getElementById('game-shield-badge');
   const gameOverScreen = document.getElementById('game-over-screen');
   const gameOverRestartBtn = document.getElementById('game-over-restart');
   const touchFx = document.getElementById('game-touch-fx');
@@ -718,10 +719,19 @@ function initGame() {
   const progressInfinity = document.getElementById('game-progress-infinity');
   const toastDismissBtn = document.getElementById('game-toast-dismiss');
   const toastTimerEl = document.getElementById('game-toast-timer');
+  const loveWordPopup = document.getElementById('game-love-word-popup');
+  const loveWordEmoji = document.getElementById('game-love-word-emoji');
+  const loveWordText = document.getElementById('game-love-word-text');
+  const loveWordReward = document.getElementById('game-love-word-reward');
   let lastTouchHeartAt = 0;
   let lastEndlessToastScore = 0;
   let endlessRewardTimer = null;
   let messagePause = false;
+  let loveWordPause = false;
+  let loveWordPauseTimer = null;
+  let goldenSlowTimer = null;
+  let loveWordState = LoveWords?.normalizeState?.(SaveManager.getSave().stats?.loveWords)
+    || { lastSpawnAt: 0, gamesSinceSpecial: 0, lastEasterGame: 0, pendingMemories: [], memoriesShown: [], totalCaught: 0 };
   let endlessIntroPause = false;
   let toastCountdownTimer = null;
   let toastCountdownInterval = null;
@@ -734,6 +744,7 @@ function initGame() {
 
   const PERF = {
     maxChocolates: perfLite ? 5 : 7,
+    maxLoveWords: 1,
     maxParticles: perfLite ? 8 : 12,
     maxEffects: perfLite ? 3 : 5,
     maxHeartRain: perfLite ? 4 : 6,
@@ -812,6 +823,19 @@ function initGame() {
     gamePaused = false;
     gameOver = false;
     messagePause = false;
+    loveWordPause = false;
+    if (loveWordPauseTimer) {
+      clearTimeout(loveWordPauseTimer);
+      loveWordPauseTimer = null;
+    }
+    if (goldenSlowTimer) {
+      clearTimeout(goldenSlowTimer);
+      goldenSlowTimer = null;
+    }
+    engine.missShield = false;
+    engine.fallSpeedMul = 1;
+    syncShieldHud(false);
+    hideLoveWordPopup(true);
     endlessIntroPause = false;
     engine.heartRainActive = false;
     engine.camZoom = 1;
@@ -899,6 +923,58 @@ function initGame() {
     return gameLayoutCache.gameContainer;
   }
 
+  function saveLoveWordState() {
+    SaveManager.updateSection('stats', { loveWords: { ...loveWordState } });
+  }
+
+  function isCoupleOnline() {
+    const room = window.CloudManager?.getCurrentRoom?.();
+    if (!room?.players?.length || room.players.length < 2) return false;
+    const online = room.players.filter((p) => p.presence?.online === true).length;
+    return online >= 2;
+  }
+
+  function loveWordPauseDuration(word) {
+    if (word?.pauseMs) return word.pauseMs;
+    if (word?.kind === 'letter' || word?.kind === 'memory') return 2000;
+    if (word?.kind === 'easter') return 1000;
+    if (word?.kind === 'ultra' || word?.kind === 'crown') return 1200;
+    return 800;
+  }
+
+  function syncShieldHud(animate = false) {
+    if (!shieldBadge) return;
+    const active = !!engine.missShield;
+    shieldBadge.classList.toggle('hidden', !active);
+    shieldBadge.setAttribute('aria-hidden', active ? 'false' : 'true');
+    if (animate && active) {
+      shieldBadge.classList.remove('shield-pop');
+      void shieldBadge.offsetWidth;
+      shieldBadge.classList.add('shield-pop');
+    }
+  }
+
+  function flashShieldUsed() {
+    if (!shieldBadge) return;
+    shieldBadge.classList.add('shield-used');
+    scoreBox?.classList.add('shield-save-flash');
+    livesEl?.classList.add('shield-save-flash');
+    engine.glowPower = 0.85;
+    GameMeta.sounds.playCatch?.();
+    setTimeout(() => {
+      shieldBadge?.classList.remove('shield-used', 'shield-pop');
+      scoreBox?.classList.remove('shield-save-flash');
+      livesEl?.classList.remove('shield-save-flash');
+    }, 650);
+    syncShieldHud(false);
+  }
+
+  function grantShield(animate = true) {
+    engine.missShield = true;
+    syncShieldHud(animate);
+    engine.markAllDirty();
+  }
+
   function buildProgressMarkers() {
     if (!progressMarkers) return;
     progressMarkers.innerHTML = '';
@@ -918,7 +994,141 @@ function initGame() {
   }
 
   function isGameplayBlocked() {
-    return milestonePause || gamePaused || gameOver || messagePause || endlessIntroPause;
+    return milestonePause || gamePaused || gameOver || messagePause || endlessIntroPause || loveWordPause;
+  }
+
+  function hideLoveWordPopup(instant = false) {
+    if (!loveWordPopup) return;
+    loveWordPopup.classList.remove('visible', 'is-easter', 'is-memory', 'is-ultra');
+    if (instant) {
+      loveWordPopup.classList.add('hidden');
+      loveWordPopup.setAttribute('aria-hidden', 'true');
+      return;
+    }
+    setTimeout(() => {
+      if (!loveWordPause) {
+        loveWordPopup.classList.add('hidden');
+        loveWordPopup.setAttribute('aria-hidden', 'true');
+      }
+    }, 220);
+  }
+
+  function applyLoveWordReward(word) {
+    let reward = word.reward;
+
+    if (word.kind === 'gift' && window.LoveWords?.rollGiftReward) {
+      reward = LoveWords.rollGiftReward();
+      word.reward = reward;
+      if (loveWordReward) {
+        loveWordReward.textContent = reward.label || LoveWords.rewardLabel(reward);
+      }
+    }
+
+    if (!reward) return;
+
+    if (reward.type === 'points' || reward.type === 'message') {
+      score += reward.value;
+      engine.setScore(score);
+      saveGameSession({ score });
+      scoreEl.textContent = score;
+      updateProgressBar();
+      checkMilestones(false);
+    } else if (reward.type === 'life') {
+      if (milestones[FINAL_MILESTONE] && lives < MAX_LIVES) {
+        lives++;
+        saveGameSession({ lives });
+        updateLivesDisplay();
+      } else {
+        grantShield(false);
+      }
+    } else if (reward.type === 'shield') {
+      grantShield(false);
+    }
+
+    if (word.kind === 'golden') {
+      grantShield(false);
+      engine.fallSpeedMul = 0.55;
+      engine.glowPower = 1;
+      engine.camZoomTarget = 1.02;
+      if (goldenSlowTimer) clearTimeout(goldenSlowTimer);
+      goldenSlowTimer = setTimeout(() => {
+        engine.fallSpeedMul = 1;
+        engine.camZoomTarget = 1;
+        goldenSlowTimer = null;
+      }, 4000);
+    }
+
+    if (word.fx === 'love') {
+      GameMeta.celebrate('love');
+    } else if (word.fx === 'milestone') {
+      GameMeta.celebrate('milestone');
+    }
+
+    if (word.sound === 'ultra') {
+      GameMeta.sounds.playLoveUltra?.();
+    } else {
+      GameMeta.sounds.playCatch?.();
+    }
+
+    if (word.kind === 'ultra' || word.kind === 'crown') {
+      engine.glowPower = 1;
+    }
+
+    if (engine.missShield) syncShieldHud(true);
+
+    LoveWords.onCaught?.(word, loveWordState, GameMeta.stats.gamesPlayed || 0);
+    saveLoveWordState();
+  }
+
+  function showLoveWordPopup(word) {
+    if (!loveWordPopup || loveWordPause) return;
+    loveWordPause = true;
+    syncEngineBlocked();
+    updatePauseButtonState();
+
+    const emojiMap = {
+      golden: '❤️',
+      ultra: '✨',
+      crown: '👑',
+      letter: '💌',
+      gift: '🎁',
+      teddy: '🧸',
+      couple: '💕',
+      easter: '💖',
+      memory: '❤️',
+      word: '💖',
+    };
+    if (loveWordEmoji) {
+      loveWordEmoji.textContent = emojiMap[word.kind] || '💖';
+    }
+    if (loveWordText) {
+      loveWordText.textContent = word.popupText || word.display || word.text;
+    }
+    if (loveWordReward) {
+      loveWordReward.textContent = word.rewardLabel
+        || (window.LoveWords?.rewardLabel?.(word.reward) ?? '');
+    }
+
+    loveWordPopup.classList.toggle('is-easter', word.kind === 'easter');
+    loveWordPopup.classList.toggle('is-memory', word.kind === 'memory');
+    loveWordPopup.classList.toggle('is-ultra', word.kind === 'ultra' || word.kind === 'crown');
+
+    loveWordPopup.classList.remove('hidden');
+    loveWordPopup.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => loveWordPopup.classList.add('visible'));
+
+    applyLoveWordReward(word);
+
+    const duration = loveWordPauseDuration(word);
+    if (loveWordPauseTimer) clearTimeout(loveWordPauseTimer);
+    loveWordPauseTimer = setTimeout(() => {
+      loveWordPause = false;
+      loveWordPauseTimer = null;
+      hideLoveWordPopup();
+      syncEngineBlocked();
+      updatePauseButtonState();
+      engine.markAllDirty();
+    }, duration);
   }
 
   function updateProgressBar() {
@@ -1075,6 +1285,8 @@ function initGame() {
     gameOverScreen?.classList.remove('hidden');
     gameOverScreen?.setAttribute('aria-hidden', 'false');
     GameMeta.onGameOver(score);
+    LoveWords.onGameOver?.(GameMeta.stats.gamesPlayed || 0, loveWordState);
+    saveLoveWordState();
     submitOnlineScore(score);
   }
 
@@ -1098,13 +1310,13 @@ function initGame() {
 
   function updatePauseButtonState() {
     if (!pauseBtn) return;
-    const locked = milestonePause || gameOver || messagePause || endlessIntroPause;
+    const locked = milestonePause || gameOver || messagePause || endlessIntroPause || loveWordPause;
     pauseBtn.disabled = locked;
     pauseBtn.classList.toggle('hidden', locked);
   }
 
   function setPaused(paused, options = {}) {
-    if (milestonePause || gameOver || messagePause || endlessIntroPause) return;
+    if (milestonePause || gameOver || messagePause || endlessIntroPause || loveWordPause) return;
     gamePaused = paused;
     pauseBtn?.classList.toggle('is-paused', paused);
     if (pauseIcon) pauseIcon.textContent = paused ? '▶' : '⏸';
@@ -1118,7 +1330,7 @@ function initGame() {
   }
 
   function togglePause() {
-    if (milestonePause || gameOver || messagePause || endlessIntroPause) return;
+    if (milestonePause || gameOver || messagePause || endlessIntroPause || loveWordPause) return;
     setPaused(!gamePaused);
   }
 
@@ -1170,6 +1382,9 @@ function initGame() {
     gameContainer,
   });
 
+  LoveWords.checkMemoryUnlocks?.(GameMeta.stats.gamesPlayed || 0, loveWordState);
+  saveLoveWordState();
+
   window.addEventListener('gamemeta:panel-change', (event) => {
     const open = !!event.detail?.open;
     if (open) {
@@ -1190,6 +1405,22 @@ function initGame() {
     if (gameFocusActive && !isGameplayBlocked() && !gameOver) {
       GameMeta.addPlayTime(dt);
     }
+  };
+
+  engine.loveWordProvider = (time) => {
+    if (!window.LoveWords?.pick) return null;
+    const entry = LoveWords.pick({
+      now: time,
+      state: loveWordState,
+      gamesPlayed: GameMeta.stats.gamesPlayed || 0,
+      inCoupleRoom: isCoupleOnline(),
+    });
+    if (entry) saveLoveWordState();
+    return entry;
+  };
+
+  engine.onCatchLoveWord = (word) => {
+    showLoveWordPopup(word);
   };
 
   engine.onCatch = () => {
@@ -1215,6 +1446,12 @@ function initGame() {
   };
 
   engine.onMiss = () => {
+    const shieldUseful = milestones[FINAL_MILESTONE] && lives > 0 && !gameOver;
+    if (engine.missShield && shieldUseful) {
+      engine.missShield = false;
+      flashShieldUsed();
+      return;
+    }
     GameMeta.handleMiss();
     loseLife();
   };
@@ -1269,6 +1506,13 @@ function initGame() {
     lastEndlessToastScore = 0;
     engine.clearEntities();
     engine.glowPower = 0;
+    engine.missShield = false;
+    engine.fallSpeedMul = 1;
+    engine.camZoomTarget = 1;
+    engine.lastLoveSpawn = 0;
+    syncShieldHud(false);
+    hideLoveWordPopup(true);
+    loveWordPause = false;
     engine.spawnGraceUntil = 0;
     engine.cherry.x = engine.layers.W / 2;
     engine.mouseX = engine.layers.W / 2;

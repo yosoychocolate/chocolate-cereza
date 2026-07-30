@@ -292,6 +292,30 @@
     h.x = 0; h.y = 0; h.speed = 0; h.size = 0; h.opacity = 0; h.wobble = 0; h.active = false;
   }
 
+  function loveWordFactory() {
+    return {
+      kind: 'word',
+      x: 0, y: 0, speed: 0, wobble: 0, alpha: 1,
+      text: '', display: '', popupText: '',
+      reward: null, rewardLabel: '',
+      pauseMs: 0, fx: null, sound: null, isSpecial: false,
+      fontSize: 14, hitW: 40, hitH: 22,
+      collecting: false, collectStart: 0,
+      active: false, visible: false,
+    };
+  }
+
+  function resetLoveWord(w) {
+    w.kind = 'word';
+    w.x = 0; w.y = 0; w.speed = 0; w.wobble = 0; w.alpha = 1;
+    w.text = ''; w.display = ''; w.popupText = '';
+    w.reward = null; w.rewardLabel = '';
+    w.pauseMs = 0; w.fx = null; w.sound = null; w.isSpecial = false;
+    w.fontSize = 14; w.hitW = 40; w.hitH = 22;
+    w.collecting = false; w.collectStart = 0;
+    w.active = false; w.visible = false;
+  }
+
   /* ── Game Engine ── */
   class MiniGameEngine {
     constructor(options) {
@@ -307,6 +331,7 @@
       this.spatial = new SpatialHash(64);
 
       this.chocoPool = new ObjectPool(chocolateFactory, resetChocolate, 12);
+      this.loveWordPool = new ObjectPool(loveWordFactory, resetLoveWord, 4);
       this.particlePool = new ObjectPool(particleFactory, resetParticle, 24);
       this.effectPool = new ObjectPool(effectFactory, resetEffect, 10);
       this.heartPool = new ObjectPool(heartRainFactory, resetHeartRain, 10);
@@ -316,6 +341,8 @@
       this.keys = {};
       this.SPRITE_H = 85;
       this.glowPower = 0;
+      this.missShield = false;
+      this.fallSpeedMul = 1;
       this.heartRainActive = false;
       this.camZoom = 1;
       this.camZoomTarget = 1;
@@ -328,6 +355,8 @@
       this.animId = 0;
       this.lastTime = 0;
       this.lastSpawn = 0;
+      this.lastLoveSpawn = 0;
+      this.loveSpawnInterval = 11000;
       this.spawnGraceUntil = 0;
       this.spritesReady = false;
 
@@ -344,8 +373,10 @@
       this._blocked = false;
       this._score = 0;
       this.onCatch = null;
+      this.onCatchLoveWord = null;
       this.onMiss = null;
       this.onActiveTick = null;
+      this.loveWordProvider = null;
     }
 
     get W() { return this.layers.W; }
@@ -405,6 +436,14 @@
           c.y *= sy;
           c.size *= sy;
         }
+        const words = this.loveWordPool.active;
+        for (let i = 0; i < words.length; i++) {
+          words[i].x *= sx;
+          words[i].y *= sy;
+          words[i].fontSize *= sy;
+          words[i].hitW *= sx;
+          words[i].hitH *= sy;
+        }
         for (let i = 0; i < this.bgStars.length; i++) {
           this.bgStars[i].x *= sx;
           this.bgStars[i].y *= sy;
@@ -446,6 +485,7 @@
 
     clearEntities() {
       this.chocoPool.releaseAll();
+      this.loveWordPool.releaseAll();
       this.particlePool.releaseAll();
       this.effectPool.releaseAll();
       this.heartPool.releaseAll();
@@ -469,6 +509,73 @@
       c.alpha = 1;
       c.collecting = false;
       this.dirty.game = true;
+    }
+
+    spawnLoveWord(entry) {
+      const max = this.perf.maxLoveWords || 1;
+      if (this.loveWordPool.active.length >= max || !entry) return;
+      const w = this.loveWordPool.get();
+      const W = this.layers.W;
+      w.active = true;
+      w.visible = true;
+      w.kind = entry.kind || 'word';
+      w.text = entry.text || '';
+      w.display = entry.display || entry.text || '❤️';
+      w.popupText = entry.popupText || w.display;
+      w.reward = entry.reward || { type: 'points', value: 50 };
+      w.rewardLabel = entry.rewardLabel || '';
+      w.pauseMs = entry.pauseMs || 0;
+      w.fx = entry.fx || null;
+      w.sound = entry.sound || null;
+      w.isSpecial = !!entry.isSpecial;
+      w.x = 40 + Math.random() * (W - 80);
+      w.y = -40;
+      w.speed = 0.75 + Math.random() * 0.55;
+      w.wobble = Math.random() * Math.PI * 2;
+      w.alpha = 1;
+      w.collecting = false;
+      w.fontSize = w.kind === 'word'
+        ? Math.max(11, Math.min(15, W * 0.034))
+        : Math.max(18, Math.min(28, W * 0.058));
+      w.hitW = w.kind === 'word'
+        ? Math.min(W * 0.42, Math.max(56, w.display.length * w.fontSize * 0.38))
+        : w.fontSize * 1.35;
+      w.hitH = w.fontSize * 1.45;
+      this.dirty.game = true;
+    }
+
+    _trySpawnLoveWord(time) {
+      if (!this.loveWordProvider || time < this.spawnGraceUntil) return;
+      if (time - this.lastLoveSpawn < this.loveSpawnInterval) return;
+      const entry = this.loveWordProvider(time);
+      if (entry) {
+        this.spawnLoveWord(entry);
+        this.lastLoveSpawn = time;
+      }
+    }
+
+    spawnLoveCatchEffects(x, y) {
+      this.glowPower = 0.85;
+      this.dirty.fx = true;
+      const maxPt = Math.floor(this.perf.maxParticles * this.quality.particles);
+      const dots = Math.max(4, Math.floor((this.perf.catchDots + 2) * this.quality.particles));
+
+      while (this.particlePool.active.length >= maxPt - dots) {
+        this.particlePool.release(this.particlePool.active[0]);
+      }
+      const colors = ['#FF4FA3', '#FF80AB', '#FFD56A', '#FF6B9D'];
+      for (let i = 0; i < dots; i++) {
+        const angle = (Math.PI * 2 * i) / dots + Math.random() * 0.4;
+        const speed = 1.2 + Math.random() * 2.4;
+        const p = this.particlePool.get();
+        p.active = true;
+        p.x = x; p.y = y;
+        p.vx = Math.cos(angle) * speed;
+        p.vy = Math.sin(angle) * speed - 0.5;
+        p.life = 1;
+        p.color = colors[i % colors.length];
+        p.size = 2.5 + Math.random() * 2.5;
+      }
     }
 
     spawnCatchEffects(x, y) {
@@ -579,6 +686,7 @@
         this.lastSpawn = time;
         moved = true;
       }
+      this._trySpawnLoveWord(time);
 
       const active = this.chocoPool.active;
       for (let i = 0; i < active.length; i++) {
@@ -587,10 +695,23 @@
         if (c.y > this.layers.H + 60) { c.visible = false; continue; }
         if (c.y < -80) { c.visible = false; continue; }
         c.visible = true;
-        c.y += c.speed;
+        c.y += c.speed * this.fallSpeedMul;
         c.rot += c.rotSpeed;
         c.x += Math.sin(c.wobble + time * 0.002) * 0.28;
         c.wobble += 0.018;
+        moved = true;
+      }
+
+      const words = this.loveWordPool.active;
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        if (!w.active || w.collecting) continue;
+        if (w.y > this.layers.H + 60) { w.visible = false; continue; }
+        if (w.y < -80) { w.visible = false; continue; }
+        w.visible = true;
+        w.y += w.speed * this.fallSpeedMul;
+        w.x += Math.sin(w.wobble + time * 0.0016) * 0.35;
+        w.wobble += 0.012;
         moved = true;
       }
 
@@ -643,6 +764,44 @@
           this.chocoPool.release(c);
           this.dirty.game = true;
           if (this.onMiss) this.onMiss();
+        }
+      }
+
+      const words = this.loveWordPool.active;
+      const cherryHitW = this.SPRITE_H * 0.36;
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        if (!w.active || w.collecting || !w.visible) continue;
+        const dx = cx - w.x;
+        const dy = cy - w.y;
+        const hw = w.hitW * 0.5;
+        const hh = w.hitH * 0.5;
+        if ((dx < 0 ? -dx : dx) < hw + cherryHitW * 0.35
+            && (dy < 0 ? -dy : dy) < hh + cherryHitW * 0.35) {
+          this.spawnLoveCatchEffects(w.x, w.y);
+          w.collecting = true;
+          w.collectStart = time;
+          this.dirty.game = true;
+          this.dirty.fx = true;
+          if (this.onCatchLoveWord) this.onCatchLoveWord(w);
+        }
+      }
+
+      for (let i = words.length - 1; i >= 0; i--) {
+        const w = words[i];
+        if (!w.active) continue;
+        if (w.collecting) {
+          const elapsed = time - w.collectStart;
+          w.alpha = elapsed >= 220 ? 0 : 1 - elapsed / 220;
+          if (elapsed >= 220) {
+            this.loveWordPool.release(w);
+            this.dirty.game = true;
+          }
+          continue;
+        }
+        if (w.y > this.layers.H + 60) {
+          this.loveWordPool.release(w);
+          this.dirty.game = true;
         }
       }
     }
@@ -758,6 +917,13 @@
         this._drawCachedSprite(ctx, this.sprites.pickChocolate(c.size, this.SPRITE_H), c.x, c.y, c.alpha, c.rot);
       }
 
+      const words = this.loveWordPool.active;
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        if (!w.active || w.alpha <= 0 || !w.visible) continue;
+        this._drawLoveWord(ctx, w);
+      }
+
       const floatY = Math.sin(time * 0.0035) * 2.5;
       const showGlow = this.quality.glow > 0 && this.glowPower > 0.12 && this.sprites.glow;
       if (showGlow) {
@@ -766,6 +932,29 @@
         ctx.drawImage(g, this.cherry.x - g._logicalW / 2, this.cherry.y - g._logicalH / 2 + floatY - g._logicalH / 2, g._logicalW, g._logicalH);
         ctx.globalAlpha = 1;
       }
+
+      if (this.missShield) {
+        const pulse = 0.5 + Math.sin(time * 0.007) * 0.22;
+        const r = this.SPRITE_H * 0.5;
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.strokeStyle = '#8FD4FF';
+        ctx.lineWidth = 2.2;
+        ctx.shadowColor = 'rgba(120, 200, 255, 0.75)';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(this.cherry.x, this.cherry.y + floatY, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.font = `${Math.max(12, this.SPRITE_H * 0.22)}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = 0.92;
+        ctx.shadowBlur = 4;
+        ctx.fillText('🛡️', this.cherry.x + r * 0.72, this.cherry.y + floatY - r * 0.72);
+        ctx.restore();
+        this.dirty.game = true;
+      }
+
       this._drawCachedSprite(ctx, this.sprites.cherry, this.cherry.x, this.cherry.y + floatY, 1, 0);
 
       if (this.camZoom !== 1) ctx.restore();
@@ -813,6 +1002,53 @@
         }
       }
       ctx.globalAlpha = 1;
+    }
+
+    _drawLoveWord(ctx, w) {
+      const label = w.display || w.text;
+      const fs = w.fontSize;
+      ctx.save();
+      ctx.globalAlpha = w.alpha;
+      ctx.font = `700 ${fs}px "Quicksand", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const padX = 10;
+      const padY = 6;
+      const metrics = ctx.measureText(label);
+      const tw = Math.min(this.layers.W * 0.78, metrics.width + padX * 2);
+      const th = fs + padY * 2;
+      const rx = w.x - tw / 2;
+      const ry = w.y - th / 2;
+
+      ctx.fillStyle = 'rgba(18, 8, 24, 0.82)';
+      const premium = w.kind === 'golden' || w.kind === 'ultra' || w.kind === 'crown' || w.kind === 'easter';
+      ctx.strokeStyle = premium
+        ? 'rgba(255, 213, 106, 0.75)'
+        : w.kind === 'couple'
+          ? 'rgba(255, 120, 200, 0.65)'
+          : 'rgba(255, 79, 163, 0.55)';
+      ctx.lineWidth = premium ? 2 : 1.5;
+      this._roundRect(ctx, rx, ry, tw, th, th * 0.35);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.shadowColor = premium ? 'rgba(255, 213, 106, 0.55)' : 'rgba(255, 79, 163, 0.65)';
+      ctx.shadowBlur = w.kind === 'ultra' || w.kind === 'easter' ? 14 : premium ? 10 : 8;
+      ctx.fillStyle = premium ? '#FFE082' : '#FFD4EC';
+      ctx.fillText(label, w.x, w.y);
+      ctx.restore();
+    }
+
+    _roundRect(ctx, x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
     }
 
     _drawCachedSprite(ctx, baked, cx, cy, alpha, rot) {
