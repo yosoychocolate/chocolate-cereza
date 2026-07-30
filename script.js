@@ -1,42 +1,31 @@
-/* ===== Storage ===== */
+/* ===== Storage (via SaveManager) ===== */
+SaveManager.init();
+
 const STORAGE = {
-  loveClicks: 'chocolateCereza_loveClicks',
   meterClicks: 'chocolateCereza_meterClicks',
-  gameScore: 'chocolateCereza_gameScore',
   secretUnlocked: 'chocolateCereza_secretUnlocked',
-  gameMilestones: 'chocolateCereza_gameMilestones',
-  gameLives: 'chocolateCereza_gameLives',
 };
 
-function load(key, fallback = 0) {
-  const v = localStorage.getItem(key);
-  return v !== null ? JSON.parse(v) : fallback;
+function loadSiteLoveClicks() {
+  return SaveManager.getSave().site.loveClicks || 0;
 }
 
-function save(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+function saveSiteLoveClicks(value) {
+  SaveManager.updateSection('site', { loveClicks: value });
 }
 
-function loadGame(key, fallback = 0) {
-  const v = sessionStorage.getItem(key);
-  return v !== null ? JSON.parse(v) : fallback;
+function loadGameSession() {
+  return SaveManager.getSave().session;
 }
 
-function saveGame(key, value) {
-  sessionStorage.setItem(key, JSON.stringify(value));
+function saveGameSession(partial) {
+  SaveManager.updateSection('session', partial);
 }
 
 function clearSessionStorage() {
-  sessionStorage.removeItem(STORAGE.gameScore);
-  sessionStorage.removeItem(STORAGE.gameMilestones);
-  sessionStorage.removeItem(STORAGE.gameLives);
+  SaveManager.resetSession();
   sessionStorage.removeItem(STORAGE.meterClicks);
   sessionStorage.removeItem(STORAGE.secretUnlocked);
-  localStorage.removeItem(STORAGE.gameScore);
-  localStorage.removeItem(STORAGE.gameMilestones);
-  localStorage.removeItem(STORAGE.gameLives);
-  localStorage.removeItem(STORAGE.meterClicks);
-  localStorage.removeItem(STORAGE.secretUnlocked);
 }
 
 /* ===== Petal & Heart Rain ===== */
@@ -179,16 +168,14 @@ function spawnParticles(container, cx, cy) {
 /* ===== Love Clicks ===== */
 sessionStorage.removeItem(STORAGE.meterClicks);
 sessionStorage.removeItem(STORAGE.secretUnlocked);
-localStorage.removeItem(STORAGE.meterClicks);
-localStorage.removeItem(STORAGE.secretUnlocked);
 
 const LAUNCH_RESET_LOVE_CLICKS = 'chocolateCereza_loveClicks_launchReset_v3';
 if (!localStorage.getItem(LAUNCH_RESET_LOVE_CLICKS)) {
-  save(STORAGE.loveClicks, 0);
+  saveSiteLoveClicks(0);
   localStorage.setItem(LAUNCH_RESET_LOVE_CLICKS, 'done');
 }
 
-let loveClicks = load(STORAGE.loveClicks, 0);
+let loveClicks = loadSiteLoveClicks();
 let meterHeartClicks = 0;
 let secretUnlocked = false;
 
@@ -199,7 +186,7 @@ function initLoveClicks() {
 
   btn.addEventListener('click', (e) => {
     loveClicks++;
-    save(STORAGE.loveClicks, loveClicks);
+    saveSiteLoveClicks(loveClicks);
     countEl.textContent = loveClicks;
     countEl.style.transform = 'scale(1.15)';
     setTimeout(() => { countEl.style.transform = 'scale(1)'; }, 150);
@@ -851,17 +838,14 @@ function initGame() {
     '"Cada momento contigo es dulce."',
   ];
 
-  localStorage.removeItem(STORAGE.gameScore);
-  localStorage.removeItem(STORAGE.gameMilestones);
-  localStorage.removeItem(STORAGE.gameLives);
-
-  let score = loadGame(STORAGE.gameScore, 0);
+  const sessionData = loadGameSession();
+  let score = sessionData.score || 0;
   scoreEl.textContent = score;
 
-  let lives = loadGame(STORAGE.gameLives, MAX_LIVES);
+  let lives = sessionData.lives ?? MAX_LIVES;
   lives = Math.max(0, Math.min(MAX_LIVES, lives));
 
-  const milestones = loadGame(STORAGE.gameMilestones, { 50: false });
+  const milestones = { ...(sessionData.milestones || { 50: false }) };
   let lastToastScore = 0;
   let toastTimer = null;
   const progressBarCache = { score: -1, endless: null };
@@ -978,7 +962,7 @@ function initGame() {
     milestones[FINAL_MILESTONE] = true;
     saveMilestones();
     lives = MAX_LIVES;
-    saveGame(STORAGE.gameLives, lives);
+    saveGameSession({ lives });
     applyEndlessModeUI();
     updateLivesDisplay();
     showLivesHud(true);
@@ -1041,7 +1025,7 @@ function initGame() {
   function loseLife() {
     if (!milestones[FINAL_MILESTONE] || gameOver || milestonePause || gamePaused || lives <= 0) return;
     lives--;
-    saveGame(STORAGE.gameLives, lives);
+    saveGameSession({ lives });
     updateLivesDisplay();
     livesEl?.classList.add('life-lost-flash');
     setTimeout(() => livesEl?.classList.remove('life-lost-flash'), 350);
@@ -1145,7 +1129,7 @@ function initGame() {
   engine.onCatch = () => {
     score++;
     engine.setScore(score);
-    saveGame(STORAGE.gameScore, score);
+    saveGameSession({ score });
     scoreEl.textContent = score;
     updateProgressBar();
 
@@ -1197,7 +1181,7 @@ function initGame() {
   });
 
   function saveMilestones() {
-    saveGame(STORAGE.gameMilestones, milestones);
+    saveGameSession({ milestones: { ...milestones } });
   }
 
   function resetMeterSession() {
@@ -1212,9 +1196,7 @@ function initGame() {
     score = 0;
     lives = MAX_LIVES;
     milestones[50] = false;
-    saveGame(STORAGE.gameScore, 0);
-    saveMilestones();
-    saveGame(STORAGE.gameLives, lives);
+    saveGameSession({ score: 0, lives, milestones: { ...milestones } });
     scoreEl.textContent = '0';
     lastToastScore = 0;
     lastEndlessToastScore = 0;

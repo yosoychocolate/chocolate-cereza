@@ -1,17 +1,9 @@
 /**
  * Meta do mini game — sons, recorde, stats, conquistas, comemorações.
- * Leve: Web Audio sintético, localStorage, DOM mínimo.
+ * Persistência via SaveManager (save-manager.js).
  */
 (function (global) {
   'use strict';
-
-  const LS = {
-    highScore: 'chocolateCereza_highScore',
-    stats: 'chocolateCereza_stats',
-    achievements: 'chocolateCereza_achievements',
-    achievementUnlocks: 'chocolateCereza_achievementUnlocks',
-    settings: 'chocolateCereza_gameSettings',
-  };
 
   const DEFAULT_STATS = {
     totalChocolates: 0,
@@ -48,32 +40,13 @@
       title: 'Maestro del Chocolate',
       desc: 'Alcanza 200 chocolates en una sola partida.',
     },
+    {
+      id: 'legend',
+      icon: '💎',
+      title: 'Leyenda del Chocolate',
+      desc: 'Alcanza 300 chocolates en una sola partida.',
+    },
   ];
-
-  function loadJson(key, fallback) {
-    try {
-      const v = localStorage.getItem(key);
-      return v !== null ? JSON.parse(v) : fallback;
-    } catch (_) {
-      return fallback;
-    }
-  }
-
-  function saveJson(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
-  }
-
-  function formatPlayTime(ms) {
-    const sec = Math.floor(ms / 1000);
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    if (m >= 60) {
-      const h = Math.floor(m / 60);
-      const rm = m % 60;
-      return `${h}h ${rm}m`;
-    }
-    return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
-  }
 
   function formatUnlockDate(ts) {
     if (!ts) return 'Fecha desconocida';
@@ -82,17 +55,14 @@
     return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  function loadUnlockData() {
-    let data = loadJson(LS.achievementUnlocks, null);
-    if (data && typeof data === 'object' && !Array.isArray(data)) return data;
-
-    const legacy = loadJson(LS.achievements, []);
-    data = {};
-    if (Array.isArray(legacy)) {
-      for (let i = 0; i < legacy.length; i++) data[legacy[i]] = null;
-      saveJson(LS.achievementUnlocks, data);
-    }
-    return data;
+  function loadFromSave() {
+    const save = global.SaveManager.getSave();
+    return {
+      highScore: save.records.highScore || 0,
+      stats: { ...DEFAULT_STATS, ...save.stats },
+      settings: { ...DEFAULT_SETTINGS, ...save.settings },
+      unlockDates: { ...save.achievements },
+    };
   }
 
   class GameSounds {
@@ -153,6 +123,18 @@
     }
   }
 
+  function formatPlayTime(ms) {
+    const sec = Math.floor(ms / 1000);
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    if (m >= 60) {
+      const h = Math.floor(m / 60);
+      const rm = m % 60;
+      return `${h}h ${rm}m`;
+    }
+    return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
+  }
+
   const GameMeta = {
     sounds: new GameSounds(),
     highScore: 0,
@@ -170,16 +152,18 @@
     init(options) {
       this.els = options || {};
       this.perfLite = !!options.perfLite;
-      this.highScore = loadJson(LS.highScore, 0);
-      this.stats = { ...DEFAULT_STATS, ...loadJson(LS.stats, DEFAULT_STATS) };
-      this.settings = { ...DEFAULT_SETTINGS, ...loadJson(LS.settings, DEFAULT_SETTINGS) };
+
+      const data = loadFromSave();
+      this.highScore = data.highScore;
+      this.stats = data.stats;
+      this.settings = data.settings;
+      this.unlockDates = data.unlockDates;
       this.sounds.enabled = this.settings.sfx !== false;
-      this.unlockDates = loadUnlockData();
 
       const initialScore = options.initialScore || 0;
       if (initialScore > this.highScore) {
         this.highScore = initialScore;
-        saveJson(LS.highScore, this.highScore);
+        global.SaveManager.updateSection('records', { highScore: this.highScore });
       }
 
       this.panels = {
@@ -243,7 +227,19 @@
     },
 
     saveUnlockData() {
-      saveJson(LS.achievementUnlocks, this.unlockDates);
+      global.SaveManager.updateSection('achievements', { ...this.unlockDates });
+    },
+
+    saveStats() {
+      global.SaveManager.updateSection('stats', { ...this.stats });
+    },
+
+    saveSettings() {
+      global.SaveManager.updateSection('settings', { ...this.settings });
+    },
+
+    saveHighScore() {
+      global.SaveManager.updateSection('records', { highScore: this.highScore });
     },
 
     bindPanelToggles() {
@@ -302,7 +298,7 @@
       this.els.sfxToggle?.addEventListener('change', () => {
         this.settings.sfx = !!this.els.sfxToggle.checked;
         this.sounds.enabled = this.settings.sfx;
-        saveJson(LS.settings, this.settings);
+        this.saveSettings();
       });
     },
 
@@ -316,7 +312,7 @@
       this._playSaveAcc = (this._playSaveAcc || 0) + dt;
       if (this._playSaveAcc >= 5000) {
         this._playSaveAcc = 0;
-        saveJson(LS.stats, this.stats);
+        this.saveStats();
         if (this.els.statTime) this.els.statTime.textContent = formatPlayTime(this.stats.playTimeMs);
       }
     },
@@ -341,6 +337,8 @@
           return ctx.endless && ctx.endlessBonus >= 100;
         case 'master':
           return ctx.score >= 200;
+        case 'legend':
+          return ctx.score >= 300;
         default:
           return false;
       }
@@ -411,12 +409,12 @@
       if (this.currentStreak > this.stats.bestStreak) {
         this.stats.bestStreak = this.currentStreak;
       }
-      saveJson(LS.stats, this.stats);
+      this.saveStats();
 
       let recordBroken = false;
       if (ctx.score > this.highScore) {
         this.highScore = ctx.score;
-        saveJson(LS.highScore, this.highScore);
+        this.saveHighScore();
         recordBroken = true;
         this.sounds.playRecord();
         this.celebrate('record');
