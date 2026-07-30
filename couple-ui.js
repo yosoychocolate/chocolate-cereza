@@ -11,6 +11,10 @@ const {
   renderRankingRow,
   renderChatRow,
   renderStreakBadge,
+  renderGuardianPair,
+  renderFooterGuardians,
+  renderScoreHudRow,
+  playGuardianAnim,
   detectSceneMode,
 } = CoupleMascots;
 
@@ -117,6 +121,50 @@ function triggerMascotFx(fxClass, durationMs = 1200) {
   triggerMascotFx._timer = setTimeout(() => {
     els.mascotScene?.classList.remove(fxClass);
   }, durationMs);
+
+  if (fxClass === 'fx-join') {
+    playGuardianAnim(els.guardians, 'chocolate', 'wave');
+    playGuardianAnim(els.guardians, 'cereza', 'blink');
+  }
+}
+
+function initGuardians() {
+  if (els.guardians) {
+    els.guardians.innerHTML = renderGuardianPair({ size: 48 });
+  }
+  if (els.footerMascots) {
+    els.footerMascots.innerHTML = renderFooterGuardians();
+  }
+}
+
+function renderCoupleScoreHud(ranking, coupleStats) {
+  if (!els.scoreHud) return;
+
+  const room = CloudManager.getCurrentRoom();
+  if (!room || !ranking || ranking.length < 1) {
+    els.scoreHud.classList.add('hidden');
+    els.scoreHud.setAttribute('aria-hidden', 'true');
+    return;
+  }
+
+  const leaderId = coupleStats?.bestPlayerId;
+  const players = room.players || [];
+  const rows = ranking.slice(0, 2).map((entry) => {
+    const type = resolveMascotType(entry.name, entry.id, players);
+    const isLeader = leaderId === entry.id && entry.bestScore > 0;
+    return renderScoreHudRow(type, entry.bestScore, isLeader);
+  });
+
+  els.scoreHud.innerHTML = rows.join('');
+  els.scoreHud.classList.remove('hidden');
+  els.scoreHud.setAttribute('aria-hidden', 'false');
+}
+
+function hideCoupleScoreHud() {
+  if (!els.scoreHud) return;
+  els.scoreHud.classList.add('hidden');
+  els.scoreHud.setAttribute('aria-hidden', 'true');
+  els.scoreHud.innerHTML = '';
 }
 
 function scheduleHugScene(partnerName) {
@@ -325,6 +373,7 @@ async function refreshRoomPanel() {
 
   if (rankRes.success) {
     renderRanking(rankRes.ranking, coupleRes.success ? coupleRes.couple : null);
+    renderCoupleScoreHud(rankRes.ranking, coupleRes.success ? coupleRes.couple : null);
   }
 }
 
@@ -334,6 +383,9 @@ function handleCoupleUpdated(couple) {
   const newLeader = couple.bestPlayerId;
   if (lastBestPlayerId && newLeader && lastBestPlayerId !== newLeader) {
     triggerMascotFx('fx-crown');
+    const room = CloudManager.getCurrentRoom();
+    const leaderType = resolveMascotType(couple.bestPlayerName, newLeader, room?.players);
+    playGuardianAnim(els.guardians, leaderType, 'crown');
   }
   lastBestPlayerId = newLeader;
 }
@@ -349,6 +401,7 @@ async function handleRoomEvent(event) {
     lastPlayerCount = 0;
     lastBestPlayerId = null;
     forcedSceneMode = null;
+    hideCoupleScoreHud();
     showLobby();
     setStatus('La sala ya no existe.');
     return;
@@ -469,6 +522,7 @@ async function onLeaveRoom() {
     lastPlayerCount = 0;
     lastBestPlayerId = null;
     forcedSceneMode = null;
+    hideCoupleScoreHud();
 
     showLobby();
     setStatus(
@@ -512,8 +566,10 @@ function onScoreSubmitted(event) {
   if (detail.isNewBest) {
     const name = detail.couple?.bestPlayerName || 'Alguien';
     const score = detail.couple?.bestScore || 0;
+    const leaderType = resolveMascotType(name, detail.couple?.bestPlayerId, CloudManager.getCurrentRoom()?.players);
     showToast(`🏆 ¡Nuevo récord! ${name} — ${score} 🍫`);
     triggerMascotFx('fx-record');
+    playGuardianAnim(els.guardians, leaderType, 'record');
     refreshMascotScene();
   }
 
@@ -547,11 +603,16 @@ function cacheElements() {
   els.mascotStage = $('couple-mascot-stage');
   els.mascotCaption = $('couple-mascot-caption');
   els.streakWrap = $('couple-streak-wrap');
+  els.guardians = $('couple-guardians');
+  els.scoreHud = $('couple-score-hud');
+  els.footerMascots = $('site-footer-mascots');
 }
 
 async function init() {
   cacheElements();
   if (!els.lobby) return;
+
+  initGuardians();
 
   const identity = PlayerIdentity.getIdentity();
   if (els.nameInput && identity.name) {

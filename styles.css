@@ -1148,6 +1148,169 @@ p {
 .couple-mode {
   width: 100%;
   margin-bottom: 1rem;
+  position: relative;
+}
+
+/* Ursinhos guardiões — canto, estáticos, animação só por evento */
+.couple-guardians {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.55rem;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.couple-guardians-inner {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+  opacity: 0.92;
+}
+
+.guardian-bear {
+  will-change: transform;
+}
+
+.guardian-bear-chocolate.guardian-animate-wave {
+  animation: guardianWave 0.45s ease;
+}
+
+.guardian-bear-cereza.guardian-animate-blink {
+  animation: guardianBlink 0.32s ease;
+}
+
+.guardian-bear-chocolate.guardian-animate-record,
+.guardian-bear-cereza.guardian-animate-record {
+  animation: guardianRecord 0.3s ease;
+}
+
+.guardian-bear-chocolate.guardian-animate-crown,
+.guardian-bear-cereza.guardian-animate-crown {
+  animation: guardianCrownPop 0.35s ease;
+}
+
+@keyframes guardianWave {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  45% { transform: rotate(-14deg) scale(1.08); }
+}
+
+@keyframes guardianBlink {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.9); }
+}
+
+@keyframes guardianRecord {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(8deg); }
+}
+
+@keyframes guardianCrownPop {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.mascot-heart-static {
+  animation: none;
+}
+
+/* HUD placar do casal (mini jogo) */
+.couple-score-hud {
+  position: absolute;
+  top: 5.4rem;
+  left: clamp(6px, 2vw, 10px);
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 12px;
+  background: rgba(12, 6, 22, 0.72);
+  border: 1px solid rgba(255, 88, 168, 0.22);
+  pointer-events: none;
+  max-width: min(9rem, 42vw);
+}
+
+.couple-score-hud.hidden {
+  display: none;
+}
+
+.couple-hud-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255, 220, 240, 0.95);
+}
+
+.couple-hud-row.is-leader .couple-hud-score {
+  color: rgba(255, 220, 130, 0.98);
+}
+
+.hud-crown {
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.couple-hud-score {
+  min-width: 2rem;
+  text-align: right;
+}
+
+/* Rodapé — ursinhos sentados */
+.site-footer {
+  text-align: center;
+  padding: 1.25rem 1rem max(2rem, env(safe-area-inset-bottom, 2rem));
+  margin-top: 0.5rem;
+}
+
+.site-footer-divider {
+  height: 1px;
+  max-width: 280px;
+  margin: 0 auto 1rem;
+  background: linear-gradient(90deg, transparent, rgba(255, 88, 168, 0.35), transparent);
+}
+
+.site-footer-guardians {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.footer-bear {
+  opacity: 0.88;
+}
+
+.footer-heart {
+  font-size: 0.95rem;
+  align-self: center;
+  margin: 0 0.1rem;
+  opacity: 0.9;
+}
+
+.site-footer-title {
+  margin: 0;
+  font-family: 'Playfair Display', serif;
+  font-size: 0.92rem;
+  color: rgba(255, 200, 220, 0.75);
+  letter-spacing: 0.04em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guardian-bear-chocolate.guardian-animate-wave,
+  .guardian-bear-cereza.guardian-animate-blink,
+  .guardian-bear-chocolate.guardian-animate-record,
+  .guardian-bear-cereza.guardian-animate-record,
+  .guardian-bear-chocolate.guardian-animate-crown,
+  .guardian-bear-cereza.guardian-animate-crown {
+    animation: none;
+  }
+
+  .mascot-heart-pulse {
+    animation: none;
+  }
 }
 
 .couple-panel {
@@ -1164,6 +1327,7 @@ p {
 
 .couple-title {
   margin: 0 0 0.85rem;
+  padding-right: 5.5rem;
   font-family: 'Playfair Display', serif;
   font-size: 1.15rem;
   color: rgba(255, 220, 240, 0.98);
@@ -1564,6 +1728,15 @@ p {
 .couple-rank-score {
   font-weight: 700;
   color: rgba(255, 210, 150, 0.95);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.couple-rank-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .couple-player-status {
@@ -3525,6 +3698,88 @@ body.game-focus .game-achievement-toast {
   .marker-star {
     font-size: 0.58rem;
   }
+
+  /* Modo Pareja — mobile */
+  .couple-panel {
+    padding: 0.95rem 0.8rem 1rem;
+  }
+
+  .couple-title {
+    padding-right: 4.6rem;
+    font-size: 1.02rem;
+    line-height: 1.35;
+  }
+
+  .couple-guardians {
+    top: 0.35rem;
+    right: 0.4rem;
+  }
+
+  .couple-guardians-inner {
+    transform: scale(0.82);
+    transform-origin: top right;
+  }
+
+  .couple-input,
+  .couple-chat-input {
+    font-size: 16px;
+  }
+
+  .couple-chat-messages {
+    max-height: 140px;
+  }
+
+  .couple-chat-emoji {
+    width: 2.15rem;
+    height: 2.15rem;
+  }
+
+  .couple-rank-item {
+    font-size: 0.8rem;
+    gap: 0.3rem;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+  }
+
+  .couple-mascot-scene {
+    padding: 0.65rem 0.5rem 0.45rem;
+  }
+
+  .couple-mascot-stage {
+    min-height: 60px;
+  }
+
+  .mascot-stage-inner.is-duo,
+  .mascot-stage-inner.is-parted {
+    transform: scale(0.92);
+    transform-origin: center bottom;
+  }
+
+  .couple-score-hud {
+    top: auto;
+    bottom: 4.35rem;
+    left: 6px;
+    max-width: min(8.5rem, 46vw);
+    padding: 0.28rem 0.38rem;
+  }
+
+  .couple-hud-row {
+    font-size: 0.68rem;
+    gap: 0.22rem;
+  }
+
+  .couple-room-head {
+    gap: 0.35rem 0.5rem;
+  }
+
+  .couple-room-code {
+    font-size: 1rem;
+    letter-spacing: 0.14em;
+  }
+
+  .couple-chat-send {
+    min-width: 4rem;
+    font-size: 0.75rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -3548,6 +3803,29 @@ body.game-focus .game-achievement-toast {
 
   .btn-neon:hover {
     transform: translateY(-2px);
+  }
+
+  .couple-title {
+    padding-right: 4.2rem;
+    font-size: 0.98rem;
+  }
+
+  .couple-guardians-inner {
+    transform: scale(0.75);
+  }
+
+  .couple-chat-form {
+    gap: 0.35rem;
+  }
+
+  .couple-chat-send {
+    min-width: 3.6rem;
+    padding: 0.45rem 0.5rem;
+  }
+
+  .couple-score-hud {
+    bottom: 4rem;
+    max-width: min(7.8rem, 50vw);
   }
 }
 
@@ -3608,5 +3886,22 @@ body.game-focus .game-achievement-toast {
 
   .game-progress {
     padding-bottom: 0.5rem;
+  }
+
+  .couple-title {
+    padding-right: 3.6rem;
+    font-size: 0.9rem;
+  }
+
+  .couple-guardians-inner {
+    transform: scale(0.64);
+  }
+
+  .couple-score-hud {
+    bottom: 3.75rem;
+  }
+
+  .couple-streak-badge {
+    font-size: 0.7rem;
   }
 }

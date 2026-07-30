@@ -44,7 +44,7 @@ export function resolveMascotType(name, playerId, players) {
 
 /**
  * @param {MascotType} type
- * @param {{ size?: number, crown?: boolean, cherry?: boolean, online?: boolean, className?: string, label?: string }} [opts]
+ * @param {{ size?: number, crown?: boolean, cherry?: boolean, prop?: boolean, online?: boolean, className?: string, label?: string }} [opts]
  * @returns {string}
  */
 export function renderBear(type, opts = {}) {
@@ -52,6 +52,7 @@ export function renderBear(type, opts = {}) {
     size = 52,
     crown = false,
     cherry = type === 'cereza',
+    prop = false,
     online = true,
     className = '',
     label = '',
@@ -79,11 +80,26 @@ export function renderBear(type, opts = {}) {
     : '';
 
   const cherrySvg =
-    cherry && type === 'cereza' ?
+    cherry && type === 'cereza' && !prop ?
       `<g class="bear-cherry" transform="translate(42,8)">
         <circle cx="4" cy="6" r="3.5" fill="#E84393"/>
         <path d="M4 2 Q6 -2 8 1" stroke="#5A9E3A" stroke-width="1.2" fill="none"/>
       </g>`
+    : '';
+
+  const propSvg =
+    prop ?
+      type === 'chocolate' ?
+        `<g class="bear-prop" transform="translate(22,54)">
+          <rect x="0" y="2" width="20" height="9" rx="2.5" fill="#4A2818"/>
+          <rect x="1.5" y="3" width="17" height="6.5" rx="1.5" fill="#6B4423"/>
+          <rect x="3" y="4" width="4" height="4" rx="0.5" fill="#9A6B45" opacity="0.6"/>
+        </g>`
+      : `<g class="bear-prop" transform="translate(24,52)">
+          <circle cx="8" cy="7" r="6" fill="#E84393"/>
+          <circle cx="6" cy="5" r="1.5" fill="#FF8FB8" opacity="0.5"/>
+          <path d="M8 1 Q11 -4 14 0" stroke="#5A9E3A" stroke-width="1.3" fill="none"/>
+        </g>`
     : '';
 
   const aria = label ? ` aria-label="${label}" role="img"` : ' aria-hidden="true"';
@@ -92,6 +108,7 @@ export function renderBear(type, opts = {}) {
     <svg class="bear-svg" viewBox="0 0 64 72" width="${size}" height="${Math.round(size * 1.125)}" xmlns="http://www.w3.org/2000/svg">
       ${crownSvg}
       ${cherrySvg}
+      ${propSvg}
       <ellipse cx="16" cy="14" rx="9" ry="10" fill="${c.fur}"/>
       <ellipse cx="48" cy="14" rx="9" ry="10" fill="${c.fur}"/>
       <ellipse cx="16" cy="14" rx="5" ry="6" fill="${c.light}"/>
@@ -166,7 +183,7 @@ export function buildMascotScene(mode, ctx) {
     heart = '<span class="mascot-heart mascot-heart-pulse" aria-hidden="true">❤️</span>';
   } else if (mode === 'together') {
     caption = '🧸❤️🧸';
-    heart = '<span class="mascot-heart" aria-hidden="true">❤️</span>';
+    heart = '<span class="mascot-heart mascot-heart-static" aria-hidden="true">❤️</span>';
   }
 
   const choco = renderBear('chocolate', {
@@ -264,6 +281,104 @@ export function detectSceneMode(room, localPlayerId) {
   return 'alone';
 }
 
+/** @type {readonly string[]} */
+export const GUARDIAN_ANIM_CLASSES = [
+  'guardian-animate-wave',
+  'guardian-animate-blink',
+  'guardian-animate-record',
+  'guardian-animate-crown',
+];
+
+/**
+ * Par de ursinhos guardiões (estáticos, canto do painel).
+ * @param {{ size?: number }} [opts]
+ * @returns {string}
+ */
+export function renderGuardianPair(opts = {}) {
+  const size = opts.size ?? 48;
+  const choco = renderBear('chocolate', {
+    size,
+    prop: true,
+    cherry: false,
+    className: 'guardian-bear guardian-bear-chocolate',
+    label: 'Ursinho Chocolate',
+  });
+  const cereza = renderBear('cereza', {
+    size,
+    prop: true,
+    cherry: false,
+    className: 'guardian-bear guardian-bear-cereza',
+    label: 'Ursinha Cereza',
+  });
+
+  return `<div class="couple-guardians-inner" aria-hidden="true">
+    ${choco}
+    ${cereza}
+  </div>`;
+}
+
+/**
+ * Rodapé — ursinhos sentados juntos.
+ * @returns {string}
+ */
+export function renderFooterGuardians() {
+  const choco = renderBear('chocolate', {
+    size: 44,
+    prop: true,
+    className: 'footer-bear footer-bear-chocolate',
+    label: 'Chocolate',
+  });
+  const cereza = renderBear('cereza', {
+    size: 44,
+    prop: true,
+    className: 'footer-bear footer-bear-cereza',
+    label: 'Cereza',
+  });
+
+  return `<div class="site-footer-guardians" aria-hidden="true">
+    ${choco}<span class="footer-heart">❤️</span>${cereza}
+  </div>
+  <p class="site-footer-title">El Chocolate &amp; La Cereza</p>`;
+}
+
+/**
+ * Linha do HUD de placar do casal.
+ * @param {MascotType} type
+ * @param {number} score
+ * @param {boolean} [isLeader]
+ * @returns {string}
+ */
+export function renderScoreHudRow(type, score, isLeader = false) {
+  const bear = renderBear(type, {
+    size: 28,
+    prop: true,
+    crown: isLeader,
+    className: 'hud-bear',
+  });
+  const crown = isLeader ? '<span class="hud-crown">👑</span>' : '';
+  return `<div class="couple-hud-row couple-hud-${type}${isLeader ? ' is-leader' : ''}">${crown}${bear}<span class="couple-hud-score">${score}</span></div>`;
+}
+
+/**
+ * Dispara animação única num ursinho guardião.
+ * @param {HTMLElement | null} root
+ * @param {'chocolate' | 'cereza'} which
+ * @param {'wave' | 'blink' | 'record' | 'crown'} anim
+ */
+export function playGuardianAnim(root, which, anim) {
+  if (!root) return;
+  const bear = root.querySelector(`.guardian-bear-${which}`);
+  if (!bear) return;
+
+  const cls = `guardian-animate-${anim}`;
+  bear.classList.remove(...GUARDIAN_ANIM_CLASSES);
+  void bear.offsetWidth;
+  bear.classList.add(cls);
+
+  const cleanup = () => bear.classList.remove(cls);
+  bear.addEventListener('animationend', cleanup, { once: true });
+}
+
 /**
  * @param {string} text
  */
@@ -282,6 +397,10 @@ export const CoupleMascots = {
   renderRankingRow,
   renderChatRow,
   renderStreakBadge,
+  renderGuardianPair,
+  renderFooterGuardians,
+  renderScoreHudRow,
+  playGuardianAnim,
   detectSceneMode,
 };
 
