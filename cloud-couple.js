@@ -21,7 +21,50 @@ const STATS_DOC_ID = 'data';
  * @property {number} totalGames
  * @property {number} totalChocolate
  * @property {number|null} updatedAt
+ * @property {number} playStreak
+ * @property {string|null} lastPlayDate
  */
+
+/**
+ * @returns {string} YYYY-MM-DD em UTC local do navegador
+ */
+export function todayDateKey(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * @param {string} dateKey
+ * @returns {string}
+ */
+export function previousDateKey(dateKey) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() - 1);
+  return todayDateKey(dt);
+}
+
+/**
+ * @param {CoupleStats} current
+ * @param {string} [today]
+ * @returns {{ playStreak: number, lastPlayDate: string }}
+ */
+export function computePlayStreak(current, today = todayDateKey()) {
+  const last = current.lastPlayDate || null;
+  const prev = current.playStreak || 0;
+
+  if (last === today) {
+    return { playStreak: prev || 1, lastPlayDate: today };
+  }
+
+  if (last === previousDateKey(today)) {
+    return { playStreak: prev + 1, lastPlayDate: today };
+  }
+
+  return { playStreak: 1, lastPlayDate: today };
+}
 
 /**
  * @returns {CoupleStats}
@@ -34,6 +77,8 @@ export function createDefaultCoupleStats() {
     totalGames: 0,
     totalChocolate: 0,
     updatedAt: null,
+    playStreak: 0,
+    lastPlayDate: null,
   };
 }
 
@@ -77,6 +122,8 @@ export function coupleFromSnapshot(snap) {
     totalGames: typeof data.totalGames === 'number' ? data.totalGames : 0,
     totalChocolate: typeof data.totalChocolate === 'number' ? data.totalChocolate : 0,
     updatedAt: data.updatedAt?.toMillis?.() ?? null,
+    playStreak: typeof data.playStreak === 'number' ? data.playStreak : 0,
+    lastPlayDate: typeof data.lastPlayDate === 'string' ? data.lastPlayDate : null,
   };
 }
 
@@ -126,12 +173,15 @@ export function applyScoreToCouple(transaction, coupleSnap, db, roomCode, player
   const current = coupleSnap.exists() ? coupleFromSnapshot(coupleSnap) : createDefaultCoupleStats();
 
   const safeScore = Math.max(0, Math.floor(score));
+  const streakUpdate = computePlayStreak(current);
   const next = {
     bestScore: current.bestScore,
     bestPlayerId: current.bestPlayerId,
     bestPlayerName: current.bestPlayerName,
     totalGames: current.totalGames + 1,
     totalChocolate: current.totalChocolate + safeScore,
+    playStreak: streakUpdate.playStreak,
+    lastPlayDate: streakUpdate.lastPlayDate,
     updatedAt: serverTimestamp(),
   };
 
@@ -156,6 +206,8 @@ export function applyScoreToCouple(transaction, coupleSnap, db, roomCode, player
       bestPlayerName: next.bestPlayerName,
       totalGames: next.totalGames,
       totalChocolate: next.totalChocolate,
+      playStreak: next.playStreak,
+      lastPlayDate: next.lastPlayDate,
       updatedAt: Date.now(),
     },
     isNewBest,

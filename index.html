@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=39">
+  <link rel="stylesheet" href="styles.css?v=44">
 </head>
 <body>
   <!-- Chuva de pétalas e corações -->
@@ -184,7 +184,13 @@
             <button id="couple-copy-code" class="couple-btn couple-btn-small" type="button">📋 Copiar</button>
           </div>
           <div class="couple-divider" aria-hidden="true"></div>
-          <ul id="couple-players-list" class="couple-players-list"></ul>
+          <div id="couple-mascot-scene" class="couple-mascot-scene is-waiting">
+            <div id="couple-mascot-stage" class="couple-mascot-stage"></div>
+            <p id="couple-mascot-caption" class="couple-mascot-caption">🧸 esperando…</p>
+            <div id="couple-streak-wrap"></div>
+            <div id="couple-mascot-fx" class="couple-mascot-fx" aria-hidden="true"></div>
+          </div>
+          <ul id="couple-players-list" class="couple-players-list visually-hidden" aria-hidden="true"></ul>
           <div class="couple-divider" aria-hidden="true"></div>
           <div class="couple-ranking-wrap">
             <h4 class="couple-subtitle">👑 Ranking</h4>
@@ -396,8 +402,8 @@
   <script src="game-audit.js?v=32"></script>
   <script src="game-engine.js?v=32"></script>
   <script src="game-meta.js?v=32"></script>
-  <script src="script.js?v=32"></script>
-  <script type="module" src="cloud-manager.js?v=43"></script>
-  <script type="module" src="couple-ui.js?v=43"></script>
+  <script src="script.js?v=33"></script>
+  <script type="module" src="cloud-manager.js?v=44"></script>
+  <script type="module" src="couple-ui.js?v=44"></script>
 </body>
 </html>

@@ -1382,14 +1382,27 @@ function initGame() {
     }
   });
 
+  function isTypingInFormField(target) {
+    const el = target instanceof Element ? target : document.activeElement;
+    if (!el || !(el instanceof HTMLElement)) return false;
+    const tag = el.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (el.isContentEditable) return true;
+    return false;
+  }
+
   window.addEventListener('keydown', (e) => {
+    if (isTypingInFormField(e.target)) return;
     engine.keys[e.key] = true;
     if (!e.repeat && (e.key === 'p' || e.key === 'P' || e.key === 'Escape') && !milestonePause && !gameOver) {
       e.preventDefault();
       togglePause();
     }
   });
-  window.addEventListener('keyup', (e) => { engine.keys[e.key] = false; });
+  window.addEventListener('keyup', (e) => {
+    if (isTypingInFormField(e.target)) return;
+    engine.keys[e.key] = false;
+  });
 
   function setCherryTarget(clientX) {
     const rect = getCanvasStackRect();

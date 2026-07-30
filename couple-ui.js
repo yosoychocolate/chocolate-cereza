@@ -3,6 +3,16 @@
  */
 import CloudManager from './cloud-manager.js';
 import PlayerIdentity from './player-identity.js';
+import CoupleMascots from './couple-mascots.js';
+
+const {
+  resolveMascotType,
+  buildMascotScene,
+  renderRankingRow,
+  renderChatRow,
+  renderStreakBadge,
+  detectSceneMode,
+} = CoupleMascots;
 
 const els = {};
 
@@ -14,6 +24,18 @@ let unsubscribeChat = null;
 
 /** @type {boolean} */
 let chatStickToBottom = true;
+
+/** @type {number} */
+let lastPlayerCount = 0;
+
+/** @type {string | null} */
+let lastBestPlayerId = null;
+
+/** @type {ReturnType<typeof setTimeout> | null} */
+let hugTimer = null;
+
+/** @type {'waiting' | 'together' | 'alone' | 'hugging' | null} */
+let forcedSceneMode = null;
 
 function $(id) {
   return document.getElementById(id);
@@ -70,10 +92,7 @@ function renderPlayers(players) {
   if (!els.playersList) return;
   els.playersList.innerHTML = '';
 
-  if (!players || !players.length) {
-    els.playersList.innerHTML = '<li class="couple-empty">Esperando jugadores…</li>';
-    return;
-  }
+  if (!players || !players.length) return;
 
   players.forEach((player) => {
     const li = document.createElement('li');
@@ -86,24 +105,95 @@ function renderPlayers(players) {
   });
 }
 
+function getLocalPlayerId() {
+  return CloudManager.getLocalPlayer()?.id || PlayerIdentity.getOrCreatePlayerId();
+}
+
+function triggerMascotFx(fxClass, durationMs = 1200) {
+  if (!els.mascotScene) return;
+  els.mascotScene.classList.remove('fx-record', 'fx-crown', 'fx-join');
+  els.mascotScene.classList.add(fxClass);
+  clearTimeout(triggerMascotFx._timer);
+  triggerMascotFx._timer = setTimeout(() => {
+    els.mascotScene?.classList.remove(fxClass);
+  }, durationMs);
+}
+
+function scheduleHugScene(partnerName) {
+  forcedSceneMode = 'hugging';
+  triggerMascotFx('fx-join');
+  clearTimeout(hugTimer);
+  hugTimer = setTimeout(() => {
+    forcedSceneMode = null;
+    refreshMascotScene();
+  }, 3200);
+}
+
+function renderMascotScene(room, couple, overrideMode) {
+  if (!els.mascotStage || !els.mascotScene) return;
+
+  const localId = getLocalPlayerId();
+  const localPlayer = room.players.find((p) => p.id === localId) || CloudManager.getLocalPlayer();
+  const localName = localPlayer?.name || 'Jugador';
+  const localType = resolveMascotType(localName, localId, room.players);
+  const partner = room.players.find((p) => p.id !== localId);
+  const partnerName = partner?.name || '';
+  const partnerType = partner ? resolveMascotType(partner.name, partner.id, room.players) : localType === 'chocolate' ? 'cereza' : 'chocolate';
+
+  const mode = overrideMode || forcedSceneMode || detectSceneMode(room, localId);
+
+  const scene = buildMascotScene(mode, {
+    localType,
+    partnerType,
+    localName,
+    partnerName,
+    localOnline: localPlayer?.presence?.online !== false,
+    partnerOnline: partner?.presence?.online === true,
+  });
+
+  els.mascotStage.innerHTML = scene.html;
+  if (els.mascotCaption) els.mascotCaption.textContent = scene.caption;
+  els.mascotScene.className = `couple-mascot-scene ${scene.className}`;
+
+  if (els.streakWrap) {
+    const streakHtml = couple?.playStreak >= 2 ? renderStreakBadge(couple.playStreak) : '';
+    els.streakWrap.innerHTML = streakHtml;
+  }
+}
+
+async function refreshMascotScene(overrideMode) {
+  const room = CloudManager.getCurrentRoom();
+  if (!room) return;
+
+  let couple = null;
+  const coupleRes = await CloudManager.getCoupleStats();
+  if (coupleRes.success) couple = coupleRes.couple;
+
+  renderMascotScene(room, couple, overrideMode);
+}
+
 function renderChatMessages(messages) {
   if (!els.chatMessages) return;
 
   els.chatMessages.innerHTML = '';
-
   if (!messages || !messages.length) return;
 
-  messages.forEach((msg) => {
-    const div = document.createElement('div');
-    div.className = 'couple-chat-msg' + (msg.type === 'system' ? ' is-system' : ' is-player');
+  const room = CloudManager.getCurrentRoom();
+  const players = room?.players || [];
 
+  messages.forEach((msg) => {
     if (msg.type === 'system') {
+      const div = document.createElement('div');
+      div.className = 'couple-chat-msg is-system';
       div.textContent = msg.message;
-    } else {
-      div.innerHTML = `<span class="couple-chat-author">${escapeHtml(msg.playerName || 'Jugador')}:</span><span class="couple-chat-text">${escapeHtml(msg.message)}</span>`;
+      els.chatMessages.appendChild(div);
+      return;
     }
 
-    els.chatMessages.appendChild(div);
+    const type = resolveMascotType(msg.playerName, msg.playerId, players);
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderChatRow(type, msg.playerName || 'Jugador', msg.message);
+    els.chatMessages.appendChild(wrap.firstElementChild);
   });
 
   if (chatStickToBottom) {
@@ -171,21 +261,34 @@ function renderRanking(ranking, coupleStats) {
     return;
   }
 
+  const room = CloudManager.getCurrentRoom();
+  const players = room?.players || [];
+  const leaderId = coupleStats?.bestPlayerId;
+
   ranking.forEach((entry, index) => {
-    const li = document.createElement('li');
-    const crown =
-      coupleStats?.bestPlayerId === entry.id && entry.bestScore > 0 ? ' 👑' : '';
-    li.className = 'couple-rank-item' + (index === 0 && entry.bestScore > 0 ? ' is-first' : '');
-    li.innerHTML = `<span class="couple-rank-pos">${index + 1}.</span><span class="couple-rank-name">${escapeHtml(entry.name)}${crown}</span><span class="couple-rank-score">${entry.bestScore} 🍫</span>`;
-    els.rankingList.appendChild(li);
+    const type = resolveMascotType(entry.name, entry.id, players);
+    const isLeader = leaderId === entry.id && entry.bestScore > 0;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderRankingRow(type, entry.name, entry.bestScore, {
+      isLeader,
+      rank: index + 1,
+    });
+    if (wrap.firstElementChild) {
+      els.rankingList.appendChild(wrap.firstElementChild);
+    }
   });
 }
 
 function renderCoupleSummary(couple) {
   if (!els.statsSummary || !couple) return;
+  const streakLine =
+    couple.playStreak >= 2 ?
+      `<p><span>🔥 Racha</span><strong>${couple.playStreak} días</strong></p>`
+    : '';
   els.statsSummary.innerHTML = `
     <p><span>🎮 Partidas</span><strong>${couple.totalGames}</strong></p>
     <p><span>🍫 Chocolates juntos</span><strong>${couple.totalChocolate.toLocaleString('es')}</strong></p>
+    ${streakLine}
     <p><span>🕒 Última actividad</span><strong>${formatUpdatedAt(couple.updatedAt)}</strong></p>
   `;
 }
@@ -215,11 +318,24 @@ async function refreshRoomPanel() {
 
   if (coupleRes.success) {
     renderCoupleSummary(coupleRes.couple);
+    renderMascotScene(room, coupleRes.couple);
+  } else {
+    renderMascotScene(room, null);
   }
 
   if (rankRes.success) {
     renderRanking(rankRes.ranking, coupleRes.success ? coupleRes.couple : null);
   }
+}
+
+function handleCoupleUpdated(couple) {
+  if (!couple) return;
+
+  const newLeader = couple.bestPlayerId;
+  if (lastBestPlayerId && newLeader && lastBestPlayerId !== newLeader) {
+    triggerMascotFx('fx-crown');
+  }
+  lastBestPlayerId = newLeader;
 }
 
 async function handleRoomEvent(event) {
@@ -230,12 +346,31 @@ async function handleRoomEvent(event) {
     }
     renderChatMessages([]);
     setChatEnabled(false);
+    lastPlayerCount = 0;
+    lastBestPlayerId = null;
+    forcedSceneMode = null;
     showLobby();
     setStatus('La sala ya no existe.');
     return;
   }
 
-  if (event.type === 'room_updated' || event.type === 'couple_updated') {
+  if (event.type === 'couple_updated') {
+    handleCoupleUpdated(event.couple);
+    await refreshRoomPanel();
+    return;
+  }
+
+  if (event.type === 'room_updated') {
+    const room = event.room || CloudManager.getCurrentRoom();
+    const count = room?.players?.length || 0;
+
+    if (lastPlayerCount === 1 && count >= 2) {
+      const localId = getLocalPlayerId();
+      const partner = room?.players?.find((p) => p.id !== localId);
+      scheduleHugScene(partner?.name || 'Tu pareja');
+    }
+
+    lastPlayerCount = count;
     await refreshRoomPanel();
   }
 }
@@ -264,6 +399,7 @@ async function onCreateRoom() {
 
     setStatus('');
     bindRoomListener();
+    lastPlayerCount = result.room?.players?.length || 1;
     await refreshRoomPanel();
     showToast(`Sala ${result.room.code} creada — comparte el código`);
   } catch (err) {
@@ -298,7 +434,13 @@ async function onJoinRoom() {
 
     setStatus('');
     bindRoomListener();
+    lastPlayerCount = result.room?.players?.length || 0;
     await refreshRoomPanel();
+    if ((result.room?.players?.length || 0) >= 2) {
+      const localId = getLocalPlayerId();
+      const partner = result.room.players.find((p) => p.id !== localId);
+      scheduleHugScene(partner?.name || 'Tu pareja');
+    }
     showToast(`Conectado a la sala ${code}`);
   } catch (err) {
     console.error('[CoupleUI] joinRoom error:', err);
@@ -324,6 +466,9 @@ async function onLeaveRoom() {
     }
     renderChatMessages([]);
     setChatEnabled(false);
+    lastPlayerCount = 0;
+    lastBestPlayerId = null;
+    forcedSceneMode = null;
 
     showLobby();
     setStatus(
@@ -368,6 +513,12 @@ function onScoreSubmitted(event) {
     const name = detail.couple?.bestPlayerName || 'Alguien';
     const score = detail.couple?.bestScore || 0;
     showToast(`🏆 ¡Nuevo récord! ${name} — ${score} 🍫`);
+    triggerMascotFx('fx-record');
+    refreshMascotScene();
+  }
+
+  if (detail.couple?.playStreak >= 7 && detail.couple.playStreak % 7 === 0) {
+    showToast(`🔥 ¡${detail.couple.playStreak} días juntos! 🧸❤️🧸`);
   }
 }
 
@@ -392,6 +543,10 @@ function cacheElements() {
   els.chatInput = $('couple-chat-input');
   els.chatSend = $('couple-chat-send');
   els.chatEmojis = $('couple-chat-emojis');
+  els.mascotScene = $('couple-mascot-scene');
+  els.mascotStage = $('couple-mascot-stage');
+  els.mascotCaption = $('couple-mascot-caption');
+  els.streakWrap = $('couple-streak-wrap');
 }
 
 async function init() {
@@ -429,7 +584,13 @@ async function init() {
 
   if (CloudManager.getCurrentRoom()) {
     bindRoomListener();
+    const room = CloudManager.getCurrentRoom();
+    lastPlayerCount = room?.players?.length || 0;
     await refreshRoomPanel();
+    const coupleRes = await CloudManager.getCoupleStats();
+    if (coupleRes.success) {
+      lastBestPlayerId = coupleRes.couple?.bestPlayerId ?? null;
+    }
   } else {
     showLobby();
   }

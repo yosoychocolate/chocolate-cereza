@@ -1292,8 +1292,252 @@ p {
   padding: 0;
 }
 
-.couple-player-item,
 .couple-rank-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(255, 88, 168, 0.12);
+  font-size: 0.88rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ===== Ursinhos Chocolate & Cereza ===== */
+.couple-mascot-scene {
+  position: relative;
+  padding: 0.85rem 0.65rem 0.55rem;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(42, 18, 38, 0.45), rgba(18, 10, 28, 0.35));
+  border: 1px solid rgba(255, 88, 168, 0.2);
+  text-align: center;
+  overflow: hidden;
+}
+
+.couple-mascot-stage {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mascot-stage-inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.mascot-stage-inner.is-duo {
+  gap: 0.15rem;
+}
+
+.mascot-stage-inner.is-parted {
+  gap: 1.25rem;
+}
+
+.mascot-heart {
+  font-size: 1.15rem;
+  align-self: center;
+  margin: 0 0.15rem;
+  filter: drop-shadow(0 0 6px rgba(255, 79, 163, 0.45));
+}
+
+.mascot-heart-pulse {
+  animation: mascotHeartPulse 0.9s ease-in-out infinite;
+}
+
+.mascot-heart-broken {
+  font-size: 1rem;
+  opacity: 0.85;
+  animation: mascotHeartBreak 2s ease-in-out infinite;
+}
+
+.bear {
+  display: inline-flex;
+  flex-shrink: 0;
+  transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.35s ease;
+}
+
+.bear-svg {
+  display: block;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
+}
+
+.bear.is-ghost {
+  transform: scale(0.82);
+  opacity: 0.35 !important;
+}
+
+.bear.is-hug-left {
+  animation: bearHugLeft 0.85s ease forwards;
+}
+
+.bear.is-hug-right {
+  animation: bearHugRight 0.85s ease forwards;
+}
+
+.bear.has-crown .bear-svg {
+  filter: drop-shadow(0 0 8px rgba(255, 213, 106, 0.45)) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.2));
+}
+
+.couple-mascot-caption {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: rgba(255, 210, 230, 0.88);
+  font-style: italic;
+}
+
+.couple-mascot-scene.is-together .couple-mascot-caption {
+  font-style: normal;
+  letter-spacing: 0.12em;
+}
+
+.couple-streak-badge {
+  margin-top: 0.55rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  background: rgba(255, 120, 60, 0.12);
+  border: 1px solid rgba(255, 160, 80, 0.35);
+  color: rgba(255, 220, 180, 0.95);
+}
+
+.couple-streak-badge.is-milestone {
+  flex-wrap: wrap;
+  justify-content: center;
+  background: rgba(255, 79, 163, 0.15);
+  border-color: rgba(255, 120, 190, 0.5);
+  animation: streakMilestone 1.2s ease;
+}
+
+.streak-count {
+  font-size: 0.95rem;
+  color: rgba(255, 220, 130, 0.98);
+}
+
+.streak-milestone {
+  width: 100%;
+  font-size: 0.85rem;
+  color: rgba(255, 200, 230, 0.95);
+}
+
+.couple-mascot-fx {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  opacity: 0;
+}
+
+.couple-mascot-scene.fx-record .couple-mascot-fx::after {
+  content: '❤️';
+  animation: mascotFxPop 1.1s ease forwards;
+}
+
+.couple-mascot-scene.fx-crown .couple-mascot-fx::after {
+  content: '👑';
+  animation: mascotFxPop 1.1s ease forwards;
+}
+
+.couple-mascot-scene.fx-join .couple-mascot-fx::after {
+  content: '🎉';
+  animation: mascotFxPop 1.1s ease forwards;
+}
+
+.couple-rank-mascot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  position: relative;
+}
+
+.couple-rank-badge {
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.couple-rank-item.is-first .couple-rank-mascot .bear.has-crown {
+  animation: bearCrownGlow 2s ease-in-out infinite;
+}
+
+.couple-chat-msg.is-player {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.couple-chat-mascot {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.couple-chat-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.couple-chat-msg.is-player .couple-chat-author {
+  margin-right: 0;
+}
+
+@keyframes bearHugLeft {
+  from { transform: translateX(12px); }
+  to { transform: translateX(6px); }
+}
+
+@keyframes bearHugRight {
+  from { transform: translateX(-12px); }
+  to { transform: translateX(-6px); }
+}
+
+@keyframes mascotHeartPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+@keyframes mascotHeartBreak {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes mascotFxPop {
+  0% { opacity: 0; transform: scale(0.4) translateY(8px); }
+  25% { opacity: 1; transform: scale(1.15) translateY(-4px); }
+  100% { opacity: 0; transform: scale(0.9) translateY(-18px); }
+}
+
+@keyframes bearCrownGlow {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+@keyframes streakMilestone {
+  0% { transform: scale(0.92); opacity: 0.6; }
+  60% { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.couple-player-item {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 0.5rem;
