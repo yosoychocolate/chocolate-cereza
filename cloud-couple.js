@@ -8,8 +8,11 @@
 import { doc, getDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js';
 
 const ROOMS_COLLECTION = 'rooms';
+const PLAYERS_SUBCOLLECTION = 'players';
 const COUPLE_COLLECTION = 'couple';
+const STATS_COLLECTION = 'stats';
 const COUPLE_DOC_ID = 'data';
+const STATS_DOC_ID = 'data';
 
 /** @typedef {Object} CoupleStats
  * @property {number} bestScore
@@ -40,6 +43,23 @@ export function createDefaultCoupleStats() {
  */
 export function coupleRef(db, roomCode) {
   return doc(db, ROOMS_COLLECTION, roomCode, COUPLE_COLLECTION, COUPLE_DOC_ID);
+}
+
+/**
+ * @param {import('firebase/firestore').Firestore} db
+ * @param {string} roomCode
+ * @param {string} playerId
+ */
+export function playerStatsRef(db, roomCode, playerId) {
+  return doc(
+    db,
+    ROOMS_COLLECTION,
+    roomCode,
+    PLAYERS_SUBCOLLECTION,
+    playerId,
+    STATS_COLLECTION,
+    STATS_DOC_ID
+  );
 }
 
 /**
@@ -139,5 +159,55 @@ export function applyScoreToCouple(transaction, coupleSnap, db, roomCode, player
       updatedAt: Date.now(),
     },
     isNewBest,
+  };
+}
+
+/**
+ * @param {import('firebase/firestore').Transaction} transaction
+ * @param {import('firebase/firestore').DocumentSnapshot} statsSnap
+ * @param {import('firebase/firestore').Firestore} db
+ * @param {string} roomCode
+ * @param {string} playerId
+ * @param {number} score
+ */
+export function applyPlayerStats(transaction, statsSnap, db, roomCode, playerId, score) {
+  const ref = playerStatsRef(db, roomCode, playerId);
+  const prev = statsSnap.exists() ? statsSnap.data() : {};
+  const safeScore = Math.max(0, Math.floor(score));
+  const prevBest = typeof prev.bestScore === 'number' ? prev.bestScore : 0;
+  const prevGames = typeof prev.gamesPlayed === 'number' ? prev.gamesPlayed : 0;
+
+  const next = {
+    bestScore: Math.max(prevBest, safeScore),
+    lastScore: safeScore,
+    gamesPlayed: prevGames + 1,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (statsSnap.exists()) {
+    transaction.update(ref, next);
+  } else {
+    transaction.set(ref, next);
+  }
+
+  return {
+    bestScore: next.bestScore,
+    lastScore: safeScore,
+    gamesPlayed: next.gamesPlayed,
+  };
+}
+
+/**
+ * @param {import('firebase/firestore').DocumentSnapshot} snap
+ */
+export function playerStatsFromSnapshot(snap) {
+  if (!snap.exists()) {
+    return { bestScore: 0, lastScore: 0, gamesPlayed: 0 };
+  }
+  const data = snap.data();
+  return {
+    bestScore: typeof data.bestScore === 'number' ? data.bestScore : 0,
+    lastScore: typeof data.lastScore === 'number' ? data.lastScore : 0,
+    gamesPlayed: typeof data.gamesPlayed === 'number' ? data.gamesPlayed : 0,
   };
 }

@@ -41,6 +41,9 @@ import {
   createDefaultCoupleStats,
   fetchCoupleStats,
   applyScoreToCouple,
+  applyPlayerStats,
+  playerStatsRef,
+  playerStatsFromSnapshot,
   transactionDeleteCouple,
 } from './cloud-couple.js';
 
@@ -431,7 +434,10 @@ export async function submitScore(playerId, playerName, score) {
 
     const result = await runTransaction(db, async (transaction) => {
       const coupleSnap = await transaction.get(coupleRef(db, roomCode));
-      return applyScoreToCouple(transaction, coupleSnap, db, roomCode, pid, pname, score);
+      const statsSnap = await transaction.get(playerStatsRef(db, roomCode, pid));
+      const coupleResult = applyScoreToCouple(transaction, coupleSnap, db, roomCode, pid, pname, score);
+      const playerStats = applyPlayerStats(transaction, statsSnap, db, roomCode, pid, score);
+      return { ...coupleResult, playerStats };
     });
 
     currentCoupleStats = result.stats;
@@ -444,6 +450,43 @@ export async function submitScore(playerId, playerName, score) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return fail('SUBMIT_SCORE_FAILED', message);
+  }
+}
+
+/**
+ * Ranking da sala (melhor pontuação por jogador).
+ */
+export async function getCoupleRanking() {
+  if (!currentRoom) {
+    return fail('NOT_IN_ROOM', 'Você não está em uma sala.');
+  }
+
+  try {
+    const db = requireDb();
+    const room = currentRoom;
+    const ranking = [];
+
+    for (let i = 0; i < room.players.length; i++) {
+      const player = room.players[i];
+      const statsSnap = await getDoc(playerStatsRef(db, room.code, player.id));
+      const stats = playerStatsFromSnapshot(statsSnap);
+      ranking.push({
+        id: player.id,
+        name: player.name,
+        bestScore: stats.bestScore,
+        lastScore: stats.lastScore,
+        gamesPlayed: stats.gamesPlayed,
+        online: player.presence?.online === true,
+        isCoupleBest: currentCoupleStats?.bestPlayerId === player.id,
+      });
+    }
+
+    ranking.sort((a, b) => b.bestScore - a.bestScore);
+
+    return { success: true, ranking };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return fail('RANKING_FAILED', message);
   }
 }
 
@@ -765,6 +808,7 @@ export const CloudManager = {
   leaveRoom,
   submitScore,
   getCoupleStats,
+  getCoupleRanking,
   getCurrentRoom,
   getLocalPlayer,
   getRoomPresence,

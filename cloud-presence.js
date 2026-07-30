@@ -118,6 +118,9 @@ export function transactionCreatePlayer(transaction, db, roomCode, player) {
 export function transactionDeletePlayer(transaction, db, roomCode, playerId) {
   transaction.delete(profileRef(db, roomCode, playerId));
   transaction.delete(presenceRef(db, roomCode, playerId));
+  transaction.delete(
+    doc(db, ROOMS_COLLECTION, roomCode, PLAYERS_SUBCOLLECTION, playerId, 'stats', 'data')
+  );
   transaction.delete(playerRootRef(db, roomCode, playerId));
 }
 

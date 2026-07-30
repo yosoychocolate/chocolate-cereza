@@ -1039,6 +1039,19 @@ function initGame() {
     syncEngineBlocked();
     gameOverScreen?.classList.remove('hidden');
     gameOverScreen?.setAttribute('aria-hidden', 'false');
+    submitOnlineScore(score);
+  }
+
+  function submitOnlineScore(finalScore) {
+    if (!window.CloudManager?.getCurrentRoom?.()) return;
+    const player = window.CloudManager.getLocalPlayer();
+    if (!player) return;
+
+    window.CloudManager.submitScore(player.id, player.name, finalScore)
+      .then((result) => {
+        window.dispatchEvent(new CustomEvent('couple:score-submitted', { detail: result }));
+      })
+      .catch(() => {});
   }
 
   function hideGameOver() {

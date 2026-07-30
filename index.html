@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=32">
+  <link rel="stylesheet" href="styles.css?v=39">
 </head>
 <body>
   <!-- Chuva de pétalas e corações -->
@@ -156,6 +156,51 @@
     <section class="section glass" id="section-game">
       <h2>Mini Game</h2>
       <p class="game-hint">Controla la cereza con ← → , el mouse o tocando la pantalla</p>
+
+      <!-- Modo Pareja (online) -->
+      <div id="couple-mode" class="couple-mode">
+        <div id="couple-lobby" class="couple-panel">
+          <h3 class="couple-title">❤️ Jugar en Pareja</h3>
+          <label class="couple-field">
+            <span class="couple-label">Nombre</span>
+            <input id="couple-player-name" class="couple-input" type="text" maxlength="24" placeholder="Chocolate" autocomplete="nickname">
+          </label>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <button id="couple-create-btn" class="couple-btn couple-btn-primary" type="button">Crear Sala</button>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <label class="couple-field">
+            <span class="couple-label">Código</span>
+            <input id="couple-join-code" class="couple-input couple-input-code" type="text" maxlength="6" placeholder="ABC234" autocapitalize="characters" autocomplete="off">
+          </label>
+          <button id="couple-join-btn" class="couple-btn" type="button">Entrar</button>
+          <p id="couple-status-msg" class="couple-status-msg" role="status" aria-live="polite"></p>
+        </div>
+
+        <div id="couple-room-panel" class="couple-panel hidden">
+          <h3 class="couple-title">❤️ Chocolate &amp; La Cereza</h3>
+          <div class="couple-room-head">
+            <span class="couple-room-label">Sala</span>
+            <strong id="couple-room-code" class="couple-room-code">------</strong>
+            <button id="couple-copy-code" class="couple-btn couple-btn-small" type="button">📋 Copiar</button>
+          </div>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <ul id="couple-players-list" class="couple-players-list"></ul>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <div class="couple-ranking-wrap">
+            <h4 class="couple-subtitle">👑 Ranking</h4>
+            <ol id="couple-ranking-list" class="couple-ranking-list"></ol>
+          </div>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <div id="couple-stats-summary" class="couple-stats-summary"></div>
+          <div class="couple-actions">
+            <button id="couple-start-game" class="couple-btn couple-btn-primary" type="button">▶ Comenzar partida</button>
+            <button id="couple-leave-room" class="couple-btn couple-btn-ghost" type="button">Salir de la sala</button>
+          </div>
+        </div>
+
+        <div id="couple-toast" class="couple-toast hidden" role="status" aria-live="polite"></div>
+      </div>
+
       <div class="game-meta-wrap">
         <div class="game-meta-bar">
           <button id="game-stats-toggle" class="game-meta-btn" type="button" aria-expanded="false" aria-controls="game-stats-panel">
@@ -332,6 +377,7 @@
   <script src="game-engine.js?v=32"></script>
   <script src="game-meta.js?v=32"></script>
   <script src="script.js?v=32"></script>
-  <script type="module" src="cloud-manager.js?v=38"></script>
+  <script type="module" src="cloud-manager.js?v=39"></script>
+  <script type="module" src="couple-ui.js?v=39"></script>
 </body>
 </html>
