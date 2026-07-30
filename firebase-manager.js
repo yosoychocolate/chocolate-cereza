@@ -11,10 +11,13 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  addDoc,
   updateDoc,
   deleteDoc,
   runTransaction,
   onSnapshot,
+  orderBy,
+  limit,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js';
 
@@ -25,10 +28,13 @@ export {
   getDoc,
   getDocs,
   setDoc,
+  addDoc,
   updateDoc,
   deleteDoc,
   runTransaction,
   onSnapshot,
+  orderBy,
+  limit,
   serverTimestamp,
 };
 

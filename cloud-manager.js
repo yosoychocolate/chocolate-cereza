@@ -35,6 +35,13 @@ import {
 } from './cloud-presence.js';
 import { createRoomListener } from './cloud-listener.js';
 import {
+  createChatListener,
+  sendPlayerMessage,
+  sendSystemMessage,
+  normalizeChatText,
+  MAX_CHAT_LENGTH,
+} from './cloud-chat.js';
+import {
   coupleRef,
   createDefaultCoupleStats,
   fetchCoupleStats,
@@ -113,6 +120,7 @@ let restorePromise = null;
 let restoreGeneration = 0;
 
 const roomListener = createRoomListener(fetchRoom);
+const chatListener = createChatListener();
 
 roomListener.subscribe((event) => {
   if (event.type === 'room_updated' && event.room) {
@@ -134,6 +142,7 @@ function startRoomListener() {
   try {
     const db = requireDb();
     roomListener.start(db, currentRoom.code);
+    chatListener.start(db, currentRoom.code);
   } catch (err) {
     console.warn('[CloudManager] Listener não iniciado:', err);
   }
@@ -141,6 +150,65 @@ function startRoomListener() {
 
 function stopRoomListener() {
   roomListener.stop();
+  chatListener.stop();
+}
+
+/**
+ * Envia mensagens românticas/leves após pontuação (fire-and-forget).
+ * @param {import('firebase/firestore').Firestore} db
+ * @param {string} roomCode
+ * @param {string} playerId
+ * @param {string} playerName
+ * @param {number} score
+ * @param {{ isNewBest: boolean, stats: CoupleStats }} result
+ * @param {CoupleStats | null} prevCouple
+ */
+async function postScoreChatMessages(db, roomCode, playerId, playerName, score, result, prevCouple) {
+  const prevBestId = prevCouple?.bestPlayerId ?? null;
+  const prevBestName = prevCouple?.bestPlayerName ?? '';
+  const prevBestScore = prevCouple?.bestScore ?? 0;
+
+  if (result.isNewBest) {
+    if (prevBestId && prevBestId !== playerId && prevBestName) {
+      await sendSystemMessage(
+        db,
+        roomCode,
+        `🏆 ¡${playerName} le robó la corona a ${prevBestName}!`
+      );
+    } else {
+      await sendSystemMessage(db, roomCode, `🏆 ¡${playerName} batió el récord!`);
+    }
+    return;
+  }
+
+  if (prevBestId && prevBestId !== playerId && prevBestScore > 0) {
+    const gap = prevBestScore - score;
+    if (gap > 0 && gap <= 30) {
+      await sendSystemMessage(db, roomCode, `🍒 ${playerName} está casi alcanzándote…`);
+    }
+  }
+}
+
+/**
+ * @param {import('firebase/firestore').Firestore} db
+ * @param {string} roomCode
+ * @param {string} playerName
+ */
+async function postJoinChatMessage(db, roomCode, playerName) {
+  await sendSystemMessage(
+    db,
+    roomCode,
+    `❤️ ${playerName} llegó. ¡Ahora la disputa comenzó!`
+  );
+}
+
+/**
+ * @param {import('firebase/firestore').Firestore} db
+ * @param {string} roomCode
+ * @param {string} playerName
+ */
+async function postLeaveChatMessage(db, roomCode, playerName) {
+  await sendSystemMessage(db, roomCode, `🍫 ${playerName} salió de la sala.`);
 }
 
 function refreshConnection() {
@@ -462,6 +530,7 @@ export async function submitScore(playerId, playerName, score) {
   try {
     const db = requireDb();
     const roomCode = currentRoom.code;
+    const prevCouple = currentCoupleStats ? { ...currentCoupleStats } : null;
 
     const result = await runTransaction(db, async (transaction) => {
       const coupleSnap = await transaction.get(coupleRef(db, roomCode));
@@ -472,6 +541,10 @@ export async function submitScore(playerId, playerName, score) {
     });
 
     currentCoupleStats = result.stats;
+
+    postScoreChatMessages(db, roomCode, pid, pname, score, result, prevCouple).catch((err) => {
+      console.warn('[CloudManager] postScoreChatMessages:', err);
+    });
 
     return {
       success: true,
@@ -728,6 +801,9 @@ export async function joinRoom(code, player) {
 
     if (!joinedExisting) {
       await setPlayerOnline(db, roomCode, normalized.id);
+      postJoinChatMessage(db, roomCode, normalized.name).catch((err) => {
+        console.warn('[CloudManager] postJoinChatMessage:', err);
+      });
     }
 
     const room = await fetchRoom(db, roomCode);
@@ -763,6 +839,7 @@ export async function leaveRoom() {
 
   const roomId = currentRoom.id;
   const playerId = currentPlayerId;
+  const playerName = getLocalPlayer()?.name || 'Jugador';
 
   stopRoomListener();
   stopPresenceLifecycle();
@@ -771,6 +848,9 @@ export async function leaveRoom() {
 
   try {
     const db = requireDb();
+    await postLeaveChatMessage(db, roomId, playerName).catch((err) => {
+      console.warn('[CloudManager] postLeaveChatMessage:', err);
+    });
     await setPlayerOffline(db, roomId, playerId);
 
     const roomRef = roomDocRef(db, roomId);
@@ -812,6 +892,89 @@ export async function leaveRoom() {
 
   return { success: true };
 }
+
+/**
+ * Envia mensagem de chat do jogador local.
+ * @param {string} message
+ */
+export async function sendChatMessage(message) {
+  if (!currentRoom || !currentPlayerId) {
+    return fail('NOT_IN_ROOM', 'No estás en una sala.');
+  }
+
+  const text = normalizeChatText(message);
+  if (!text) {
+    return fail('EMPTY_MESSAGE', 'Escribe un mensaje.');
+  }
+
+  const player = getLocalPlayer();
+  const playerName = player?.name || 'Jugador';
+
+  try {
+    const db = requireDb();
+    await sendPlayerMessage(db, currentRoom.code, currentPlayerId, playerName, text);
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return fail('CHAT_FAILED', msg);
+  }
+}
+
+/**
+ * Notifica no chat que o jogador local iniciou uma partida.
+ */
+export async function notifyGameStarted() {
+  if (!currentRoom || !currentPlayerId) {
+    return fail('NOT_IN_ROOM', 'No estás en una sala.');
+  }
+
+  const player = getLocalPlayer();
+  const playerName = player?.name || 'Jugador';
+
+  try {
+    const db = requireDb();
+    await sendSystemMessage(db, currentRoom.code, `🍫 ${playerName} inició una partida.`);
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return fail('CHAT_FAILED', msg);
+  }
+}
+
+/**
+ * Inscreve callback para mensagens de chat em tempo real.
+ * @param {(event: import('./cloud-chat.js').ChatUpdateEvent) => void} callback
+ * @returns {() => void}
+ */
+export function subscribeToChat(callback) {
+  if (typeof callback !== 'function') {
+    return () => {};
+  }
+
+  const unsubscribe = chatListener.subscribe(callback);
+
+  if (currentRoom) {
+    if (!chatListener.isActive()) {
+      try {
+        const db = requireDb();
+        chatListener.start(db, currentRoom.code);
+      } catch (err) {
+        console.warn('[CloudManager] Chat listener não iniciado:', err);
+      }
+    }
+  }
+
+  return unsubscribe;
+}
+
+/**
+ * @param {(event: import('./cloud-chat.js').ChatUpdateEvent) => void} [callback]
+ */
+export function unsubscribeFromChat(callback) {
+  chatListener.unsubscribe(callback);
+}
+
+export { MAX_CHAT_LENGTH };
 
 /**
  * Inscreve callback para atualizações em tempo real da sala atual.
@@ -883,6 +1046,11 @@ export const CloudManager = {
   subscribeToRoom,
   unsubscribeFromRoom,
   isListeningToRoom,
+  sendChatMessage,
+  notifyGameStarted,
+  subscribeToChat,
+  unsubscribeFromChat,
+  MAX_CHAT_LENGTH,
   restoreSession,
   whenSessionReady,
   hasSession,

@@ -9,6 +9,12 @@ const els = {};
 /** @type {(() => void) | null} */
 let unsubscribeRoom = null;
 
+/** @type {(() => void) | null} */
+let unsubscribeChat = null;
+
+/** @type {boolean} */
+let chatStickToBottom = true;
+
 function $(id) {
   return document.getElementById(id);
 }
@@ -80,6 +86,82 @@ function renderPlayers(players) {
   });
 }
 
+function renderChatMessages(messages) {
+  if (!els.chatMessages) return;
+
+  els.chatMessages.innerHTML = '';
+
+  if (!messages || !messages.length) return;
+
+  messages.forEach((msg) => {
+    const div = document.createElement('div');
+    div.className = 'couple-chat-msg' + (msg.type === 'system' ? ' is-system' : ' is-player');
+
+    if (msg.type === 'system') {
+      div.textContent = msg.message;
+    } else {
+      div.innerHTML = `<span class="couple-chat-author">${escapeHtml(msg.playerName || 'Jugador')}:</span><span class="couple-chat-text">${escapeHtml(msg.message)}</span>`;
+    }
+
+    els.chatMessages.appendChild(div);
+  });
+
+  if (chatStickToBottom) {
+    els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  }
+}
+
+function handleChatEvent(event) {
+  if (event.type === 'chat_updated') {
+    renderChatMessages(event.messages);
+  }
+}
+
+function bindChatListener() {
+  if (unsubscribeChat) unsubscribeChat();
+  unsubscribeChat = CloudManager.subscribeToChat(handleChatEvent);
+}
+
+function setChatEnabled(enabled) {
+  if (els.chatInput) els.chatInput.disabled = !enabled;
+  if (els.chatSend) els.chatSend.disabled = !enabled;
+  els.chatEmojis?.querySelectorAll('.couple-chat-emoji').forEach((btn) => {
+    btn.disabled = !enabled;
+  });
+}
+
+async function sendChat(text) {
+  const message = (text || '').trim();
+  if (!message) return;
+
+  setChatEnabled(false);
+  try {
+    const result = await CloudManager.sendChatMessage(message);
+    if (!result.success) {
+      setStatus(result.message || 'No se pudo enviar.', true);
+      return;
+    }
+    if (els.chatInput) els.chatInput.value = '';
+    setStatus('');
+  } finally {
+    setChatEnabled(true);
+    els.chatInput?.focus();
+  }
+}
+
+async function onChatSubmit(event) {
+  event.preventDefault();
+  const text = els.chatInput?.value || '';
+  await sendChat(text);
+}
+
+async function onEmojiClick(event) {
+  const btn = event.target.closest('.couple-chat-emoji');
+  if (!btn || btn.disabled) return;
+  const emoji = btn.dataset.emoji;
+  if (emoji) await sendChat(emoji);
+}
+
 function renderRanking(ranking, coupleStats) {
   if (!els.rankingList) return;
   els.rankingList.innerHTML = '';
@@ -142,6 +224,12 @@ async function refreshRoomPanel() {
 
 async function handleRoomEvent(event) {
   if (event.type === 'room_removed') {
+    if (unsubscribeChat) {
+      unsubscribeChat();
+      unsubscribeChat = null;
+    }
+    renderChatMessages([]);
+    setChatEnabled(false);
     showLobby();
     setStatus('La sala ya no existe.');
     return;
@@ -155,6 +243,8 @@ async function handleRoomEvent(event) {
 function bindRoomListener() {
   if (unsubscribeRoom) unsubscribeRoom();
   unsubscribeRoom = CloudManager.subscribeToRoom(handleRoomEvent);
+  bindChatListener();
+  setChatEnabled(true);
 }
 
 async function onCreateRoom() {
@@ -228,6 +318,12 @@ async function onLeaveRoom() {
       unsubscribeRoom();
       unsubscribeRoom = null;
     }
+    if (unsubscribeChat) {
+      unsubscribeChat();
+      unsubscribeChat = null;
+    }
+    renderChatMessages([]);
+    setChatEnabled(false);
 
     showLobby();
     setStatus(
@@ -253,6 +349,10 @@ async function onCopyCode() {
 }
 
 function onStartGame() {
+  CloudManager.notifyGameStarted().catch((err) => {
+    console.warn('[CoupleUI] notifyGameStarted:', err);
+  });
+
   const container = document.getElementById('game-container');
   if (container) {
     container.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -287,6 +387,11 @@ function cacheElements() {
   els.statsSummary = $('couple-stats-summary');
   els.statusMsg = $('couple-status-msg');
   els.toast = $('couple-toast');
+  els.chatMessages = $('couple-chat-messages');
+  els.chatForm = $('couple-chat-form');
+  els.chatInput = $('couple-chat-input');
+  els.chatSend = $('couple-chat-send');
+  els.chatEmojis = $('couple-chat-emojis');
 }
 
 async function init() {
@@ -303,6 +408,14 @@ async function init() {
   els.leaveBtn?.addEventListener('click', onLeaveRoom);
   els.copyBtn?.addEventListener('click', onCopyCode);
   els.startBtn?.addEventListener('click', onStartGame);
+  els.chatForm?.addEventListener('submit', onChatSubmit);
+  els.chatEmojis?.addEventListener('click', onEmojiClick);
+
+  els.chatMessages?.addEventListener('scroll', () => {
+    if (!els.chatMessages) return;
+    const el = els.chatMessages;
+    chatStickToBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+  });
 
   els.joinCode?.addEventListener('input', () => {
     if (els.joinCode) {

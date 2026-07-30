@@ -191,6 +191,26 @@
             <ol id="couple-ranking-list" class="couple-ranking-list"></ol>
           </div>
           <div class="couple-divider" aria-hidden="true"></div>
+          <div class="couple-chat-wrap">
+            <h4 class="couple-subtitle">💬 Chat</h4>
+            <div id="couple-chat-messages" class="couple-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+            <div id="couple-chat-emojis" class="couple-chat-emojis" aria-label="Emojis rápidos">
+              <button type="button" class="couple-chat-emoji" data-emoji="❤️" aria-label="Enviar ❤️">❤️</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="😂" aria-label="Enviar 😂">😂</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="😭" aria-label="Enviar 😭">😭</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="😎" aria-label="Enviar 😎">😎</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="😘" aria-label="Enviar 😘">😘</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="🍫" aria-label="Enviar 🍫">🍫</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="🍒" aria-label="Enviar 🍒">🍒</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="👏" aria-label="Enviar 👏">👏</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="👑" aria-label="Enviar 👑">👑</button>
+            </div>
+            <form id="couple-chat-form" class="couple-chat-form">
+              <input id="couple-chat-input" class="couple-chat-input" type="text" maxlength="200" placeholder="Escribe un mensaje…" autocomplete="off">
+              <button id="couple-chat-send" class="couple-btn couple-btn-small couple-chat-send" type="submit">Enviar</button>
+            </form>
+          </div>
+          <div class="couple-divider" aria-hidden="true"></div>
           <div id="couple-stats-summary" class="couple-stats-summary"></div>
           <div class="couple-actions">
             <button id="couple-start-game" class="couple-btn couple-btn-primary" type="button">▶ Comenzar partida</button>
@@ -377,7 +397,7 @@
   <script src="game-engine.js?v=32"></script>
   <script src="game-meta.js?v=32"></script>
   <script src="script.js?v=32"></script>
-  <script type="module" src="cloud-manager.js?v=42"></script>
-  <script type="module" src="couple-ui.js?v=42"></script>
+  <script type="module" src="cloud-manager.js?v=43"></script>
+  <script type="module" src="couple-ui.js?v=43"></script>
 </body>
 </html>
