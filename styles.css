@@ -1034,6 +1034,10 @@ p {
 }
 
 .game-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
   min-height: 48px;
   min-width: 48px;
   padding: 14px clamp(12px, 3vw, 16px);
@@ -2282,6 +2286,90 @@ body.music-playing .glass {
   #game-canvas {
     cursor: default;
   }
+
+  .game-score {
+    max-width: calc(100% - 5.5rem);
+    padding: 0.32rem 0.55rem;
+    border-radius: 10px;
+  }
+
+  .game-score-label {
+    font-size: 0.6rem;
+  }
+
+  .game-score-num {
+    font-size: clamp(0.95rem, 4.2vw, 1.15rem);
+  }
+
+  .game-endless-badge {
+    font-size: 0.5rem;
+    padding: 0.1rem 0.4rem;
+  }
+
+  .game-actions {
+    gap: 5px;
+    top: 6px;
+    right: 6px;
+  }
+
+  .game-pause-btn {
+    min-height: 36px;
+    min-width: 36px;
+    padding: 7px 9px;
+    font-size: 0.62rem;
+    gap: 4px;
+    border-radius: 9px;
+  }
+
+  .game-pause-icon {
+    font-size: 0.82rem;
+  }
+
+  .game-pause-label {
+    display: none;
+  }
+
+  .game-action-btn {
+    min-height: 36px;
+    min-width: 36px;
+    padding: 7px 8px;
+    font-size: 0.62rem;
+    border-radius: 9px;
+  }
+
+  .game-action-icon {
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  .game-action-text {
+    display: none;
+  }
+
+  .game-lives {
+    padding: 0.22rem 0.5rem 0.28rem;
+    border-radius: 10px;
+  }
+
+  .game-lives-label {
+    font-size: 0.52rem;
+  }
+
+  .life-heart {
+    font-size: 0.82rem;
+  }
+
+  .game-progress {
+    padding: 0.75rem 0.55rem 0.45rem;
+  }
+
+  .marker-num {
+    font-size: 0.52rem;
+  }
+
+  .marker-star {
+    font-size: 0.58rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -2327,8 +2415,12 @@ body.music-playing .glass {
   }
 
   .game-score {
-    max-width: calc(100% - 8.5rem);
-    padding: 0.4rem 0.65rem;
+    max-width: calc(100% - 5rem);
+    padding: 0.28rem 0.5rem;
+  }
+
+  .game-score-num {
+    font-size: 0.9rem;
   }
 
   .game-lives {
@@ -2344,7 +2436,9 @@ body.music-playing .glass {
   }
 
   .game-pause-btn {
-    padding-inline: 13px;
+    min-height: 34px;
+    min-width: 34px;
+    padding: 6px 8px;
   }
 
   .game-pause-label {
@@ -2352,8 +2446,9 @@ body.music-playing .glass {
   }
 
   .game-action-btn {
-    padding-inline: 12px;
-    font-size: 0.65rem;
+    min-height: 34px;
+    min-width: 34px;
+    padding: 6px 7px;
   }
 
   .game-progress {

@@ -686,6 +686,15 @@ function initGame() {
 
   const perfLite = isMobileView();
   ctx.imageSmoothingQuality = 'medium';
+  const CHERRY_BOTTOM_NORM = perfLite ? 112 : 58;
+  const SPRITE_NORM = perfLite ? 70 : 85;
+
+  function applyPlayfieldLayout() {
+    if (!H) return;
+    SPRITE_H = H * (SPRITE_NORM / 400);
+    cherry.y = H - H * (CHERRY_BOTTOM_NORM / 400);
+    cherry.speed = W * (6.5 / 360);
+  }
 
   const PERF = {
     maxChocolates: perfLite ? 5 : 7,
@@ -715,7 +724,7 @@ function initGame() {
     if (!gameReady || !cherry) return;
     cherry.x *= sx;
     mouseX *= sx;
-    cherry.y = H - H * (58 / 400);
+    cherry.y = H - H * (CHERRY_BOTTOM_NORM / 400);
     cherry.speed = W * (6.5 / 360);
     chocolates.forEach((c) => {
       c.x *= sx;
@@ -806,7 +815,6 @@ function initGame() {
 
     W = newW;
     H = newH;
-    SPRITE_H = H * (85 / 400);
     dpr = Math.min(window.devicePixelRatio || 1, PERF.dprCap);
 
     canvas.width = W * dpr;
@@ -816,6 +824,7 @@ function initGame() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'medium';
+    if (gameReady) applyPlayfieldLayout();
     if (gameReady) rebuildBgCache();
   }
 
@@ -1137,9 +1146,8 @@ function initGame() {
 
   resizeCanvas();
   cherry.x = W / 2;
-  cherry.y = H - H * (58 / 400);
-  cherry.speed = W * (6.5 / 360);
   mouseX = W / 2;
+  applyPlayfieldLayout();
   bgStars.forEach((s) => {
     s.x = Math.random() * W;
     s.y = Math.random() * H;
