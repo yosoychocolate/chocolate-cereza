@@ -3503,10 +3503,24 @@ body.game-meta-panel-open #game-container {
   pointer-events: none;
 }
 
+body.game-meta-panel-open #game-container * {
+  pointer-events: none !important;
+}
+
+body.game-meta-panel-open .game-meta-wrap,
 body.game-meta-panel-open .game-meta-panel {
+  pointer-events: auto;
   touch-action: pan-y;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+}
+
+body.game-meta-panel-open .game-pause-screen,
+body.game-meta-panel-open .couple-score-hud {
+  display: none !important;
+}
+
+body.game-meta-panel-open .game-meta-panel {
+  touch-action: auto;
+  overscroll-behavior: auto;
 }
 
 body.game-meta-panel-open .game-achievements-gallery {
@@ -3558,6 +3572,17 @@ body.game-meta-panel-open .game-achievements-gallery {
   }
 }
 
+@media (min-width: 769px) {
+  .game-score-label {
+    display: block;
+    font-size: 0.72rem;
+  }
+
+  .game-score-label::after {
+    content: ' Chocolates';
+  }
+}
+
 @media (max-width: 768px) {
   #section-game {
     margin-bottom: 1.5rem;
@@ -3600,41 +3625,29 @@ body.game-meta-panel-open .game-achievements-gallery {
   }
 
   .game-meta-panel {
-    position: fixed;
-    left: var(--space-x);
-    right: var(--space-x);
-    bottom: max(12px, env(safe-area-inset-bottom, 0px));
-    z-index: 1200;
-    max-height: min(78vh, 520px);
-    margin-top: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    transform-origin: bottom center;
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    z-index: auto;
+    max-height: none;
+    margin-top: 0.45rem;
+    overflow: visible;
+    transform-origin: top center;
   }
 
   .game-meta-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 1199;
-    background: rgba(8, 4, 12, 0.62);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-  }
-
-  .game-meta-backdrop:not(.hidden) {
-    display: block;
+    display: none !important;
   }
 
   body.game-meta-sheet-open {
-    overflow: hidden;
+    overflow: auto;
   }
 
   body.game-meta-panel-open .game-achievements-gallery {
     max-height: none;
     overflow: visible;
   }
-
-  .game-achievements-gallery {
 
   #meeting {
     justify-content: flex-start;
@@ -3693,93 +3706,252 @@ body.game-meta-panel-open .game-achievements-gallery {
     cursor: default;
   }
 
+  /* ===== Mini game HUD compacto (mobile) ===== */
+  #game-container.game-mobile .game-score,
   .game-score {
-    max-width: calc(100% - 5.5rem);
-    padding: 0.32rem 0.55rem;
-    border-radius: 10px;
+    top: 3px;
+    left: 3px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    max-width: calc(100% - 3.4rem);
+    padding: 0.1rem 0.28rem;
+    gap: 0.2rem;
+    border-radius: 7px;
+    background: rgba(26, 16, 36, 0.78);
+    box-shadow: 0 0 6px rgba(255, 79, 163, 0.12);
+    backdrop-filter: blur(6px);
   }
 
+  #game-container.game-mobile .game-score-label,
   .game-score-label {
-    font-size: 0.6rem;
+    display: none;
   }
 
+  #game-container.game-mobile .game-score-num,
   .game-score-num {
-    font-size: clamp(0.95rem, 4.2vw, 1.15rem);
+    font-size: 0.76rem;
+    filter: none;
   }
 
-  .game-endless-badge {
+  #game-container.game-mobile .game-record-inline,
+  .game-record-inline {
+    margin: 0;
+    font-size: 0.46rem;
+    white-space: nowrap;
+  }
+
+  #game-container.game-mobile .game-record-inline span,
+  .game-record-inline span {
     font-size: 0.5rem;
-    padding: 0.1rem 0.4rem;
   }
 
+  #game-container.game-mobile .game-endless-badge,
+  .game-endless-badge {
+    margin: 0;
+    font-size: 0.4rem;
+    padding: 0.04rem 0.22rem;
+  }
+
+  #game-container.game-mobile .game-actions,
   .game-actions {
-    gap: 5px;
-    top: 6px;
-    right: 6px;
+    gap: 3px;
+    top: 3px;
+    right: 3px;
   }
 
-  .game-pause-btn {
-    min-height: 36px;
-    min-width: 36px;
-    padding: 7px 9px;
-    font-size: 0.62rem;
-    gap: 4px;
-    border-radius: 9px;
-  }
-
-  .game-pause-icon {
-    font-size: 0.82rem;
-  }
-
-  .game-pause-label {
-    display: none;
-  }
-
+  #game-container.game-mobile .game-pause-btn,
+  #game-container.game-mobile .game-action-btn,
+  .game-pause-btn,
   .game-action-btn {
-    min-height: 36px;
-    min-width: 36px;
-    padding: 7px 8px;
-    font-size: 0.62rem;
-    border-radius: 9px;
+    min-height: 26px;
+    min-width: 26px;
+    padding: 3px;
+    font-size: 0;
+    gap: 0;
+    border-radius: 6px;
+    border-width: 1px;
+    box-shadow: 0 0 8px rgba(255, 79, 163, 0.22);
   }
 
+  #game-container.game-mobile .game-pause-icon,
+  #game-container.game-mobile .game-action-icon,
+  .game-pause-icon,
   .game-action-icon {
-    font-size: 0.9rem;
-    line-height: 1;
+    font-size: 0.72rem;
   }
 
+  #game-container.game-mobile .game-pause-label,
+  #game-container.game-mobile .game-action-text,
+  .game-pause-label,
   .game-action-text {
+    display: none !important;
+  }
+
+  #game-container.game-mobile .game-lives,
+  .game-lives {
+    top: auto;
+    bottom: 2.15rem;
+    left: 3px;
+    right: auto;
+    transform: none;
+    flex-direction: row;
+    align-items: center;
+    padding: 0.08rem 0.26rem;
+    border-radius: 7px;
+    gap: 0.12rem;
+    background: rgba(26, 16, 36, 0.72);
+    box-shadow: none;
+  }
+
+  #game-container.game-mobile .game-lives-label,
+  .game-lives-label {
     display: none;
   }
 
-  .game-lives {
-    padding: 0.22rem 0.5rem 0.28rem;
-    border-radius: 10px;
+  #game-container.game-mobile .game-lives-hearts,
+  .game-lives-hearts {
+    gap: 0.02rem;
   }
 
-  .game-lives-label {
-    font-size: 0.52rem;
-  }
-
+  #game-container.game-mobile .life-heart,
   .life-heart {
+    font-size: 0.62rem;
+  }
+
+  #game-container.game-mobile .game-progress,
+  .game-progress {
+    padding: 0.22rem 0.28rem 0.18rem;
+    background: linear-gradient(to top, rgba(18, 11, 23, 0.94) 55%, transparent);
+  }
+
+  #game-container.game-mobile .game-progress-markers,
+  .game-progress-markers {
+    height: 0.72rem;
+    margin-bottom: 0.04rem;
+  }
+
+  #game-container.game-mobile .marker-num,
+  .marker-num {
+    font-size: 0.4rem;
+  }
+
+  #game-container.game-mobile .marker-star,
+  .marker-star {
+    font-size: 0.44rem;
+  }
+
+  #game-container.game-mobile .game-progress-bar,
+  .game-progress-bar {
+    height: 5px;
+  }
+
+  #game-container.game-mobile .game-pause-screen,
+  .game-pause-screen {
+    display: none !important;
+  }
+
+  #game-container.game-mobile .game-pause-screen p,
+  .game-pause-screen p {
+    font-size: 0.75rem;
+  }
+
+  #game-container.game-mobile .game-resume-btn,
+  .game-resume-btn {
+    min-height: 34px;
+    padding: 7px 14px;
+    font-size: 0.72rem;
+  }
+
+  #game-container.game-mobile .game-over-screen,
+  .game-over-screen {
+    gap: 0.35rem;
+    padding: 0.65rem;
+  }
+
+  #game-container.game-mobile .game-over-screen p,
+  .game-over-screen p {
     font-size: 0.82rem;
   }
 
-  .game-progress {
-    padding: 0.55rem 0.5rem 0.38rem;
+  #game-container.game-mobile .game-over-sub,
+  .game-over-sub {
+    font-size: 0.68rem !important;
   }
 
-  .game-progress-markers {
-    height: 1.45rem;
-    margin-bottom: 0.1rem;
+  #game-container.game-mobile .game-milestone,
+  .game-milestone {
+    gap: 0.35rem;
+    padding: 0.55rem;
   }
 
-  .marker-num {
-    font-size: 0.52rem;
+  #game-container.game-mobile .game-milestone p,
+  .game-milestone p {
+    font-size: 0.78rem;
   }
 
-  .marker-star {
+  #game-container.game-mobile .game-milestone-sub,
+  .game-milestone-sub {
+    font-size: 0.68rem !important;
+  }
+
+  #game-container.game-mobile .game-continue,
+  #game-container.game-mobile .game-toast-dismiss,
+  .game-continue,
+  .game-toast-dismiss {
+    min-height: 34px;
+    padding: 7px 14px;
+    font-size: 0.72rem;
+    bottom: 8px;
+  }
+
+  #game-container.game-mobile .game-endless-reward,
+  .game-endless-reward {
+    gap: 0.35rem;
+    padding: 0.55rem;
+  }
+
+  #game-container.game-mobile .game-reward-title,
+  .game-reward-title {
+    font-size: 0.82rem;
+  }
+
+  #game-container.game-mobile .game-reward-sub,
+  .game-reward-sub,
+  #game-container.game-mobile .game-reward-bonus,
+  .game-reward-bonus {
+    font-size: 0.65rem;
+  }
+
+  #game-container.game-mobile .game-achievement-toast,
+  .game-achievement-toast {
+    top: 34px;
+    max-width: calc(100% - 0.75rem);
+    padding: 0.28rem 0.45rem;
     font-size: 0.58rem;
+  }
+
+  #game-container.game-mobile .couple-score-hud,
+  .couple-score-hud {
+    top: 2rem;
+    bottom: auto;
+    left: auto;
+    right: 3px;
+    max-width: min(4.8rem, 38vw);
+    padding: 0.1rem 0.22rem;
+    border-radius: 6px;
+    opacity: 0.92;
+  }
+
+  #game-container.game-mobile .couple-hud-row,
+  .couple-hud-row {
+    font-size: 0.5rem;
+    gap: 0.12rem;
+  }
+
+  #game-container.game-mobile .hud-crown,
+  .hud-crown {
+    font-size: 0.44rem;
   }
 
   /* Modo Pareja — mobile */
@@ -3835,19 +4007,6 @@ body.game-meta-panel-open .game-achievements-gallery {
   .mascot-stage-inner.is-parted {
     transform: scale(0.92);
     transform-origin: center bottom;
-  }
-
-  .couple-score-hud {
-    top: auto;
-    bottom: 4.35rem;
-    left: 6px;
-    max-width: min(8.5rem, 46vw);
-    padding: 0.28rem 0.38rem;
-  }
-
-  .couple-hud-row {
-    font-size: 0.68rem;
-    gap: 0.22rem;
   }
 
   .couple-room-head {
@@ -3907,8 +4066,8 @@ body.game-meta-panel-open .game-achievements-gallery {
   }
 
   .couple-score-hud {
-    bottom: 4rem;
-    max-width: min(7.8rem, 50vw);
+    top: 1.85rem;
+    max-width: min(4.5rem, 40vw);
   }
 }
 
@@ -3931,57 +4090,32 @@ body.game-meta-panel-open .game-achievements-gallery {
   }
 
   .game-score {
-    max-width: calc(100% - 5rem);
-    padding: 0.28rem 0.5rem;
+    max-width: calc(100% - 3.2rem);
+    padding: 0.1rem 0.24rem;
   }
 
   .game-score-num {
-    font-size: 0.9rem;
+    font-size: 0.72rem;
   }
 
   .game-lives {
-    padding: 0.28rem 0.55rem 0.35rem;
-  }
-
-  .game-lives-label {
-    font-size: 0.55rem;
+    bottom: 2rem;
+    padding: 0.06rem 0.22rem;
   }
 
   .life-heart {
-    font-size: 0.88rem;
+    font-size: 0.58rem;
   }
 
-  .game-pause-btn {
-    min-height: 34px;
-    min-width: 34px;
-    padding: 6px 8px;
-  }
-
-  .game-pause-label {
-    display: none;
-  }
-
+  .game-pause-btn,
   .game-action-btn {
-    min-height: 34px;
-    min-width: 34px;
-    padding: 6px 7px;
-  }
-
-  .game-progress {
-    padding-bottom: 0.5rem;
-  }
-
-  .couple-title {
-    padding-right: 3.6rem;
-    font-size: 0.9rem;
-  }
-
-  .couple-guardians-inner {
-    transform: scale(0.64);
+    min-height: 24px;
+    min-width: 24px;
   }
 
   .couple-score-hud {
-    bottom: 3.75rem;
+    top: 1.75rem;
+    max-width: min(4.2rem, 42vw);
   }
 
   .couple-streak-badge {

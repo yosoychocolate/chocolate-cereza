@@ -729,8 +729,8 @@ function initGame() {
   const TOAST_READ_SECONDS = 8;
 
   const perfLite = isMobileView();
-  const CHERRY_BOTTOM_NORM = perfLite ? 68 : 58;
-  const SPRITE_NORM = perfLite ? 70 : 85;
+  const CHERRY_BOTTOM_NORM = perfLite ? 56 : 58;
+  const SPRITE_NORM = perfLite ? 62 : 85;
 
   const PERF = {
     maxChocolates: perfLite ? 5 : 7,
@@ -755,6 +755,7 @@ function initGame() {
     profiling: new URLSearchParams(location.search).has('gameprofile'),
   });
   window.__MINI_GAME_ENGINE__ = engine;
+  if (perfLite) gameContainer?.classList.add('game-mobile');
 
   engine.bgStars = Array.from({ length: PERF.bgStars }, () => ({
     x: 0, y: 0,
@@ -1102,15 +1103,16 @@ function initGame() {
     pauseBtn.classList.toggle('hidden', locked);
   }
 
-  function setPaused(paused) {
+  function setPaused(paused, options = {}) {
     if (milestonePause || gameOver || messagePause || endlessIntroPause) return;
     gamePaused = paused;
     pauseBtn?.classList.toggle('is-paused', paused);
     if (pauseIcon) pauseIcon.textContent = paused ? '▶' : '⏸';
     if (pauseLabel) pauseLabel.textContent = paused ? 'Reanudar' : 'Pausar';
     pauseBtn?.setAttribute('aria-label', paused ? 'Reanudar juego' : 'Pausar juego');
-    pauseScreen?.classList.toggle('hidden', !paused);
-    pauseScreen?.setAttribute('aria-hidden', paused ? 'false' : 'true');
+    const showOverlay = paused && !options.silent;
+    pauseScreen?.classList.toggle('hidden', !showOverlay);
+    pauseScreen?.setAttribute('aria-hidden', showOverlay ? 'false' : 'true');
     syncEngineBlocked();
     engine.markAllDirty();
   }
@@ -1174,13 +1176,13 @@ function initGame() {
       setGameFocus(false);
       if (!gamePaused && !gameOver && !milestonePause && !messagePause && !endlessIntroPause) {
         metaPanelAutoPaused = true;
-        setPaused(true);
+        setPaused(true, { silent: true });
       }
       return;
     }
     if (metaPanelAutoPaused) {
       metaPanelAutoPaused = false;
-      setPaused(false);
+      setPaused(false, { silent: true });
     }
   });
 

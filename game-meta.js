@@ -254,15 +254,15 @@
     _syncSheetOverlay() {
       const mobile = window.matchMedia('(max-width: 768px)').matches;
       const backdrop = this.els.metaBackdrop;
-      if (mobile && this._openPanelId) {
-        document.body.classList.add('game-meta-sheet-open');
-        backdrop?.classList.remove('hidden');
-        backdrop?.setAttribute('aria-hidden', 'false');
-      } else {
+      if (mobile || !this._openPanelId) {
         document.body.classList.remove('game-meta-sheet-open');
         backdrop?.classList.add('hidden');
         backdrop?.setAttribute('aria-hidden', 'true');
+        return;
       }
+      document.body.classList.add('game-meta-sheet-open');
+      backdrop?.classList.remove('hidden');
+      backdrop?.setAttribute('aria-hidden', 'false');
     },
 
     _syncPanelBrowseMode(open, id) {
@@ -365,12 +365,10 @@
     },
 
     bindPanelScrollGuards() {
-      const stopBubble = (event) => event.stopPropagation();
+      const stopWheel = (event) => event.stopPropagation();
       for (const id of ['stats', 'achievements', 'settings']) {
         const panel = this.panels[id]?.panel;
-        if (!panel) continue;
-        panel.addEventListener('wheel', stopBubble, { passive: true });
-        panel.addEventListener('touchmove', stopBubble, { passive: true });
+        panel?.addEventListener('wheel', stopWheel, { passive: true });
       }
     },
 
