@@ -196,6 +196,7 @@ function initLoveClicks() {
     countEl.textContent = loveClicks;
     countEl.style.transform = 'scale(1.15)';
     setTimeout(() => { countEl.style.transform = 'scale(1)'; }, 150);
+    window.GameMeta?.refreshAchievements?.();
 
     const burst = document.createElement('div');
     burst.className = 'click-burst';
@@ -978,6 +979,11 @@ function initGame() {
     engine.lastSpawn = performance.now();
     syncEngineBlocked();
     engine.forceRestart();
+    GameMeta.syncSession({
+      score,
+      endless: true,
+      endlessBonus: Math.max(0, score - FINAL_MILESTONE),
+    });
   }
 
   function clearEndlessModeUI() {
@@ -1035,6 +1041,7 @@ function initGame() {
     updateLivesDisplay();
     livesEl?.classList.add('life-lost-flash');
     setTimeout(() => livesEl?.classList.remove('life-lost-flash'), 350);
+    GameMeta.onLifeUpdate(lives, score);
     if (lives <= 0) triggerGameOver();
   }
 
@@ -1045,6 +1052,7 @@ function initGame() {
     syncEngineBlocked();
     gameOverScreen?.classList.remove('hidden');
     gameOverScreen?.setAttribute('aria-hidden', 'false');
+    GameMeta.onGameOver(score);
     submitOnlineScore(score);
   }
 
@@ -1157,6 +1165,7 @@ function initGame() {
       score,
       endless,
       endlessBonus: endless ? score - FINAL_MILESTONE : 0,
+      inOnlineRoom: !!window.CloudManager?.getCurrentRoom?.(),
     });
 
     checkMilestones();

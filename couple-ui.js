@@ -547,18 +547,6 @@ async function onCopyCode() {
   }
 }
 
-function onStartGame() {
-  CloudManager.notifyGameStarted().catch((err) => {
-    console.warn('[CoupleUI] notifyGameStarted:', err);
-  });
-
-  const container = document.getElementById('game-container');
-  if (container) {
-    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-  showToast('¡Buena suerte! 🍫');
-}
-
 function onScoreSubmitted(event) {
   const detail = event.detail;
   if (!detail?.success) return;
@@ -586,7 +574,6 @@ function cacheElements() {
   els.createBtn = $('couple-create-btn');
   els.joinBtn = $('couple-join-btn');
   els.leaveBtn = $('couple-leave-room');
-  els.startBtn = $('couple-start-game');
   els.copyBtn = $('couple-copy-code');
   els.roomCode = $('couple-room-code');
   els.playersList = $('couple-players-list');
@@ -623,7 +610,6 @@ async function init() {
   els.joinBtn?.addEventListener('click', onJoinRoom);
   els.leaveBtn?.addEventListener('click', onLeaveRoom);
   els.copyBtn?.addEventListener('click', onCopyCode);
-  els.startBtn?.addEventListener('click', onStartGame);
   els.chatForm?.addEventListener('submit', onChatSubmit);
   els.chatEmojis?.addEventListener('click', onEmojiClick);
 

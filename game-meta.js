@@ -9,44 +9,68 @@
     totalChocolates: 0,
     playTimeMs: 0,
     bestStreak: 0,
+    gamesPlayed: 0,
+    recordsBroken: 0,
+    playTimeMutedMs: 0,
+    panelsOpened: { stats: false, achievements: false, settings: false },
   };
+
+  const MIN = 60 * 1000;
+
+  const ACHIEVEMENTS = [
+    { id: 'first', icon: '🍫', title: 'Primer Chocolate', desc: 'Atrapa tu primer chocolate.' },
+    { id: 'true_love', icon: '❤️', title: 'Amor Verdadero', desc: 'Alcanza 50 chocolates en una partida.' },
+    { id: 'infinite_love', icon: '♾️', title: 'Amor Infinito', desc: 'Consigue 100 chocolates extra en el modo infinito.' },
+    { id: 'master', icon: '👑', title: 'Maestro del Chocolate', desc: 'Alcanza 200 chocolates en una sola partida.' },
+    { id: 'legend', icon: '💎', title: 'Leyenda del Chocolate', desc: 'Alcanza 300 chocolates en una sola partida.' },
+    /* Tiempo de juego */
+    { id: 'time_5m', icon: '⏱️', title: 'Primeros Minutos', desc: 'Juega 5 minutos en total.' },
+    { id: 'time_20m', icon: '🕐', title: 'Tiempo Juntos', desc: 'Juega 20 minutos en total.' },
+    { id: 'time_60m', icon: '🕰️', title: 'Hora Dulce', desc: 'Juega 1 hora en total.' },
+    { id: 'time_180m', icon: '🌙', title: 'Noche de Chocolate', desc: 'Juega 3 horas en total.' },
+    /* Colección total */
+    { id: 'total_250', icon: '🧺', title: 'Cesta Romántica', desc: 'Atrapa 250 chocolates en total.' },
+    { id: 'total_500', icon: '🎁', title: 'Cofre del Amor', desc: 'Atrapa 500 chocolates en total.' },
+    { id: 'total_1000', icon: '🏺', title: 'Tesoro Chocolate', desc: 'Atrapa 1.000 chocolates en total.' },
+    { id: 'total_2500', icon: '💰', title: 'Fortuna Dulce', desc: 'Atrapa 2.500 chocolates en total.' },
+    /* Rachas */
+    { id: 'streak_10', icon: '🔥', title: 'Racha Dulce', desc: 'Consigue una racha de 10 seguidos.' },
+    { id: 'streak_25', icon: '⚡', title: 'Imparable', desc: 'Consigue una racha de 25 seguidos.' },
+    { id: 'streak_50', icon: '🌟', title: 'Manos de Oro', desc: 'Consigue una racha de 50 seguidos.' },
+    { id: 'streak_75', icon: '💫', title: 'Sin Fallar', desc: 'Consigue una racha de 75 seguidos.' },
+    /* Puntuación en partida */
+    { id: 'run_75', icon: '🍒', title: 'Cereza Veloz', desc: 'Alcanza 75 chocolates en una partida.' },
+    { id: 'run_100', icon: '💯', title: 'Centenar de Amor', desc: 'Alcanza 100 chocolates en una partida.' },
+    { id: 'run_150', icon: '🎯', title: 'Precisión Perfecta', desc: 'Alcanza 150 chocolates en una partida.' },
+    /* Récords */
+    { id: 'record_80', icon: '📈', title: 'Subiendo Nivel', desc: 'Consigue un récord de 80 o más.' },
+    { id: 'record_120', icon: '🏅', title: 'Medalla de Honor', desc: 'Consigue un récord de 120 o más.' },
+    { id: 'record_250', icon: '🥇', title: 'Campeón del Amor', desc: 'Consigue un récord de 250 o más.' },
+    { id: 'first_record', icon: '✨', title: 'Nuevo Récord', desc: 'Supera tu récord personal por primera vez.' },
+    /* Modo infinito */
+    { id: 'endless_unlock', icon: '🌌', title: 'Más Allá del 50', desc: 'Desbloquea el modo infinito.' },
+    { id: 'endless_25', icon: '✨', title: 'Estrellas Dulces', desc: 'Consigue 25 chocolates extra en infinito.' },
+    { id: 'endless_50', icon: '🚀', title: 'Sin Límites', desc: 'Consigue 50 chocolates extra en infinito.' },
+    /* Clicks de amor (sitio) */
+    { id: 'love_25', icon: '💕', title: 'Pensando en Ti', desc: 'Haz 25 clicks de amor en el sitio.', toastScope: 'site' },
+    { id: 'love_100', icon: '💗', title: 'Corazón Activo', desc: 'Haz 100 clicks de amor en el sitio.', toastScope: 'site' },
+    { id: 'love_500', icon: '💖', title: 'Amor Sin Pausa', desc: 'Haz 500 clicks de amor en el sitio.', toastScope: 'site' },
+    /* Momentos & hábitos */
+    { id: 'night_owl', icon: '🦉', title: 'Búho Enamorado', desc: 'Juega después de las 22:00.' },
+    { id: 'early_bird', icon: '🌅', title: 'Amanecer Juntos', desc: 'Juega antes de las 8:00.' },
+    { id: 'weekend', icon: '📅', title: 'Fin de Semana', desc: 'Juega un sábado o domingo.' },
+    { id: 'silent_heart', icon: '🤫', title: 'Amor Silencioso', desc: 'Juega 5 minutos con el sonido apagado.' },
+    { id: 'explorer', icon: '🗺️', title: 'Explorador', desc: 'Abre estadísticas, logros y ajustes.' },
+    /* Supervivencia & partidas */
+    { id: 'last_stand', icon: '🛡️', title: 'Última Vida', desc: 'Alcanza 35+ estando a 1 vida.' },
+    { id: 'games_10', icon: '🎮', title: 'Jugador Fiel', desc: 'Completa 10 partidas.' },
+    { id: 'games_50', icon: '🎲', title: 'Viciado al Amor', desc: 'Completa 50 partidas.' },
+    { id: 'online_duo', icon: '🧸', title: 'Dúo Chocolate', desc: 'Atrapa un chocolate en modo pareja.' },
+  ];
 
   const DEFAULT_SETTINGS = {
     sfx: true,
   };
-
-  const ACHIEVEMENTS = [
-    {
-      id: 'first',
-      icon: '🍫',
-      title: 'Primer Chocolate',
-      desc: 'Primer chocolate atrapado.',
-    },
-    {
-      id: 'true_love',
-      icon: '❤️',
-      title: 'Amor Verdadero',
-      desc: 'Alcanza 50 chocolates.',
-    },
-    {
-      id: 'infinite_love',
-      icon: '♾️',
-      title: 'Amor Infinito',
-      desc: 'Consigue 100 chocolates extra en el modo infinito.',
-    },
-    {
-      id: 'master',
-      icon: '👑',
-      title: 'Maestro del Chocolate',
-      desc: 'Alcanza 200 chocolates en una sola partida.',
-    },
-    {
-      id: 'legend',
-      icon: '💎',
-      title: 'Leyenda del Chocolate',
-      desc: 'Alcanza 300 chocolates en una sola partida.',
-    },
-  ];
 
   function formatUnlockDate(ts) {
     if (!ts) return 'Fecha desconocida';
@@ -57,9 +81,17 @@
 
   function loadFromSave() {
     const save = global.SaveManager.getSave();
+    const mergedStats = {
+      ...DEFAULT_STATS,
+      ...save.stats,
+      panelsOpened: {
+        ...DEFAULT_STATS.panelsOpened,
+        ...(save.stats?.panelsOpened || {}),
+      },
+    };
     return {
       highScore: save.records.highScore || 0,
-      stats: { ...DEFAULT_STATS, ...save.stats },
+      stats: mergedStats,
       settings: { ...DEFAULT_SETTINGS, ...save.settings },
       unlockDates: { ...save.achievements },
     };
@@ -135,6 +167,13 @@
     return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
   }
 
+  function getToastScope(achievement) {
+    if (achievement.toastScope === 'site' || achievement.toastScope === 'game') {
+      return achievement.toastScope;
+    }
+    return achievement.id.startsWith('love_') ? 'site' : 'game';
+  }
+
   const GameMeta = {
     sounds: new GameSounds(),
     highScore: 0,
@@ -142,6 +181,7 @@
     settings: { ...DEFAULT_SETTINGS },
     unlockDates: {},
     currentStreak: 0,
+    session: { hadOneLife: false, score: 0, endless: false, endlessBonus: 0, inOnlineRoom: false },
     els: {},
     panels: {},
     perfLite: false,
@@ -195,6 +235,7 @@
       this.bindSettings();
       this._isMobileUI = window.matchMedia('(max-width: 768px)').matches;
       this.els.metaBackdrop = document.getElementById('game-meta-backdrop');
+      this.els.siteAchievementToast = document.getElementById('site-achievement-toast');
       this.els.metaBackdrop?.addEventListener('click', () => {
         if (this._openPanelId) this.closePanel(this._openPanelId);
       });
@@ -264,6 +305,11 @@
     openPanel(id) {
       const entry = this.panels[id];
       if (!entry?.panel) return;
+      if (this.stats.panelsOpened && id in this.stats.panelsOpened) {
+        this.stats.panelsOpened[id] = true;
+        this.saveStats();
+        this._checkMetaAchievements();
+      }
       entry.panel.classList.remove('hidden');
       requestAnimationFrame(() => entry.panel.classList.add('is-open'));
       entry.toggle?.setAttribute('aria-expanded', 'true');
@@ -309,22 +355,46 @@
     addPlayTime(dt) {
       if (dt <= 0) return;
       this.stats.playTimeMs += dt;
+      if (this.settings.sfx === false) {
+        this.stats.playTimeMutedMs = (this.stats.playTimeMutedMs || 0) + dt;
+      }
       this._playSaveAcc = (this._playSaveAcc || 0) + dt;
       if (this._playSaveAcc >= 5000) {
         this._playSaveAcc = 0;
         this.saveStats();
         if (this.els.statTime) this.els.statTime.textContent = formatPlayTime(this.stats.playTimeMs);
+        this._checkMetaAchievements();
       }
     },
 
-    getContext(score, endless, endlessBonus) {
+    buildContext(partial) {
+      const p = partial || {};
+      const save = global.SaveManager.getSave();
+      const panels = { stats: false, achievements: false, settings: false, ...(this.stats.panelsOpened || {}) };
+      const now = new Date();
       return {
-        score,
-        highScore: Math.max(this.highScore, score),
-        endless,
-        endlessBonus,
+        score: p.score || 0,
+        highScore: Math.max(this.highScore, p.score || 0),
+        endless: !!p.endless,
+        endlessBonus: p.endlessBonus || 0,
         totalChocolates: this.stats.totalChocolates,
+        playTimeMs: this.stats.playTimeMs,
+        playTimeMutedMs: this.stats.playTimeMutedMs || 0,
+        bestStreak: this.stats.bestStreak,
+        currentStreak: this.currentStreak,
+        gamesPlayed: this.stats.gamesPlayed || 0,
+        recordsBroken: this.stats.recordsBroken || 0,
+        loveClicks: save.site?.loveClicks || 0,
+        panelsOpened: panels,
+        hadOneLife: !!this.session.hadOneLife,
+        inOnlineRoom: !!p.inOnlineRoom,
+        hour: now.getHours(),
+        day: now.getDay(),
       };
+    },
+
+    getContext(score, endless, endlessBonus) {
+      return this.buildContext({ score, endless, endlessBonus });
     },
 
     checkAchievement(a, ctx) {
@@ -339,9 +409,106 @@
           return ctx.score >= 200;
         case 'legend':
           return ctx.score >= 300;
+        case 'time_5m':
+          return ctx.playTimeMs >= 5 * MIN;
+        case 'time_20m':
+          return ctx.playTimeMs >= 20 * MIN;
+        case 'time_60m':
+          return ctx.playTimeMs >= 60 * MIN;
+        case 'time_180m':
+          return ctx.playTimeMs >= 180 * MIN;
+        case 'total_250':
+          return ctx.totalChocolates >= 250;
+        case 'total_500':
+          return ctx.totalChocolates >= 500;
+        case 'total_1000':
+          return ctx.totalChocolates >= 1000;
+        case 'total_2500':
+          return ctx.totalChocolates >= 2500;
+        case 'streak_10':
+          return ctx.bestStreak >= 10;
+        case 'streak_25':
+          return ctx.bestStreak >= 25;
+        case 'streak_50':
+          return ctx.bestStreak >= 50;
+        case 'streak_75':
+          return ctx.bestStreak >= 75;
+        case 'run_75':
+          return ctx.score >= 75;
+        case 'run_100':
+          return ctx.score >= 100;
+        case 'run_150':
+          return ctx.score >= 150;
+        case 'record_80':
+          return ctx.highScore >= 80;
+        case 'record_120':
+          return ctx.highScore >= 120;
+        case 'record_250':
+          return ctx.highScore >= 250;
+        case 'first_record':
+          return ctx.recordsBroken >= 1;
+        case 'endless_unlock':
+          return ctx.endless;
+        case 'endless_25':
+          return ctx.endless && ctx.endlessBonus >= 25;
+        case 'endless_50':
+          return ctx.endless && ctx.endlessBonus >= 50;
+        case 'love_25':
+          return ctx.loveClicks >= 25;
+        case 'love_100':
+          return ctx.loveClicks >= 100;
+        case 'love_500':
+          return ctx.loveClicks >= 500;
+        case 'night_owl':
+          return ctx.hour >= 22 || ctx.hour < 5;
+        case 'early_bird':
+          return ctx.hour < 8;
+        case 'weekend':
+          return ctx.day === 0 || ctx.day === 6;
+        case 'silent_heart':
+          return ctx.playTimeMutedMs >= 5 * MIN;
+        case 'explorer':
+          return ctx.panelsOpened.stats && ctx.panelsOpened.achievements && ctx.panelsOpened.settings;
+        case 'last_stand':
+          return ctx.hadOneLife && ctx.score >= 35;
+        case 'games_10':
+          return ctx.gamesPlayed >= 10;
+        case 'games_50':
+          return ctx.gamesPlayed >= 50;
+        case 'online_duo':
+          return ctx.inOnlineRoom && ctx.totalChocolates >= 1;
         default:
           return false;
       }
+    },
+
+    _notifyUnlocks(newly) {
+      for (let i = 0; i < newly.length; i++) {
+        const achievement = newly[i];
+        this.sounds.playAchievement();
+        if (getToastScope(achievement) === 'game') {
+          this.celebrate('achievement');
+        }
+        this.showAchievementToast(achievement);
+      }
+      if (newly.length) {
+        setTimeout(() => { this._justUnlockedIds = []; }, 800);
+      }
+    },
+
+    _checkMetaAchievements() {
+      const ctx = this.buildContext(this.session);
+      const newly = this.tryUnlockAchievements(ctx);
+      if (newly.length) this._notifyUnlocks(newly);
+    },
+
+    refreshAchievements() {
+      this._checkMetaAchievements();
+    },
+
+    syncSession(partial) {
+      Object.assign(this.session, partial || {});
+      this._checkMetaAchievements();
     },
 
     tryUnlockAchievements(ctx) {
@@ -365,13 +532,19 @@
     },
 
     showAchievementToast(achievement) {
-      const box = this.els.achievementToast;
+      const scope = getToastScope(achievement);
+      const box = scope === 'site'
+        ? this.els.siteAchievementToast
+        : this.els.achievementToast;
       if (!box) return;
+
       box.innerHTML = `<span class="ach-icon">${achievement.icon}</span><span class="ach-text"><strong>${achievement.title}</strong><small>${achievement.desc}</small></span>`;
       box.classList.remove('hidden');
       box.classList.add('show', 'ach-toast-glow');
-      clearTimeout(this._achToastTimer);
-      this._achToastTimer = setTimeout(() => {
+
+      const timerKey = scope === 'site' ? '_siteAchToastTimer' : '_achToastTimer';
+      clearTimeout(this[timerKey]);
+      this[timerKey] = setTimeout(() => {
         box.classList.remove('show', 'ach-toast-glow');
         setTimeout(() => box.classList.add('hidden'), 400);
       }, 3200);
@@ -402,38 +575,59 @@
       while (fx.children.length > 8) fx.firstChild?.remove();
     },
 
-    handleCatch(ctx) {
+    handleCatch(partial) {
       this.sounds.playCatch();
       this.stats.totalChocolates++;
       this.currentStreak++;
       if (this.currentStreak > this.stats.bestStreak) {
         this.stats.bestStreak = this.currentStreak;
       }
-      this.saveStats();
 
       let recordBroken = false;
-      if (ctx.score > this.highScore) {
-        this.highScore = ctx.score;
+      const runScore = partial?.score || 0;
+      if (runScore > this.highScore) {
+        if (this.highScore > 0) {
+          this.stats.recordsBroken = (this.stats.recordsBroken || 0) + 1;
+        }
+        this.highScore = runScore;
         this.saveHighScore();
         recordBroken = true;
         this.sounds.playRecord();
         this.celebrate('record');
       }
+      this.saveStats();
+
+      const ctx = this.buildContext(partial);
+      this.session = {
+        hadOneLife: this.session.hadOneLife,
+        score: ctx.score,
+        endless: ctx.endless,
+        endlessBonus: ctx.endlessBonus,
+        inOnlineRoom: ctx.inOnlineRoom,
+      };
 
       this.renderHighScore();
       this.renderStats();
 
       const newly = this.tryUnlockAchievements(ctx);
-      for (let i = 0; i < newly.length; i++) {
-        this.sounds.playAchievement();
-        this.celebrate('achievement');
-        this.showAchievementToast(newly[i]);
-      }
-      if (newly.length) {
-        setTimeout(() => { this._justUnlockedIds = []; }, 800);
-      }
+      this._notifyUnlocks(newly);
 
       return { recordBroken, achievements: newly };
+    },
+
+    onLifeUpdate(lives, score) {
+      if (lives <= 1) this.session.hadOneLife = true;
+      this.session.score = score || this.session.score;
+      if (this.session.hadOneLife && (score || 0) >= 35) {
+        this._checkMetaAchievements();
+      }
+    },
+
+    onGameOver(score) {
+      this.stats.gamesPlayed = (this.stats.gamesPlayed || 0) + 1;
+      this.session.score = score || 0;
+      this.saveStats();
+      this._checkMetaAchievements();
     },
 
     handleMiss() {
@@ -443,6 +637,7 @@
 
     resetSessionStreak() {
       this.currentStreak = 0;
+      this.session = { hadOneLife: false, score: 0, endless: false, endlessBonus: 0, inOnlineRoom: false };
     },
 
     renderHighScore() {
