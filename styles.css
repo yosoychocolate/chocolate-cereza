@@ -1281,20 +1281,22 @@ html.intro-lock body {
 /* HUD placar do casal (mini jogo) */
 .couple-score-hud {
   position: absolute;
-  top: 2.15rem;
-  bottom: auto;
+  top: auto;
+  bottom: 2.35rem;
   left: auto;
   right: clamp(4px, 1.2vw, 8px);
-  z-index: 12;
+  z-index: 6;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.18rem 0.3rem;
+  align-items: stretch;
+  gap: 0.14rem;
+  padding: 0.2rem 0.34rem;
   border-radius: 8px;
-  background: rgba(12, 6, 22, 0.72);
+  background: rgba(12, 6, 22, 0.78);
   border: 1px solid rgba(255, 88, 168, 0.22);
   pointer-events: none;
-  max-width: min(5.5rem, 34vw);
+  min-width: 3.4rem;
+  max-width: min(6.5rem, 40vw);
 }
 
 .couple-score-hud.hidden {
@@ -1304,8 +1306,10 @@ html.intro-lock body {
 .couple-hud-row {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
-  font-size: 0.62rem;
+  gap: 0.28rem;
+  line-height: 1;
+  white-space: nowrap;
+  font-size: 0.68rem;
   font-weight: 700;
   color: rgba(255, 220, 240, 0.95);
 }
@@ -1314,14 +1318,22 @@ html.intro-lock body {
   color: rgba(255, 220, 130, 0.98);
 }
 
-.hud-crown {
-  font-size: 0.52rem;
-  line-height: 1;
+.hud-bear {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  line-height: 0;
+}
+
+.hud-bear .bear-svg {
+  display: block;
 }
 
 .couple-hud-score {
-  min-width: 2rem;
-  text-align: right;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
 }
 
 /* Rodapé — ursinhos sentados */
@@ -3954,25 +3966,18 @@ body.game-meta-panel-open .game-achievements-gallery {
 
   #game-container.game-mobile .couple-score-hud,
   .couple-score-hud {
-    top: 2rem;
-    bottom: auto;
-    left: auto;
+    bottom: 2.15rem;
     right: 3px;
-    max-width: min(4.8rem, 38vw);
-    padding: 0.1rem 0.22rem;
+    min-width: 3rem;
+    max-width: min(5.8rem, 42vw);
+    padding: 0.16rem 0.28rem;
     border-radius: 6px;
-    opacity: 0.92;
   }
 
   #game-container.game-mobile .couple-hud-row,
   .couple-hud-row {
-    font-size: 0.5rem;
-    gap: 0.12rem;
-  }
-
-  #game-container.game-mobile .hud-crown,
-  .hud-crown {
-    font-size: 0.44rem;
+    font-size: 0.58rem;
+    gap: 0.22rem;
   }
 
   /* Modo Pareja — mobile */
@@ -4087,8 +4092,8 @@ body.game-meta-panel-open .game-achievements-gallery {
   }
 
   .couple-score-hud {
-    top: 1.85rem;
-    max-width: min(4.5rem, 40vw);
+    bottom: 2.05rem;
+    max-width: min(5.4rem, 44vw);
   }
 }
 
@@ -4135,8 +4140,8 @@ body.game-meta-panel-open .game-achievements-gallery {
   }
 
   .couple-score-hud {
-    top: 1.75rem;
-    max-width: min(4.2rem, 42vw);
+    bottom: 1.95rem;
+    max-width: min(5rem, 46vw);
   }
 
   .couple-streak-badge {

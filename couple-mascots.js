@@ -350,13 +350,13 @@ export function renderFooterGuardians() {
  */
 export function renderScoreHudRow(type, score, isLeader = false) {
   const bear = renderBear(type, {
-    size: 28,
-    prop: true,
+    size: 24,
+    prop: false,
+    cherry: false,
     crown: isLeader,
     className: 'hud-bear',
   });
-  const crown = isLeader ? '<span class="hud-crown">👑</span>' : '';
-  return `<div class="couple-hud-row couple-hud-${type}${isLeader ? ' is-leader' : ''}">${crown}${bear}<span class="couple-hud-score">${score}</span></div>`;
+  return `<div class="couple-hud-row couple-hud-${type}${isLeader ? ' is-leader' : ''}">${bear}<span class="couple-hud-score">${score}</span></div>`;
 }
 
 /**
