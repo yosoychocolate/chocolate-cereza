@@ -639,6 +639,43 @@ function loadSprite(key) {
   return loadRawImage(src).then((img) => prepareSprite(img, key));
 }
 
+/* ===== Game Focus Mode ===== */
+let gameFocusActive = false;
+let musicNotesSuspendedForGame = false;
+
+function suspendMusicNotesForGame() {
+  if (!musicState.playing || !musicState.noteTimer) return;
+  musicNotesSuspendedForGame = true;
+  stopMusicNotes();
+}
+
+function resumeMusicNotesAfterGame() {
+  if (!musicNotesSuspendedForGame) return;
+  musicNotesSuspendedForGame = false;
+  if (musicState.playing) startMusicNotes();
+}
+
+function setGameFocus(active) {
+  if (gameFocusActive === active) return;
+  gameFocusActive = active;
+  document.body.classList.toggle('game-focus', active);
+  if (active) {
+    suspendMusicNotesForGame();
+  } else {
+    resumeMusicNotesAfterGame();
+  }
+  window.dispatchEvent(new CustomEvent('gamefocuschange', { detail: { active } }));
+}
+
+function initGameFocusObserver(gameContainer) {
+  if (!gameContainer || !('IntersectionObserver' in window)) return;
+  const observer = new IntersectionObserver((entries) => {
+    const visible = entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.35);
+    setGameFocus(visible);
+  }, { threshold: [0, 0.35, 0.55] });
+  observer.observe(gameContainer);
+}
+
 function initGame() {
   const gameContainer = document.getElementById('game-container');
   const canvasStack = document.getElementById('game-canvas-stack');
@@ -676,8 +713,6 @@ function initGame() {
   let toastCountdownInterval = null;
   const TOAST_READ_SECONDS = 8;
 
-  const TOAST_READ_SECONDS = 8;
-
   const perfLite = isMobileView();
   const CHERRY_BOTTOM_NORM = perfLite ? 112 : 58;
   const SPRITE_NORM = perfLite ? 70 : 85;
@@ -704,6 +739,7 @@ function initGame() {
     isCoarsePointer,
     profiling: new URLSearchParams(location.search).has('gameprofile'),
   });
+  window.__MINI_GAME_ENGINE__ = engine;
 
   engine.bgStars = Array.from({ length: PERF.bgStars }, () => ({
     x: 0, y: 0,
@@ -723,6 +759,7 @@ function initGame() {
 
   function resizeGame() {
     if (!gameContainer) return;
+    invalidateGameLayoutCache();
     const newW = Math.max(280, Math.min(gameContainer.clientWidth, 900));
     const newH = Math.round(newW * (400 / 360));
     const dpr = Math.min(window.devicePixelRatio || 1, PERF.dprCap);
@@ -746,6 +783,12 @@ function initGame() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(resizeGame, 250);
   });
+  window.addEventListener('scroll', invalidateGameLayoutCache, { passive: true });
+  window.addEventListener('orientationchange', () => {
+    invalidateGameLayoutCache();
+    setTimeout(invalidateGameLayoutCache, 150);
+  });
+  window.addEventListener('gamefocuschange', invalidateGameLayoutCache);
 
   function clearAllGameplayBlockers() {
     milestonePause = false;
@@ -820,6 +863,27 @@ function initGame() {
   const milestones = loadGame(STORAGE.gameMilestones, { 50: false });
   let lastToastScore = 0;
   let toastTimer = null;
+  const progressBarCache = { score: -1, endless: null };
+  const gameLayoutCache = { canvasStack: null, gameContainer: null };
+
+  function invalidateGameLayoutCache() {
+    gameLayoutCache.canvasStack = null;
+    gameLayoutCache.gameContainer = null;
+  }
+
+  function getCanvasStackRect() {
+    if (!gameLayoutCache.canvasStack && canvasStack) {
+      gameLayoutCache.canvasStack = canvasStack.getBoundingClientRect();
+    }
+    return gameLayoutCache.canvasStack;
+  }
+
+  function getGameContainerRect() {
+    if (!gameLayoutCache.gameContainer && gameContainer) {
+      gameLayoutCache.gameContainer = gameContainer.getBoundingClientRect();
+    }
+    return gameLayoutCache.gameContainer;
+  }
 
   function buildProgressMarkers() {
     if (!progressMarkers) return;
@@ -845,6 +909,10 @@ function initGame() {
 
   function updateProgressBar() {
     const endless = milestones[FINAL_MILESTONE];
+    if (progressBarCache.score === score && progressBarCache.endless === endless) return;
+    progressBarCache.score = score;
+    progressBarCache.endless = endless;
+
     if (progressFill) {
       if (endless) {
         progressFill.style.width = '100%';
@@ -1277,7 +1345,8 @@ function initGame() {
   window.addEventListener('keyup', (e) => { engine.keys[e.key] = false; });
 
   function setCherryTarget(clientX) {
-    const rect = canvasStack.getBoundingClientRect();
+    const rect = getCanvasStackRect();
+    if (!rect) return;
     const W = engine.layers.W;
     engine.mouseX = ((clientX - rect.left) / rect.width) * W;
     const pad = engine.SPRITE_H * 0.35;
@@ -1290,7 +1359,8 @@ function initGame() {
     if (now - lastTouchHeartAt < 100) return;
     lastTouchHeartAt = now;
 
-    const rect = gameContainer.getBoundingClientRect();
+    const rect = getGameContainerRect();
+    if (!rect) return;
     const x = clientX - rect.left;
     const y = clientY - rect.top;
     const icons = ['❤️', '💕', '💗'];
@@ -1319,7 +1389,8 @@ function initGame() {
 
   function updateGameCursor(e) {
     if (!gameCursor || !gameContainer || window.matchMedia('(pointer: coarse)').matches) return;
-    const rect = gameContainer.getBoundingClientRect();
+    const rect = getGameContainerRect();
+    if (!rect) return;
     gameCursor.style.left = `${e.clientX - rect.left}px`;
     gameCursor.style.top = `${e.clientY - rect.top}px`;
     const overCanvas = canvasStack?.contains(e.target);
@@ -1387,6 +1458,8 @@ function initGame() {
 
   document.getElementById('game-reload').addEventListener('click', resetGameSession);
   gameOverRestartBtn?.addEventListener('click', resetGameSession);
+
+  initGameFocusObserver(gameContainer);
 }
 
 /* ===== Letter ===== */
@@ -1465,7 +1538,21 @@ let audioEl = null;
 let audioCtx = null;
 let musicNodes = [];
 let fallbackTimer = null;
-let progressRaf = null;
+let progressTimer = null;
+const MUSIC_PROGRESS_INTERVAL_MS = 100;
+
+function startMusicProgressLoop() {
+  stopMusicProgressLoop();
+  updateMusicProgress();
+  progressTimer = setInterval(updateMusicProgress, MUSIC_PROGRESS_INTERVAL_MS);
+}
+
+function stopMusicProgressLoop() {
+  if (progressTimer !== null) {
+    clearInterval(progressTimer);
+    progressTimer = null;
+  }
+}
 
 function formatMusicTime(sec) {
   if (!Number.isFinite(sec) || sec < 0) return '00:00';
@@ -1527,13 +1614,6 @@ function updateMusicProgress() {
   fill.style.width = `${pct}%`;
   currentEl.textContent = formatMusicTime(current);
   durationEl.textContent = formatMusicTime(duration);
-}
-
-function tickMusicProgress() {
-  updateMusicProgress();
-  if (musicState.playing) {
-    progressRaf = requestAnimationFrame(tickMusicProgress);
-  }
 }
 
 function showMusicToast() {
@@ -1661,8 +1741,7 @@ async function playMusic() {
     startMusicNotes();
     showMusicToast();
     updateMusicUI();
-    cancelAnimationFrame(progressRaf);
-    progressRaf = requestAnimationFrame(tickMusicProgress);
+    startMusicProgressLoop();
   }
 }
 
@@ -1677,7 +1756,7 @@ function pauseMusic() {
   setMusicPlayingEffects(false);
   stopMusicNotes();
   updateMusicUI();
-  cancelAnimationFrame(progressRaf);
+  stopMusicProgressLoop();
   updateMusicProgress();
 }
 
@@ -1705,7 +1784,7 @@ async function tryAutoplayMusic() {
     startMusicNotes();
     showMusicToast();
     updateMusicUI();
-    progressRaf = requestAnimationFrame(tickMusicProgress);
+    startMusicProgressLoop();
   } catch (_) {
     document.getElementById('music-autoplay-prompt')?.classList.remove('hidden');
     updateMusicUI();

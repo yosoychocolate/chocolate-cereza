@@ -2220,6 +2220,38 @@ body.music-playing .glass {
   50% { box-shadow: 0 0 14px rgba(108, 59, 255, 0.28), 0 0 24px rgba(255, 88, 168, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.05); }
 }
 
+/* ===== Game Focus Mode — suspend site FX while mini game is active ===== */
+body.game-focus #petal-rain,
+body.game-focus #petal-rain *,
+body.game-focus #ambient-bg,
+body.game-focus #ambient-bg *,
+body.game-focus #stars-bg,
+body.game-focus #stars-bg .star,
+body.game-focus .music-note-particle,
+body.game-focus .music-toggle.is-playing,
+body.game-focus .music-toggle.is-playing .music-icon,
+body.game-focus.music-playing .glass,
+body.game-focus .game-endless-badge {
+  animation-play-state: paused !important;
+}
+
+body.game-focus #stars-bg .star:nth-child(n + 16) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+body.game-focus .game-score,
+body.game-focus .game-lives,
+body.game-focus .game-pause-btn,
+body.game-focus .game-pause-screen,
+body.game-focus .game-milestone,
+body.game-focus .game-over-screen,
+body.game-focus .game-endless-reward,
+body.game-focus .game-endless-badge {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* ===== Responsive (Mobile First enhancements) ===== */
 
 @media (min-width: 481px) {

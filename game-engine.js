@@ -50,6 +50,7 @@
     constructor(cellSize) {
       this.cell = cellSize;
       this.cells = new Map();
+      this._seen = new Set();
     }
 
     clear() {
@@ -86,7 +87,8 @@
       const x1 = Math.floor((x + hw) / cs);
       const y0 = Math.floor((y - hh) / cs);
       const y1 = Math.floor((y + hh) / cs);
-      const seen = new Set();
+      const seen = this._seen;
+      seen.clear();
       for (let gx = x0; gx <= x1; gx++) {
         for (let gy = y0; gy <= y1; gy++) {
           const bucket = this.cells.get(this._key(gx, gy));
