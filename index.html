@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=24">
 </head>
 <body>
   <!-- Chuva de pétalas e corações -->
@@ -92,6 +92,15 @@
       <div id="surprise-message" class="surprise-message"></div>
     </section>
 
+    <!-- Generador de poemas -->
+    <section class="section glass" id="section-poem">
+      <h2>📜 Poema para ti</h2>
+      <p class="poem-hint">100 poemas únicos — sin repetir hasta completar la colección.</p>
+      <p id="poem-counter" class="poem-counter"></p>
+      <button type="button" id="btn-poem" class="btn-neon">✨ Crear poema</button>
+      <div id="poem-output" class="poem-output" aria-live="polite"></div>
+    </section>
+
     <!-- Medidor do Amor -->
     <section class="section glass" id="section-meter">
       <h2>Medidor do Amor</h2>
@@ -149,15 +158,56 @@
       <p class="game-hint">Controla la cereza con ← → , el mouse o tocando la pantalla</p>
       <div id="game-container">
         <canvas id="game-canvas"></canvas>
+        <div id="game-cursor" class="game-cursor hidden" aria-hidden="true">🍒</div>
+        <div id="game-touch-fx" class="game-touch-fx" aria-hidden="true"></div>
         <div id="game-score" class="game-score">
           <span class="game-score-label">❤️ Clicks de Amor</span>
           <span class="game-score-num">0</span>
+          <span id="game-endless-badge" class="game-endless-badge hidden">✨ Modo Infinito</span>
+        </div>
+        <div id="game-lives" class="game-lives lives-locked" aria-label="Vidas de la cereza">
+          <span class="game-lives-label">Vidas</span>
+          <div id="game-lives-hearts" class="game-lives-hearts"></div>
         </div>
         <div id="game-milestone" class="game-milestone hidden">
           <p id="game-milestone-text"></p>
           <p id="game-milestone-sub" class="game-milestone-sub hidden"></p>
+          <p id="game-toast-timer" class="game-toast-timer hidden" aria-live="polite"></p>
+          <button id="game-toast-dismiss" class="game-toast-dismiss hidden" type="button">▶ Continuar</button>
         </div>
-        <button id="game-reload" class="game-reload" type="button">🔄 Reiniciar juego</button>
+        <div id="game-pause-screen" class="game-pause-screen hidden" aria-hidden="true">
+          <p>⏸ Pausado</p>
+          <button id="game-resume" class="game-resume-btn" type="button">▶ Continuar</button>
+        </div>
+        <div id="game-over-screen" class="game-over-screen hidden" aria-hidden="true">
+          <p>Sin vidas... 🍒</p>
+          <p class="game-over-sub">Perdiste 5 chocolates. ¡Intenta de nuevo!</p>
+          <button id="game-over-restart" class="game-resume-btn" type="button">🔄 Reiniciar juego</button>
+        </div>
+        <button id="game-continue" class="game-continue hidden" type="button">▶ Continuar jugando</button>
+        <div id="game-endless-reward" class="game-endless-reward hidden" aria-hidden="true">
+          <div class="game-reward-medal" aria-hidden="true">🏆</div>
+          <p class="game-reward-title">¡Modo Infinito desbloqueado!</p>
+          <p class="game-reward-sub">Tu cereza ganó 5 vidas y un amor sin fin. Sigue atrapando chocolates para siempre.</p>
+          <p class="game-reward-bonus">💫 Mensajes secretos cada 25 chocolates</p>
+          <button id="game-endless-enter" class="game-resume-btn" type="button">▶ Entrar al Modo Infinito</button>
+        </div>
+        <div class="game-actions">
+          <button id="game-pause" class="game-pause-btn" type="button" aria-label="Pausar juego">
+            <span class="game-pause-icon" aria-hidden="true">⏸</span>
+            <span class="game-pause-label">Pausar</span>
+          </button>
+          <button id="game-reload" class="game-action-btn" type="button">🔄 Reiniciar</button>
+        </div>
+        <div class="game-progress" aria-label="Metas del juego">
+          <div class="game-progress-inner">
+            <div id="game-progress-markers" class="game-progress-markers"></div>
+            <div class="game-progress-bar">
+              <div id="game-progress-fill" class="game-progress-fill"></div>
+              <span id="game-progress-infinity" class="game-progress-infinity hidden">∞</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -220,6 +270,6 @@
     </button>
   </div>
 
-  <script src="script.js?v=5"></script>
+  <script src="script.js?v=24"></script>
 </body>
 </html>
