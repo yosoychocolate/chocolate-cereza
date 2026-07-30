@@ -55,12 +55,24 @@
     { id: 'love_25', icon: '💕', title: 'Pensando en Ti', desc: 'Haz 25 clicks de amor en el sitio.', toastScope: 'site' },
     { id: 'love_100', icon: '💗', title: 'Corazón Activo', desc: 'Haz 100 clicks de amor en el sitio.', toastScope: 'site' },
     { id: 'love_500', icon: '💖', title: 'Amor Sin Pausa', desc: 'Haz 500 clicks de amor en el sitio.', toastScope: 'site' },
+    /* Sorpréndeme (sitio) */
+    { id: 'surprise_1', icon: '🍒', title: 'Primera Sorpresa', desc: 'Pide tu primera sorpresa romántica.', toastScope: 'site' },
+    { id: 'surprise_10', icon: '💌', title: 'Coleccionista de Frases', desc: 'Pide 10 sorpresas.', toastScope: 'site' },
+    { id: 'surprise_25', icon: '🎀', title: 'Corazón Curioso', desc: 'Pide 25 sorpresas.', toastScope: 'site' },
+    /* Poemas (sitio) */
+    { id: 'poem_1', icon: '📜', title: 'Primer Poema', desc: 'Crea tu primer poema.', toastScope: 'site' },
+    { id: 'poem_10', icon: '✒️', title: 'Poeta del Amor', desc: 'Crea 10 poemas.', toastScope: 'site' },
+    { id: 'poem_50', icon: '📖', title: 'Libro de Versos', desc: 'Crea 50 poemas.', toastScope: 'site' },
+    { id: 'poem_round', icon: '🏆', title: 'Cien Poemas', desc: 'Completa una ronda de 100 poemas únicos.', toastScope: 'site' },
+    /* Medidor do amor (sitio) */
+    { id: 'meter_full', icon: '❤️', title: 'Amor al Máximo', desc: 'Llena el medidor de amor al 100%.', toastScope: 'site' },
+    { id: 'meter_infinite', icon: '♾️', title: 'Amor Infinito', desc: 'Descubre el secreto del medidor.', toastScope: 'site' },
     /* Momentos & hábitos */
     { id: 'night_owl', icon: '🦉', title: 'Búho Enamorado', desc: 'Juega después de las 22:00.' },
     { id: 'early_bird', icon: '🌅', title: 'Amanecer Juntos', desc: 'Juega antes de las 8:00.' },
     { id: 'weekend', icon: '📅', title: 'Fin de Semana', desc: 'Juega un sábado o domingo.' },
     { id: 'silent_heart', icon: '🤫', title: 'Amor Silencioso', desc: 'Juega 5 minutos con el sonido apagado.' },
-    { id: 'explorer', icon: '🗺️', title: 'Explorador', desc: 'Abre estadísticas, logros y ajustes.' },
+    { id: 'explorer', icon: '🗺️', title: 'Explorador', desc: 'Abre estadísticas, logros y ajustes.', toastScope: 'site' },
     /* Supervivencia & partidas */
     { id: 'last_stand', icon: '🛡️', title: 'Última Vida', desc: 'Alcanza 35+ estando a 1 vida.' },
     { id: 'games_10', icon: '🎮', title: 'Jugador Fiel', desc: 'Completa 10 partidas.' },
@@ -168,10 +180,7 @@
   }
 
   function getToastScope(achievement) {
-    if (achievement.toastScope === 'site' || achievement.toastScope === 'game') {
-      return achievement.toastScope;
-    }
-    return achievement.id.startsWith('love_') ? 'site' : 'game';
+    return achievement.toastScope === 'site' ? 'site' : 'game';
   }
 
   const GameMeta = {
@@ -232,6 +241,7 @@
       this.renderAchievementProgress();
       this.syncSettingsUI();
       this.bindPanelToggles();
+      this.bindPanelScrollGuards();
       this.bindSettings();
       this._isMobileUI = window.matchMedia('(max-width: 768px)').matches;
       this.els.metaBackdrop = document.getElementById('game-meta-backdrop');
@@ -253,6 +263,13 @@
         backdrop?.classList.add('hidden');
         backdrop?.setAttribute('aria-hidden', 'true');
       }
+    },
+
+    _syncPanelBrowseMode(open, id) {
+      document.body.classList.toggle('game-meta-panel-open', open);
+      window.dispatchEvent(new CustomEvent('gamemeta:panel-change', {
+        detail: { open, id: id || null },
+      }));
     },
 
     isUnlocked(id) {
@@ -321,6 +338,12 @@
       }
       if (id === 'stats') this.renderStats();
       this._syncSheetOverlay();
+      this._syncPanelBrowseMode(true, id);
+      if (!this._isMobileUI) {
+        requestAnimationFrame(() => {
+          entry.panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
     },
 
     closePanel(id, clearActive = true) {
@@ -337,6 +360,17 @@
       if (clearActive && this._openPanelId === id) {
         this._openPanelId = null;
         this._syncSheetOverlay();
+        this._syncPanelBrowseMode(false);
+      }
+    },
+
+    bindPanelScrollGuards() {
+      const stopBubble = (event) => event.stopPropagation();
+      for (const id of ['stats', 'achievements', 'settings']) {
+        const panel = this.panels[id]?.panel;
+        if (!panel) continue;
+        panel.addEventListener('wheel', stopBubble, { passive: true });
+        panel.addEventListener('touchmove', stopBubble, { passive: true });
       }
     },
 
@@ -385,6 +419,11 @@
         gamesPlayed: this.stats.gamesPlayed || 0,
         recordsBroken: this.stats.recordsBroken || 0,
         loveClicks: save.site?.loveClicks || 0,
+        surpriseCount: save.site?.surpriseCount || 0,
+        poemsCreated: save.site?.poemsCreated || 0,
+        poemRoundsCompleted: save.site?.poemRoundsCompleted || 0,
+        meterFullReached: !!save.site?.meterFullReached,
+        meterSecretUnlocked: !!save.site?.meterSecretUnlocked,
         panelsOpened: panels,
         hadOneLife: !!this.session.hadOneLife,
         inOnlineRoom: !!p.inOnlineRoom,
@@ -459,6 +498,24 @@
           return ctx.loveClicks >= 100;
         case 'love_500':
           return ctx.loveClicks >= 500;
+        case 'surprise_1':
+          return ctx.surpriseCount >= 1;
+        case 'surprise_10':
+          return ctx.surpriseCount >= 10;
+        case 'surprise_25':
+          return ctx.surpriseCount >= 25;
+        case 'poem_1':
+          return ctx.poemsCreated >= 1;
+        case 'poem_10':
+          return ctx.poemsCreated >= 10;
+        case 'poem_50':
+          return ctx.poemsCreated >= 50;
+        case 'poem_round':
+          return ctx.poemRoundsCompleted >= 1;
+        case 'meter_full':
+          return ctx.meterFullReached;
+        case 'meter_infinite':
+          return ctx.meterSecretUnlocked;
         case 'night_owl':
           return ctx.hour >= 22 || ctx.hour < 5;
         case 'early_bird':

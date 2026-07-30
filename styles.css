@@ -3498,6 +3498,22 @@ body.game-focus .game-achievement-toast {
   -webkit-backdrop-filter: none !important;
 }
 
+/* Painéis de stats/logros — modo navegação (scroll livre, jogo não captura toque) */
+body.game-meta-panel-open #game-container {
+  pointer-events: none;
+}
+
+body.game-meta-panel-open .game-meta-panel {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.game-meta-panel-open .game-achievements-gallery {
+  max-height: none;
+  overflow: visible;
+}
+
 /* ===== Responsive (Mobile First enhancements) ===== */
 
 @media (min-width: 481px) {
@@ -3589,7 +3605,7 @@ body.game-focus .game-achievement-toast {
     right: var(--space-x);
     bottom: max(12px, env(safe-area-inset-bottom, 0px));
     z-index: 1200;
-    max-height: min(52vh, 380px);
+    max-height: min(78vh, 520px);
     margin-top: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -3613,9 +3629,12 @@ body.game-focus .game-achievement-toast {
     overflow: hidden;
   }
 
-  .game-achievements-gallery {
-    max-height: min(36vh, 260px);
+  body.game-meta-panel-open .game-achievements-gallery {
+    max-height: none;
+    overflow: visible;
   }
+
+  .game-achievements-gallery {
 
   #meeting {
     justify-content: flex-start;

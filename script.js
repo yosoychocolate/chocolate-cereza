@@ -14,6 +14,18 @@ function saveSiteLoveClicks(value) {
   SaveManager.updateSection('site', { loveClicks: value });
 }
 
+function bumpSiteCounter(key, delta = 1) {
+  const save = SaveManager.getSave();
+  const next = (save.site?.[key] || 0) + delta;
+  SaveManager.updateSection('site', { [key]: next });
+  window.GameMeta?.refreshAchievements?.();
+}
+
+function setSiteFlag(key, value = true) {
+  SaveManager.updateSection('site', { [key]: value });
+  window.GameMeta?.refreshAchievements?.();
+}
+
 function loadGameSession() {
   return SaveManager.getSave().session;
 }
@@ -240,6 +252,7 @@ function initSurprise() {
     void msg.offsetWidth;
     msg.textContent = `"${surprisePhrases[idx]}"`;
     msg.classList.add('show');
+    bumpSiteCounter('surpriseCount');
   });
 }
 
@@ -423,9 +436,12 @@ function initPoem() {
   btn.addEventListener('mouseenter', () => spawnButtonHearts(btn));
 
   btn.addEventListener('click', () => {
+    const completingRound = poemQueue.length === 1;
     const lines = nextPoemFromDeck();
     const sign = poemSigns[Math.floor(Math.random() * poemSigns.length)];
     renderPoem(output, lines, sign);
+    bumpSiteCounter('poemsCreated');
+    if (completingRound) bumpSiteCounter('poemRoundsCompleted');
     updatePoemCounter();
   });
 }
@@ -454,6 +470,9 @@ function initMeter() {
     updateMeterDisplay();
 
     if (meterHeartClicks >= 100 && !secretUnlocked) {
+      if (!SaveManager.getSave().site?.meterFullReached) {
+        setSiteFlag('meterFullReached', true);
+      }
       triggerSecretAnimation();
     }
 
@@ -511,6 +530,7 @@ function updateMeterDisplay() {
 function triggerSecretAnimation() {
   if (secretUnlocked) return;
   secretUnlocked = true;
+  setSiteFlag('meterSecretUnlocked', true);
 
   const overlay = document.getElementById('secret-overlay');
   const scene = document.querySelector('.secret-scene');
@@ -705,6 +725,7 @@ function initGame() {
   let endlessIntroPause = false;
   let toastCountdownTimer = null;
   let toastCountdownInterval = null;
+  let metaPanelAutoPaused = false;
   const TOAST_READ_SECONDS = 8;
 
   const perfLite = isMobileView();
@@ -1145,6 +1166,22 @@ function initGame() {
     achievementToast: document.getElementById('game-achievement-toast'),
     celebrateFx: document.getElementById('game-celebrate-fx'),
     gameContainer,
+  });
+
+  window.addEventListener('gamemeta:panel-change', (event) => {
+    const open = !!event.detail?.open;
+    if (open) {
+      setGameFocus(false);
+      if (!gamePaused && !gameOver && !milestonePause && !messagePause && !endlessIntroPause) {
+        metaPanelAutoPaused = true;
+        setPaused(true);
+      }
+      return;
+    }
+    if (metaPanelAutoPaused) {
+      metaPanelAutoPaused = false;
+      setPaused(false);
+    }
   });
 
   engine.onActiveTick = (dt) => {
