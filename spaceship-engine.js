@@ -226,7 +226,12 @@
 
   const ROCKET_SPRITE_REGISTRY = {
     ship_chocolate: {
-      src: 'assets/cannon-ship.png',
+      src: 'assets/cannon-unit.png',
+      fallbackSrc: 'assets/cannon-ship.png',
+      combinedUnit: true,
+      hidePlatform: true,
+      hideProceduralFlame: true,
+      unitScale: 1.42,
       procedural: 'generic',
       palette: 'chocolate',
       flameBurstMs: 80,
@@ -235,7 +240,7 @@
       sockets: {
         pivot: { x: 0, y: 0 },
         nose: { x: 0, y: -0.985 },
-        flame: { x: 0, y: 0.07 },
+        flame: { x: 0, y: -0.92 },
       },
     },
     ship_cherry: {
@@ -247,7 +252,7 @@
       sockets: {
         pivot: { x: 0, y: 0 },
         nose: { x: 0, y: -0.985 },
-        flame: { x: 0, y: 0.07 },
+        flame: { x: 0, y: 0.04 },
       },
     },
     ship_rosa: {
@@ -259,7 +264,7 @@
       sockets: {
         pivot: { x: 0, y: 0 },
         nose: { x: 0, y: -0.985 },
-        flame: { x: 0, y: 0.07 },
+        flame: { x: 0, y: 0.04 },
       },
     },
     ship_neon: {
@@ -271,7 +276,7 @@
       sockets: {
         pivot: { x: 0, y: 0 },
         nose: { x: 0, y: -0.985 },
-        flame: { x: 0, y: 0.07 },
+        flame: { x: 0, y: 0.04 },
       },
     },
     ship_sakura: {
@@ -283,7 +288,7 @@
       sockets: {
         pivot: { x: 0, y: 0 },
         nose: { x: 0, y: -0.985 },
-        flame: { x: 0, y: 0.07 },
+        flame: { x: 0, y: 0.04 },
       },
     },
     ship_galaxy: {
@@ -295,34 +300,50 @@
       sockets: {
         pivot: { x: 0, y: 0 },
         nose: { x: 0, y: -0.985 },
-        flame: { x: 0, y: 0.07 },
+        flame: { x: 0, y: 0.04 },
       },
     },
   };
 
   const DEFAULT_ROCKET_ID = 'ship_chocolate';
 
-  /** Plataforma + nave — ratios por viewport (desktop / mobile / mobile pequeno). */
+  /** Base do canhão (carriage) — deck = superfície onde o cano encaixa. */
+  const CANNON_BASE_REGISTRY = {
+    default: {
+      src: 'assets/cannon-base.png',
+      fallbackSrc: 'assets/cannon-platform.png',
+      widthRatio: 0.82,
+      /** null = detecta automaticamente no bake */
+      deckY: null,
+      /** Sobrepõe cano na base (px) */
+      mountOverlap: 10,
+    },
+  };
+
+  /** Plataforma + canhão — ratios por viewport (desktop / mobile / mobile pequeno). */
   const LAYOUT_PROFILES = {
     desktop: {
-      floorRatio: 0.64,
+      floorRatio: 0.72,
       deckRatio: 0.12,
       shipRatio: 0.26,
-      platformWidth: 0.94,
+      platformWidth: 0.82,
+      platformLift: 12,
       cherryScale: 0.065,
     },
     mobile: {
-      floorRatio: 0.62,
+      floorRatio: 0.69,
       deckRatio: 0.12,
       shipRatio: 0.23,
-      platformWidth: 0.96,
+      platformWidth: 0.86,
+      platformLift: 10,
       cherryScale: 0.06,
     },
     mobileSm: {
-      floorRatio: 0.60,
+      floorRatio: 0.67,
       deckRatio: 0.12,
       shipRatio: 0.21,
-      platformWidth: 0.98,
+      platformWidth: 0.88,
+      platformLift: 8,
       cherryScale: 0.055,
     },
   };
@@ -565,20 +586,126 @@
     return stripBlackBackground(bakeSprite(img, targetH, dpr));
   }
 
-  function bakePlatformSprite(img, targetW, dpr) {
-    const aspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
-    const tw = Math.round(targetW * dpr);
-    const th = Math.round((targetW / aspect) * dpr);
+  /** Detecta a fileira “deck” (superfície plana onde o cano encaixa). */
+  function measurePlatformDeckRatio(canvas, fallback) {
+    try {
+      const w = canvas.width;
+      const h = canvas.height;
+      if (!w || !h) return fallback;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const data = ctx.getImageData(0, 0, w, h).data;
+      const minSpan = w * 0.42;
+      const maxScanY = Math.floor(h * 0.55);
+      let bestY = -1;
+      let bestSpan = 0;
+
+      for (let y = 0; y < maxScanY; y++) {
+        let xmin = w;
+        let xmax = -1;
+        for (let x = 0; x < w; x++) {
+          const a = data[(y * w + x) * 4 + 3];
+          if (a > 24) {
+            if (x < xmin) xmin = x;
+            if (x > xmax) xmax = x;
+          }
+        }
+        const span = xmax >= xmin ? xmax - xmin + 1 : 0;
+        if (span >= minSpan && span >= bestSpan) {
+          bestSpan = span;
+          bestY = y;
+        }
+      }
+
+      if (bestY >= 0) {
+        return Math.max(0.04, Math.min(0.45, bestY / h));
+      }
+    } catch (e) {
+      console.warn('[Cañón] deck measure skipped', e);
+    }
+    return fallback;
+  }
+
+  /** Base baixa estilo carriagem de canhão (fallback procedural). */
+  function bakeProceduralCannonBase(targetW) {
+    const w = Math.max(48, Math.ceil(targetW));
+    const h = Math.max(14, Math.ceil(w * 0.2));
     const c = document.createElement('canvas');
-    c.width = tw;
-    c.height = th;
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+
+    const cx = w / 2;
+    const deckY = h * 0.08;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(cx, h * 0.92, w * 0.36, h * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const grad = ctx.createLinearGradient(0, deckY, 0, h);
+    grad.addColorStop(0, '#6D4C41');
+    grad.addColorStop(0.45, '#5D4037');
+    grad.addColorStop(1, '#3E2723');
+
+    ctx.beginPath();
+    ctx.moveTo(w * 0.1, deckY + h * 0.06);
+    ctx.lineTo(w * 0.9, deckY + h * 0.06);
+    ctx.lineTo(w * 0.78, h * 0.94);
+    ctx.lineTo(w * 0.22, h * 0.94);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 200, 120, 0.25)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 220, 160, 0.18)';
+    ctx.fillRect(w * 0.18, deckY + h * 0.1, w * 0.64, h * 0.07);
+
+    ctx.beginPath();
+    ctx.ellipse(cx, deckY + h * 0.03, w * 0.11, h * 0.055, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#4E342E';
+    ctx.fill();
+
+    c._logicalW = w;
+    c._logicalH = h;
+    c._deckY = deckY / h;
+    c._procedural = true;
+    return c;
+  }
+
+  function bakeCannonBaseSprite(img, targetW, dpr, baseDef) {
+    const def = baseDef || CANNON_BASE_REGISTRY.default;
+    const fallbackDeck = def.deckY ?? 0.12;
+
+    if (!img) {
+      return bakeProceduralCannonBase(targetW);
+    }
+
+    const aspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
+    const logicalH = targetW / aspect;
+    const tw = Math.round(targetW * dpr);
+    const th = Math.round(logicalH * dpr);
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, tw);
+    c.height = Math.max(1, th);
     const cx = c.getContext('2d');
     cx.imageSmoothingEnabled = true;
     cx.imageSmoothingQuality = 'high';
     cx.drawImage(img, 0, 0, tw, th);
+    stripEdgeBackground(c);
+
     c._logicalW = targetW;
-    c._logicalH = targetW / aspect;
-    return stripBlackBackground(c);
+    c._logicalH = logicalH;
+    c._deckY = def.deckY != null ? def.deckY : measurePlatformDeckRatio(c, fallbackDeck);
+    c._procedural = false;
+    return c;
+  }
+
+  /** @deprecated use bakeCannonBaseSprite */
+  function bakePlatformSprite(img, targetW, dpr) {
+    return bakeCannonBaseSprite(img, targetW, dpr, CANNON_BASE_REGISTRY.default);
   }
 
   function cherryVisualH(r) {
@@ -677,6 +804,11 @@
       return ROCKET_SPRITE_REGISTRY[id] ?? ROCKET_SPRITE_REGISTRY[DEFAULT_ROCKET_ID];
     }
 
+    _usesCombinedUnit() {
+      const def = this._rocketDef();
+      return !!(def.combinedUnit && this.sprites.ship && this.sprites.ship._combinedUnit);
+    }
+
     async loadSprites() {
       if (this._loadingSprites) return this._loadingSprites;
 
@@ -686,7 +818,7 @@
         const rocketDef = ROCKET_SPRITE_REGISTRY[this.cosmetics?.shipId || DEFAULT_ROCKET_ID]
           ?? ROCKET_SPRITE_REGISTRY[DEFAULT_ROCKET_ID];
         const cherryPath = assetUrl('assets/cherry-planet.png');
-        const platformPath = assetUrl('assets/cannon-platform.png');
+        const baseDef = this._cannonBaseDef();
         const bgPath = assetUrl('assets/cannon-bg.png');
 
         if (!this.useHtmlBg && !this.bgImage) {
@@ -700,17 +832,25 @@
 
         try {
           this.sprites.ship = null;
-          if (rocketDef.src) {
+          const srcList = [rocketDef.src, rocketDef.fallbackSrc].filter(Boolean);
+          for (let si = 0; si < srcList.length; si++) {
             try {
-              const shipImg = await loadImage(assetUrl(rocketDef.src));
-              this.sprites.ship = bakeCannonSpriteAligned(shipImg, this.cannon.h || 48);
+              const shipImg = await loadImage(assetUrl(srcList[si]));
+              const unitScale = rocketDef.unitScale ?? 1;
+              const targetH = (this.cannon.h || 48) * unitScale;
+              this.sprites.ship = bakeCannonSpriteAligned(shipImg, targetH);
+              this.sprites.ship._combinedUnit = !!(rocketDef.combinedUnit && si === 0);
               console.log(
-                '[Cañón] nave PNG',
-                rocketDef.src,
-                `${this.sprites.ship._logicalW}x${this.sprites.ship._logicalH}`
+                '[Cañón] canhão PNG',
+                srcList[si],
+                `${this.sprites.ship._logicalW}x${this.sprites.ship._logicalH}`,
+                this.sprites.ship._combinedUnit ? '(unidade completa)' : ''
               );
+              break;
             } catch (pngErr) {
-              console.warn('[Cañón] PNG nave indisponível, usando procedural', pngErr);
+              if (si === srcList.length - 1) {
+                console.warn('[Cañón] PNG canhão indisponível, usando procedural', pngErr);
+              }
             }
           }
           if (!this.sprites.ship && rocketDef.procedural === 'generic') {
@@ -738,12 +878,37 @@
           this.sprites.cherry = null;
         }
 
-        try {
-          const platformImg = await loadImage(platformPath);
-          this.sprites.platform = bakePlatformSprite(platformImg, this.W * profile.platformWidth || 320, dpr);
-        } catch (e) {
-          console.warn('[Cañón] platform load failed', e);
+        if (this.sprites.ship?._combinedUnit) {
           this.sprites.platform = null;
+        } else {
+          try {
+            let baseImg = null;
+            if (baseDef.src) {
+              try {
+                baseImg = await loadImage(assetUrl(baseDef.src));
+                console.log('[Cañón] base PNG', baseDef.src);
+              } catch (baseErr) {
+                console.warn('[Cañón] cannon-base indisponível, tentando fallback', baseErr);
+              }
+            }
+            if (!baseImg && baseDef.fallbackSrc) {
+              try {
+                baseImg = await loadImage(assetUrl(baseDef.fallbackSrc));
+                console.log('[Cañón] base fallback', baseDef.fallbackSrc);
+              } catch (fallbackErr) {
+                console.warn('[Cañón] base fallback indisponível', fallbackErr);
+              }
+            }
+            this.sprites.platform = bakeCannonBaseSprite(
+              baseImg,
+              this.W * profile.platformWidth || 320,
+              dpr,
+              baseDef
+            );
+          } catch (e) {
+            console.warn('[Cañón] base load failed', e);
+            this.sprites.platform = bakeProceduralCannonBase(this.W * profile.platformWidth || 320);
+          }
         }
 
         this._syncCannonAnchor();
@@ -1115,15 +1280,33 @@
       return this.W < 340 ? LAYOUT_PROFILES.mobileSm : LAYOUT_PROFILES.mobile;
     }
 
+    _cannonBaseDef() {
+      return CANNON_BASE_REGISTRY.default;
+    }
+
     _layoutCannonFloor() {
       const h = this.H || 400;
       const profile = this._getLayoutProfile();
-      const plat = this.sprites.platform;
-      const platH = plat?._logicalH ?? h * (this.perfLite ? 0.08 : 0.09);
 
-      this.platformTopY = h * profile.floorRatio;
-      this.cannon.y = this.platformTopY;
-      this.platformDrawY = this.platformTopY - platH * profile.deckRatio;
+      if (this._usesCombinedUnit()) {
+        this.mountY = h * profile.floorRatio;
+        this.platformTopY = this.mountY;
+        this.cannon.y = this.mountY;
+        this.platformDrawY = null;
+        this.groundY = this.mountY + Math.max(10, (this.sprites.ship?._logicalH ?? 0) * 0.03);
+        return;
+      }
+
+      const baseDef = this._cannonBaseDef();
+      const plat = this.sprites.platform;
+      const platH = plat?._logicalH ?? h * (this.perfLite ? 0.07 : 0.08);
+      const deckY = plat?._deckY ?? baseDef.deckY ?? profile.deckRatio;
+      const overlap = (baseDef.mountOverlap ?? 0) + (profile.platformLift ?? 0);
+
+      this.mountY = h * profile.floorRatio;
+      this.platformTopY = this.mountY;
+      this.cannon.y = this.mountY;
+      this.platformDrawY = this.mountY - platH * deckY - overlap;
       this.groundY = this.platformDrawY + platH;
     }
 
@@ -1580,15 +1763,34 @@
       ctx.fillRect(0, gy, W, gh);
     }
 
+    _drawCombinedUnitShadow(ctx) {
+      const W = this.W;
+      const y = this.mountY ?? this.cannon.y;
+      const w = (this.sprites.ship?._logicalW ?? this.cannon.w) * 0.55;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.34)';
+      ctx.beginPath();
+      ctx.ellipse(this.cannon.x, y + 4, w, Math.max(8, w * 0.12), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
+      ctx.beginPath();
+      ctx.ellipse(this.cannon.x, y + 7, w * 1.12, Math.max(10, w * 0.15), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     _drawPlatform(ctx) {
+      if (this._usesCombinedUnit()) {
+        this._drawCombinedUnitShadow(ctx);
+        return;
+      }
+
       const W = this.W;
       const plat = this.sprites.platform;
       if (plat) {
         const platW = plat._logicalW;
         const platH = plat._logicalH;
         const px = (W - platW) / 2;
-        const deckRatio = this._getLayoutProfile().deckRatio;
-        const py = this.platformDrawY ?? (this.platformTopY - platH * deckRatio);
+        const deckY = plat?._deckY ?? this._cannonBaseDef().deckY ?? this._getLayoutProfile().deckRatio;
+        const py = this.platformDrawY ?? (this.platformTopY - platH * deckY);
         const shadowY = py + platH * 0.9;
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
@@ -1953,7 +2155,9 @@
         ctx.shadowBlur = 8 + recoil * 0.6;
       }
 
-      this._drawCannonFlame(ctx, flame, dh, time);
+      if (!this._rocketDef().hideProceduralFlame) {
+        this._drawCannonFlame(ctx, flame, dh, time);
+      }
       const srcW = meta.canvasW || sprite.width || rect.w;
       const srcH = meta.canvasH || sprite.height || rect.h;
       ctx.drawImage(sprite, 0, 0, srcW, srcH, rect.left, rect.top, rect.w, rect.h);
@@ -2072,6 +2276,7 @@
 
   global.SpaceshipEngine = SpaceshipEngine;
   global.RocketSpriteRegistry = ROCKET_SPRITE_REGISTRY;
+  global.CannonBaseRegistry = CANNON_BASE_REGISTRY;
   global.RotTestModes = ROT_TEST_MODES;
   global.cannonRotFromAim = cannonRotFromAim;
 })(typeof window !== 'undefined' ? window : globalThis);
