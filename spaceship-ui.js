@@ -157,6 +157,15 @@
     engine?.setBlocked(gamePaused || gameOver || !active || metaPanelPaused);
   }
 
+  function getCannonMetaPayload() {
+    return {
+      score: engine?.score || 0,
+      hits: engine?.hits || 0,
+      survivalMs: engine?.survivalMs || 0,
+      inOnlineRoom: !!global.CloudManager?.getCurrentRoom?.(),
+    };
+  }
+
   function triggerGameOver() {
     gameOver = true;
     syncBlocked();
@@ -166,6 +175,9 @@
     const score = engine?.score || 0;
     const timeMs = engine?.survivalMs || 0;
     const rec = saveRecords(score, timeMs);
+
+    global.CannonMissions?.onGameOver?.(engine);
+    global.GameMeta?.onCannonGameOver?.(getCannonMetaPayload());
 
     els.gameOverScreen?.classList.remove('hidden');
     els.gameOverScreen?.setAttribute('aria-hidden', 'false');
@@ -196,6 +208,8 @@
     hideGameOver();
     gamePaused = false;
     clearInput();
+    global.GameMeta?.resetCannonSession?.();
+    global.CannonMissions?.resetRun?.();
     engine?.resetSession();
     updateHud(true);
     syncBlocked();
@@ -295,6 +309,9 @@
   function wireEngine() {
     engine.onCorrect = () => {
       updateHud();
+      const meta = getCannonMetaPayload();
+      global.GameMeta?.handleCannonHit?.(meta);
+      global.CannonMissions?.onHit?.(engine);
       if (engine.hits % 5 === 0 && global.GameShop?.addCoins) {
         global.GameShop.addCoins(1);
         if (els.wallet) els.wallet.textContent = String(global.GameShop.getWallet());
@@ -306,6 +323,8 @@
     };
 
     engine.onMiss = () => {
+      global.GameMeta?.handleCannonMiss?.();
+      global.GameMeta?.onCannonLifeUpdate?.(engine.lives, getCannonMetaPayload());
       updateLivesHud();
       updateHud();
       container?.classList.add('spaceship-hit-flash');
@@ -313,7 +332,12 @@
       if (engine.lives <= 0) triggerGameOver();
     };
 
-    engine.onActiveTick = () => updateHud(false);
+    engine.onActiveTick = () => {
+      const meta = getCannonMetaPayload();
+      global.GameMeta?.addCannonPlayTime?.(250, meta);
+      global.CannonMissions?.onTick?.(engine);
+      updateHud(false);
+    };
   }
 
   function applyShopCosmetics() {
@@ -327,6 +351,7 @@
     hideGameOver();
     gamePaused = false;
     clearInput();
+    global.CannonMissions?.resetRun?.();
     syncBlocked();
     resizeGame();
     applyShopCosmetics();
@@ -449,6 +474,7 @@
     bindMetaPanelPause();
     initGameRouter();
     observeVisibility();
+    global.CannonMissions?.init?.();
 
     global.addEventListener('spaceship:activate', activate);
     global.addEventListener('spaceship:deactivate', deactivate);

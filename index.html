@@ -308,6 +308,11 @@
               <span id="game-ach-pct">0%</span>
             </p>
           </div>
+          <div id="game-ach-filter" class="game-ach-filter" role="tablist" aria-label="Filtrar logros">
+            <button type="button" class="game-ach-filter-btn is-active" data-ach-filter="all" role="tab" aria-selected="true">Todos</button>
+            <button type="button" class="game-ach-filter-btn" data-ach-filter="cherry" role="tab" aria-selected="false">🍒 Cereza</button>
+            <button type="button" class="game-ach-filter-btn" data-ach-filter="cannon" role="tab" aria-selected="false">🍫 Cañón</button>
+          </div>
           <ul id="game-achievements-gallery" class="game-achievements-gallery"></ul>
         </div>
         <div id="game-settings-panel" class="game-meta-panel hidden" role="region" aria-label="Ajustes del juego">
@@ -444,6 +449,10 @@
             <span id="spaceship-hits-val">0</span>
           </div>
         </div>
+        <div id="spaceship-missions" class="spaceship-missions" aria-label="Misiones de la partida">
+          <div class="spaceship-missions-head">🎯 Misiones</div>
+          <ul id="spaceship-missions-list" class="spaceship-missions-list"></ul>
+        </div>
         <div id="spaceship-lives" class="spaceship-lives" aria-label="Vidas">
           <div id="spaceship-lives-hearts" class="spaceship-lives-hearts"></div>
         </div>
@@ -474,6 +483,7 @@
           <p class="spaceship-go-meta">Puntos: <strong id="spaceship-go-score">0</strong> · Tiempo: <strong id="spaceship-go-time">0:00</strong> · Aciertos: <strong id="spaceship-go-hits">0</strong></p>
           <button id="spaceship-over-restart" class="game-resume-btn" type="button">🔄 Reiniciar</button>
         </div>
+        <div id="spaceship-mission-toast" class="spaceship-toast" role="status" aria-live="polite"></div>
         <div class="spaceship-actions">
           <button id="spaceship-pause" class="game-pause-btn" type="button" aria-label="Pausar juego">
             <span class="spaceship-pause-icon" aria-hidden="true">⏸</span>
@@ -561,6 +571,7 @@
   <script src="spaceship-engine.js?v=__APP_VERSION__"></script>
   <script src="game-meta.js?v=__APP_VERSION__"></script>
   <script src="game-shop.js?v=__APP_VERSION__"></script>
+  <script src="cannon-missions.js?v=__APP_VERSION__"></script>
   <script src="spaceship-ui.js?v=__APP_VERSION__"></script>
   <script src="script.js?v=__APP_VERSION__"></script>
   <script type="module" src="couple-ui.js?v=__APP_VERSION__"></script>

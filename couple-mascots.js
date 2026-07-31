@@ -231,14 +231,22 @@ export function renderRankingRow(type, name, score, opts = {}) {
  * @param {MascotType} type
  * @param {string} name
  * @param {string} message
+ * @param {string} [timeLabel]
+ * @param {string} [timeIso]
  * @returns {string}
  */
-export function renderChatRow(type, name, message) {
+export function renderChatRow(type, name, message, timeLabel = '', timeIso = '') {
   const bear = renderBear(type, { size: 32, cherry: type === 'cereza' });
+  const timeHtml = timeLabel
+    ? `<time class="couple-chat-time" datetime="${escapeHtml(timeIso)}">${escapeHtml(timeLabel)}</time>`
+    : '';
   return `<div class="couple-chat-msg is-player">
     <span class="couple-chat-mascot">${bear}</span>
     <div class="couple-chat-bubble">
-      <span class="couple-chat-author">${escapeHtml(name)}</span>
+      <div class="couple-chat-meta">
+        <span class="couple-chat-author">${escapeHtml(name)}</span>
+        ${timeHtml}
+      </div>
       <span class="couple-chat-text">${escapeHtml(message)}</span>
     </div>
   </div>`;

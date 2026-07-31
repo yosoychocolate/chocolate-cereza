@@ -13,6 +13,11 @@
     recordsBroken: 0,
     playTimeMutedMs: 0,
     panelsOpened: { stats: false, achievements: false, settings: false },
+    cannonTotalHits: 0,
+    cannonGamesPlayed: 0,
+    cannonPlayTimeMs: 0,
+    cannonBestStreak: 0,
+    cannonRecordsBroken: 0,
   };
 
   const MIN = 60 * 1000;
@@ -78,6 +83,27 @@
     { id: 'games_10', icon: '🎮', title: 'Jugador Fiel', desc: 'Completa 10 partidas.' },
     { id: 'games_50', icon: '🎲', title: 'Viciado al Amor', desc: 'Completa 50 partidas.' },
     { id: 'online_duo', icon: '🧸', title: 'Dúo Chocolate', desc: 'Atrapa un chocolate en modo pareja.' },
+    /* Cañón Chocolate — misiones / logros persistentes */
+    { id: 'cannon_first', icon: '🚀', title: 'Primer Disparo', desc: 'Acerta tu primera cereza con el cañón.', mode: 'cannon' },
+    { id: 'cannon_score_50', icon: '⭐', title: 'Artillero Novato', desc: 'Alcanza 50 puntos en una partida.', mode: 'cannon' },
+    { id: 'cannon_score_100', icon: '💯', title: 'Centenar Cañón', desc: 'Alcanza 100 puntos en una partida.', mode: 'cannon' },
+    { id: 'cannon_score_200', icon: '🎯', title: 'Francotirador', desc: 'Alcanza 200 puntos en una partida.', mode: 'cannon' },
+    { id: 'cannon_hits_10', icon: '🔫', title: 'Disparos Certeros', desc: '10 aciertos en una partida.', mode: 'cannon' },
+    { id: 'cannon_hits_25', icon: '💥', title: 'Lluvia de Aciertos', desc: '25 aciertos en una partida.', mode: 'cannon' },
+    { id: 'cannon_streak_5', icon: '🔥', title: 'Racha de Fuego', desc: '5 aciertos seguidos sin fallar.', mode: 'cannon' },
+    { id: 'cannon_streak_10', icon: '⚡', title: 'Imparable Cañón', desc: '10 aciertos seguidos sin fallar.', mode: 'cannon' },
+    { id: 'cannon_survive_60', icon: '⏱️', title: 'Minuto de Gloria', desc: 'Sobrevive 1 minuto en una partida.', mode: 'cannon' },
+    { id: 'cannon_survive_180', icon: '🛡️', title: 'Bunker Chocolate', desc: 'Sobrevive 3 minutos en una partida.', mode: 'cannon' },
+    { id: 'cannon_record_100', icon: '📈', title: 'Récord Artillero', desc: 'Consigue un récord cañón de 100+ puntos.', mode: 'cannon' },
+    { id: 'cannon_record_200', icon: '🏅', title: 'Medalla Cañón', desc: 'Consigue un récord cañón de 200+ puntos.', mode: 'cannon' },
+    { id: 'cannon_total_hits_100', icon: '🧺', title: 'Cazador de Cerezas', desc: '100 aciertos totales con el cañón.', mode: 'cannon' },
+    { id: 'cannon_total_hits_500', icon: '🏺', title: 'Destructor Orbital', desc: '500 aciertos totales con el cañón.', mode: 'cannon' },
+    { id: 'cannon_games_5', icon: '🎮', title: 'Artillero Fiel', desc: 'Completa 5 partidas cañón.', mode: 'cannon' },
+    { id: 'cannon_games_25', icon: '🎲', title: 'Veterano Cañón', desc: 'Completa 25 partidas cañón.', mode: 'cannon' },
+    { id: 'cannon_time_10m', icon: '🕐', title: 'En la Trinchera', desc: 'Juega 10 minutos en modo cañón.', mode: 'cannon' },
+    { id: 'cannon_last_stand', icon: '❤️‍🔥', title: 'Última Munición', desc: '50+ puntos con solo 1 vida restante.', mode: 'cannon' },
+    { id: 'cannon_online', icon: '🧸', title: 'Dúo Artillero', desc: 'Juega cañón estando en modo pareja.', mode: 'cannon' },
+    { id: 'cannon_first_record', icon: '✨', title: 'Nuevo Récord Cañón', desc: 'Supera tu récord cañón por primera vez.', mode: 'cannon' },
   ];
 
   const DEFAULT_SETTINGS = {
@@ -103,6 +129,7 @@
     };
     return {
       highScore: save.records.highScore || 0,
+      cannonHighScore: save.records.spaceshipHighScore || 0,
       stats: mergedStats,
       settings: { ...DEFAULT_SETTINGS, ...save.settings },
       unlockDates: { ...save.achievements },
@@ -193,17 +220,21 @@
   const GameMeta = {
     sounds: new GameSounds(),
     highScore: 0,
+    cannonHighScore: 0,
     stats: { ...DEFAULT_STATS },
     settings: { ...DEFAULT_SETTINGS },
     unlockDates: {},
     currentStreak: 0,
+    cannonStreak: 0,
     session: { hadOneLife: false, score: 0, endless: false, endlessBonus: 0, inOnlineRoom: false },
+    cannonSession: { hadOneLife: false, score: 0, hits: 0, survivalMs: 0, inOnlineRoom: false },
     els: {},
     panels: {},
     perfLite: false,
     _openPanelId: null,
     _justUnlockedIds: [],
     _isMobileUI: false,
+    _achFilter: 'all',
 
     init(options) {
       this.els = options || {};
@@ -211,6 +242,7 @@
 
       const data = loadFromSave();
       this.highScore = data.highScore;
+      this.cannonHighScore = data.cannonHighScore;
       this.stats = data.stats;
       this.settings = data.settings;
       this.unlockDates = data.unlockDates;
@@ -246,6 +278,7 @@
       ));
       this.renderAchievementGallery();
       this.renderAchievementProgress();
+      this.bindAchievementFilters();
       this.syncSettingsUI();
       this.bindPanelToggles();
       this.bindPanelScrollGuards();
@@ -411,6 +444,9 @@
       const save = global.SaveManager.getSave();
       const panels = { stats: false, achievements: false, settings: false, ...(this.stats.panelsOpened || {}) };
       const now = new Date();
+      const cannonScore = p.cannonScore ?? p.score ?? this.cannonSession.score ?? 0;
+      const cannonHits = p.cannonHits ?? p.hits ?? this.cannonSession.hits ?? 0;
+      const cannonSurvivalMs = p.cannonSurvivalMs ?? p.survivalMs ?? this.cannonSession.survivalMs ?? 0;
       return {
         score: p.score || 0,
         highScore: Math.max(this.highScore, p.score || 0),
@@ -434,6 +470,18 @@
         inOnlineRoom: !!p.inOnlineRoom,
         hour: now.getHours(),
         day: now.getDay(),
+        cannonScore,
+        cannonHits,
+        cannonSurvivalMs,
+        cannonHighScore: Math.max(this.cannonHighScore, cannonScore),
+        cannonBestStreak: this.stats.cannonBestStreak || 0,
+        cannonCurrentStreak: this.cannonStreak,
+        cannonTotalHits: this.stats.cannonTotalHits || 0,
+        cannonGamesPlayed: this.stats.cannonGamesPlayed || 0,
+        cannonPlayTimeMs: this.stats.cannonPlayTimeMs || 0,
+        cannonRecordsBroken: this.stats.cannonRecordsBroken || 0,
+        cannonHadOneLife: !!this.cannonSession.hadOneLife,
+        cannonInOnlineRoom: !!p.cannonInOnlineRoom || !!p.inOnlineRoom,
       };
     },
 
@@ -539,6 +587,46 @@
           return ctx.gamesPlayed >= 50;
         case 'online_duo':
           return ctx.inOnlineRoom && ctx.totalChocolates >= 1;
+        case 'cannon_first':
+          return ctx.cannonHits >= 1 || ctx.cannonTotalHits >= 1;
+        case 'cannon_score_50':
+          return ctx.cannonScore >= 50;
+        case 'cannon_score_100':
+          return ctx.cannonScore >= 100;
+        case 'cannon_score_200':
+          return ctx.cannonScore >= 200;
+        case 'cannon_hits_10':
+          return ctx.cannonHits >= 10;
+        case 'cannon_hits_25':
+          return ctx.cannonHits >= 25;
+        case 'cannon_streak_5':
+          return ctx.cannonBestStreak >= 5;
+        case 'cannon_streak_10':
+          return ctx.cannonBestStreak >= 10;
+        case 'cannon_survive_60':
+          return ctx.cannonSurvivalMs >= 60 * 1000;
+        case 'cannon_survive_180':
+          return ctx.cannonSurvivalMs >= 180 * 1000;
+        case 'cannon_record_100':
+          return ctx.cannonHighScore >= 100;
+        case 'cannon_record_200':
+          return ctx.cannonHighScore >= 200;
+        case 'cannon_total_hits_100':
+          return ctx.cannonTotalHits >= 100;
+        case 'cannon_total_hits_500':
+          return ctx.cannonTotalHits >= 500;
+        case 'cannon_games_5':
+          return ctx.cannonGamesPlayed >= 5;
+        case 'cannon_games_25':
+          return ctx.cannonGamesPlayed >= 25;
+        case 'cannon_time_10m':
+          return ctx.cannonPlayTimeMs >= 10 * MIN;
+        case 'cannon_last_stand':
+          return ctx.cannonHadOneLife && ctx.cannonScore >= 50;
+        case 'cannon_online':
+          return ctx.cannonInOnlineRoom && ctx.cannonGamesPlayed >= 1;
+        case 'cannon_first_record':
+          return ctx.cannonRecordsBroken >= 1;
         default:
           return false;
       }
@@ -706,6 +794,140 @@
       this.session = { hadOneLife: false, score: 0, endless: false, endlessBonus: 0, inOnlineRoom: false };
     },
 
+    resetCannonSession() {
+      this.cannonStreak = 0;
+      this.cannonSession = { hadOneLife: false, score: 0, hits: 0, survivalMs: 0, inOnlineRoom: false };
+    },
+
+    saveCannonHighScore() {
+      const save = global.SaveManager.getSave();
+      global.SaveManager.updateSection('records', {
+        ...save.records,
+        spaceshipHighScore: this.cannonHighScore,
+      });
+    },
+
+    addCannonPlayTime(dt, partial) {
+      if (!dt || dt <= 0) return;
+      this.stats.cannonPlayTimeMs = (this.stats.cannonPlayTimeMs || 0) + dt;
+      this._cannonPlaySaveAcc = (this._cannonPlaySaveAcc || 0) + dt;
+      if (partial) {
+        this.cannonSession.score = partial.score ?? this.cannonSession.score;
+        this.cannonSession.hits = partial.hits ?? this.cannonSession.hits;
+        this.cannonSession.survivalMs = partial.survivalMs ?? this.cannonSession.survivalMs;
+      }
+      this._cannonAchAcc = (this._cannonAchAcc || 0) + dt;
+      if (this._cannonPlaySaveAcc >= 5000) {
+        this._cannonPlaySaveAcc = 0;
+        this.saveStats();
+      }
+      if (this._cannonAchAcc >= 3000) {
+        this._cannonAchAcc = 0;
+        const ctx = this.buildContext({
+          cannonScore: this.cannonSession.score,
+          cannonHits: this.cannonSession.hits,
+          cannonSurvivalMs: this.cannonSession.survivalMs,
+          cannonInOnlineRoom: partial?.inOnlineRoom,
+        });
+        const newly = this.tryUnlockAchievements(ctx);
+        if (newly.length) this._notifyUnlocks(newly);
+      }
+    },
+
+    handleCannonHit(partial) {
+      this.sounds.playCatch();
+      this.stats.cannonTotalHits = (this.stats.cannonTotalHits || 0) + 1;
+      this.cannonStreak++;
+      if (this.cannonStreak > (this.stats.cannonBestStreak || 0)) {
+        this.stats.cannonBestStreak = this.cannonStreak;
+      }
+
+      const runScore = partial?.score || 0;
+      let recordBroken = false;
+      if (runScore > this.cannonHighScore) {
+        if (this.cannonHighScore > 0) {
+          this.stats.cannonRecordsBroken = (this.stats.cannonRecordsBroken || 0) + 1;
+        }
+        this.cannonHighScore = runScore;
+        this.saveCannonHighScore();
+        recordBroken = true;
+        this.sounds.playRecord();
+        this.celebrate('record');
+      }
+      this.saveStats();
+
+      const ctx = this.buildContext({
+        cannonScore: runScore,
+        cannonHits: partial?.hits || 0,
+        cannonSurvivalMs: partial?.survivalMs || 0,
+        cannonInOnlineRoom: partial?.inOnlineRoom,
+      });
+      this.cannonSession = {
+        hadOneLife: this.cannonSession.hadOneLife,
+        score: ctx.cannonScore,
+        hits: ctx.cannonHits,
+        survivalMs: ctx.cannonSurvivalMs,
+        inOnlineRoom: !!partial?.inOnlineRoom,
+      };
+
+      const newly = this.tryUnlockAchievements(ctx);
+      this._notifyUnlocks(newly);
+      return { recordBroken, achievements: newly };
+    },
+
+    onCannonLifeUpdate(lives, partial) {
+      if (lives <= 1) this.cannonSession.hadOneLife = true;
+      if (partial) {
+        this.cannonSession.score = partial.score || this.cannonSession.score;
+        this.cannonSession.hits = partial.hits || this.cannonSession.hits;
+        this.cannonSession.survivalMs = partial.survivalMs || this.cannonSession.survivalMs;
+      }
+      if (this.cannonSession.hadOneLife && (this.cannonSession.score || 0) >= 50) {
+        this._checkMetaAchievements();
+      }
+    },
+
+    onCannonGameOver(partial) {
+      this.stats.cannonGamesPlayed = (this.stats.cannonGamesPlayed || 0) + 1;
+      this.cannonSession.score = partial?.score || 0;
+      this.cannonSession.hits = partial?.hits || 0;
+      this.cannonSession.survivalMs = partial?.survivalMs || 0;
+      if (partial?.inOnlineRoom) this.cannonSession.inOnlineRoom = true;
+      this.saveStats();
+      const ctx = this.buildContext({
+        cannonScore: this.cannonSession.score,
+        cannonHits: this.cannonSession.hits,
+        cannonSurvivalMs: this.cannonSession.survivalMs,
+        cannonInOnlineRoom: this.cannonSession.inOnlineRoom,
+      });
+      const newly = this.tryUnlockAchievements(ctx);
+      this._notifyUnlocks(newly);
+    },
+
+    handleCannonMiss() {
+      this.cannonStreak = 0;
+    },
+
+    achievementMode(a) {
+      return a.mode === 'cannon' ? 'cannon' : 'cherry';
+    },
+
+    bindAchievementFilters() {
+      const wrap = document.getElementById('game-ach-filter');
+      if (!wrap) return;
+      wrap.querySelectorAll('[data-ach-filter]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const filter = btn.getAttribute('data-ach-filter') || 'all';
+          this._achFilter = filter;
+          wrap.querySelectorAll('[data-ach-filter]').forEach((b) => {
+            b.classList.toggle('is-active', b.getAttribute('data-ach-filter') === filter);
+            b.setAttribute('aria-selected', b.getAttribute('data-ach-filter') === filter ? 'true' : 'false');
+          });
+          this.renderAchievementGallery();
+        });
+      });
+    },
+
     renderHighScore() {
       if (this.els.highScoreEl) {
         this.els.highScoreEl.textContent = String(this.highScore);
@@ -751,8 +973,14 @@
       if (!list) return;
       list.innerHTML = '';
 
+      const filter = this._achFilter || 'all';
+
       for (let i = 0; i < ACHIEVEMENTS.length; i++) {
         const a = ACHIEVEMENTS[i];
+        const mode = this.achievementMode(a);
+        if (filter === 'cherry' && mode === 'cannon') continue;
+        if (filter === 'cannon' && mode !== 'cannon') continue;
+
         const unlocked = this.isUnlocked(a.id);
         const li = document.createElement('li');
         li.className = 'game-ach-card' + (unlocked ? ' unlocked' : ' locked');

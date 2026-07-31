@@ -1287,6 +1287,21 @@ html.intro-lock body {
     bottom: 7.5rem;
     font-size: 0.72rem;
   }
+
+  .spaceship-container.spaceship-mobile .spaceship-missions {
+    width: min(10rem, 46vw);
+    top: 0.35rem;
+    left: 0.35rem;
+    padding: 0.35rem 0.45rem;
+  }
+
+  .spaceship-container.spaceship-mobile .spaceship-mission-title {
+    font-size: 0.62rem;
+  }
+
+  .spaceship-container.spaceship-mobile .spaceship-mission-desc {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1301,6 +1316,10 @@ html.intro-lock body {
 
   .spaceship-container.spaceship-mobile .spaceship-hud {
     right: 2.35rem;
+  }
+
+  .spaceship-container.spaceship-mobile .spaceship-missions {
+    width: min(8.5rem, 44vw);
   }
 }
 
@@ -1352,6 +1371,99 @@ html.intro-lock body {
 
 .spaceship-toast.show {
   opacity: 1;
+}
+
+.spaceship-missions {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.55rem;
+  z-index: 12;
+  width: min(11.5rem, 42vw);
+  padding: 0.45rem 0.55rem 0.5rem;
+  border-radius: 14px;
+  background: rgba(12, 6, 22, 0.72);
+  border: 1px solid rgba(255, 88, 168, 0.28);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.spaceship-missions-head {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255, 200, 230, 0.92);
+  margin-bottom: 0.35rem;
+}
+
+.spaceship-missions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.spaceship-mission-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.spaceship-mission-icon {
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.spaceship-mission-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.spaceship-mission-title {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba(255, 230, 245, 0.95);
+}
+
+.spaceship-mission-desc {
+  font-size: 0.6rem;
+  color: rgba(255, 200, 230, 0.62);
+  line-height: 1.2;
+}
+
+.spaceship-mission-bar {
+  display: block;
+  height: 3px;
+  margin-top: 0.08rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.spaceship-mission-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255, 120, 190, 0.85), rgba(255, 200, 120, 0.9));
+  transition: width 0.25s ease;
+}
+
+.spaceship-mission-item.is-done .spaceship-mission-title {
+  color: rgba(160, 255, 190, 0.95);
+}
+
+.spaceship-mission-item.is-done-all {
+  font-size: 0.65rem;
+  color: rgba(255, 220, 140, 0.92);
+  font-weight: 600;
+  padding: 0.15rem 0;
 }
 
 .spaceship-overlay {
@@ -2478,7 +2590,9 @@ html.intro-lock body {
 .couple-chat-messages {
   max-height: 180px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.65rem 0.75rem;
+  padding-right: 0.45rem;
   border-radius: 12px;
   background: rgba(8, 4, 16, 0.55);
   border: 1px solid rgba(255, 88, 168, 0.18);
@@ -2486,6 +2600,42 @@ html.intro-lock body {
   flex-direction: column;
   gap: 0.45rem;
   scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 79, 163, 0.5) rgba(18, 10, 28, 0.45);
+}
+
+.couple-chat-messages::-webkit-scrollbar {
+  width: 5px;
+}
+
+.couple-chat-messages::-webkit-scrollbar-track {
+  margin: 0.2rem 0;
+  background: rgba(18, 10, 28, 0.45);
+  border-radius: 999px;
+}
+
+.couple-chat-messages::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 79, 163, 0.65) 0%,
+    rgba(160, 90, 220, 0.55) 100%
+  );
+  border-radius: 999px;
+  box-shadow: 0 0 6px rgba(255, 79, 163, 0.25);
+}
+
+.couple-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 79, 163, 0.85) 0%,
+    rgba(160, 90, 220, 0.75) 100%
+  );
+}
+
+.couple-chat-messages::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .couple-chat-messages:empty::before {
@@ -2506,12 +2656,36 @@ html.intro-lock body {
   font-style: italic;
   text-align: center;
   padding: 0.15rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+}
+
+.couple-chat-system-text {
+  line-height: 1.35;
+}
+
+.couple-chat-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+}
+
+.couple-chat-time {
+  font-size: 0.68rem;
+  font-weight: 500;
+  font-style: normal;
+  color: rgba(255, 200, 230, 0.48);
+  white-space: nowrap;
 }
 
 .couple-chat-msg.is-player .couple-chat-author {
   color: rgba(255, 180, 220, 0.95);
   font-weight: 600;
-  margin-right: 0.35rem;
+  margin-right: 0;
 }
 
 .couple-chat-msg.is-player .couple-chat-text {
@@ -2966,6 +3140,39 @@ html.intro-lock body {
 
 .game-ach-progress-sep {
   opacity: 0.45;
+}
+
+.game-ach-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 0.75rem;
+}
+
+.game-ach-filter-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 88, 168, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 200, 230, 0.78);
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.game-ach-filter-btn.is-active {
+  border-color: rgba(255, 120, 190, 0.65);
+  background: rgba(255, 88, 168, 0.16);
+  color: rgba(255, 240, 250, 0.98);
+}
+
+.game-ach-filter-btn:hover:not(.is-active) {
+  border-color: rgba(255, 88, 168, 0.4);
+  color: rgba(255, 220, 240, 0.92);
 }
 
 .game-achievements-gallery {

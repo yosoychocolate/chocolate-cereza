@@ -7,7 +7,7 @@
 
   const SAVE_KEY = 'ChocolateCerezaSave';
   const BACKUP_KEY = 'ChocolateCerezaSave_backup';
-  const SAVE_VERSION = 29;
+  const SAVE_VERSION = 30;
 
   const LEGACY = {
     highScore: 'chocolateCereza_highScore',
@@ -31,9 +31,16 @@
         totalChocolates: 0,
         playTimeMs: 0,
         bestStreak: 0,
+        cannonTotalHits: 0,
+        cannonGamesPlayed: 0,
+        cannonPlayTimeMs: 0,
+        cannonBestStreak: 0,
+        cannonRecordsBroken: 0,
       },
       records: {
         highScore: 0,
+        spaceshipHighScore: 0,
+        spaceshipBestTime: 0,
       },
       achievements: {},
       session: {
@@ -109,10 +116,31 @@
     if (!isFiniteNumber(save.stats.bestStreak) || save.stats.bestStreak < 0) {
       save.stats.bestStreak = 0;
     }
+    if (!isFiniteNumber(save.stats.cannonTotalHits) || save.stats.cannonTotalHits < 0) {
+      save.stats.cannonTotalHits = 0;
+    }
+    if (!isFiniteNumber(save.stats.cannonGamesPlayed) || save.stats.cannonGamesPlayed < 0) {
+      save.stats.cannonGamesPlayed = 0;
+    }
+    if (!isFiniteNumber(save.stats.cannonPlayTimeMs) || save.stats.cannonPlayTimeMs < 0) {
+      save.stats.cannonPlayTimeMs = 0;
+    }
+    if (!isFiniteNumber(save.stats.cannonBestStreak) || save.stats.cannonBestStreak < 0) {
+      save.stats.cannonBestStreak = 0;
+    }
+    if (!isFiniteNumber(save.stats.cannonRecordsBroken) || save.stats.cannonRecordsBroken < 0) {
+      save.stats.cannonRecordsBroken = 0;
+    }
 
     if (!isObject(save.records)) save.records = { highScore: 0 };
     if (!isFiniteNumber(save.records.highScore) || save.records.highScore < 0) {
       save.records.highScore = 0;
+    }
+    if (!isFiniteNumber(save.records.spaceshipHighScore) || save.records.spaceshipHighScore < 0) {
+      save.records.spaceshipHighScore = 0;
+    }
+    if (!isFiniteNumber(save.records.spaceshipBestTime) || save.records.spaceshipBestTime < 0) {
+      save.records.spaceshipBestTime = 0;
     }
 
     if (!isObject(save.achievements)) save.achievements = {};
@@ -235,11 +263,13 @@
       version = 29;
     }
 
-    /* Futuras migrações — apenas adicionar campos novos:
     if (version < 30) {
-      if (save.preferences == null) save.preferences = {};
+      fillMissing(save.stats, createDefaultSave().stats);
+      fillMissing(save.records, createDefaultSave().records);
       version = 30;
     }
+
+    /* Futuras migrações — apenas adicionar campos novos:
     if (version < 31) {
       version = 31;
     }

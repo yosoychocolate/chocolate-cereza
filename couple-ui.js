@@ -103,6 +103,14 @@ function formatUpdatedAt(ts) {
   return new Date(ts).toLocaleString('es');
 }
 
+function formatChatTimestamp(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function renderPlayers(players) {
   if (!els.playersList) return;
   els.playersList.innerHTML = '';
@@ -358,17 +366,23 @@ function renderChatMessages(messages) {
   const players = room?.players || [];
 
   messages.forEach((msg) => {
+    const timeLabel = formatChatTimestamp(msg.createdAt);
+    const timeIso = msg.createdAt ? new Date(msg.createdAt).toISOString() : '';
+
     if (msg.type === 'system') {
       const div = document.createElement('div');
       div.className = 'couple-chat-msg is-system';
-      div.textContent = msg.message;
+      div.innerHTML = `
+        <span class="couple-chat-system-text">${escapeHtml(msg.message)}</span>
+        ${timeLabel ? `<time class="couple-chat-time" datetime="${timeIso}">${escapeHtml(timeLabel)}</time>` : ''}
+      `;
       els.chatMessages.appendChild(div);
       return;
     }
 
     const type = resolveMascotType(msg.playerName, msg.playerId, players);
     const wrap = document.createElement('div');
-    wrap.innerHTML = renderChatRow(type, msg.playerName || 'Jugador', msg.message);
+    wrap.innerHTML = renderChatRow(type, msg.playerName || 'Jugador', msg.message, timeLabel, timeIso);
     els.chatMessages.appendChild(wrap.firstElementChild);
   });
 
