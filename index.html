@@ -313,6 +313,10 @@
 
       <!-- Modo Pareja (online) -->
       <div id="couple-mode" class="couple-mode">
+        <div id="couple-recovery-bar" class="couple-recovery-bar hidden" role="status" aria-live="polite">
+          <p id="couple-recovery-text" class="couple-recovery-text"></p>
+          <button type="button" id="couple-rejoin-btn" class="couple-btn couple-btn-primary couple-rejoin-btn">Reconectar a la sala</button>
+        </div>
         <div id="couple-guardians" class="couple-guardians" aria-hidden="true"></div>
         <div id="couple-lobby" class="couple-panel">
           <h3 class="couple-title">❤️ Jugar en Pareja</h3>
@@ -744,6 +748,7 @@
   <script src="hub-shared.js?v=__APP_VERSION__"></script>
   <script src="couple-hub.js?v=__APP_VERSION__"></script>
   <script src="nossa-casa.js?v=__APP_VERSION__"></script>
+  <script type="module" src="couple-ui.js?v=__APP_VERSION__"></script>
   <script>
     if (window.__FILE_PROTOCOL__) {
       document.documentElement.classList.add('file-protocol-active');
@@ -757,11 +762,6 @@
         if (warn) warn.hidden = true;
         document.documentElement.classList.remove('file-protocol-active');
       });
-    } else {
-      const mod = document.createElement('script');
-      mod.type = 'module';
-      mod.src = 'couple-ui.js?v=__APP_VERSION__';
-      document.body.appendChild(mod);
     }
   </script>
 </body>

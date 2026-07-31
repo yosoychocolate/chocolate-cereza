@@ -18,7 +18,7 @@ import {
   isFirebaseConfigValid,
   getFirebaseInitError,
 } from './firebase-manager.js?v=__APP_VERSION__';
-import { getSession, saveSession, clearSession, hasSession } from './room-session.js?v=__APP_VERSION__';
+import { getSession, saveSession, clearSession, hasSession, saveLastRoomCode, getLastRoomCode } from './room-session.js?v=__APP_VERSION__';
 import {
   playerRootRef,
   profileRef,
@@ -630,6 +630,17 @@ export function forceClearRoomSession() {
   return { success: true };
 }
 
+/** Reentra en una sala — limpia estado local y vuelve a unir. */
+export async function rejoinRoom(code, player) {
+  forceClearRoomSession();
+  await reconcileLocalRoomState();
+  return joinRoom(code, player);
+}
+
+export function getSavedRoomCode() {
+  return getLastRoomCode() || getSession()?.roomCode || null;
+}
+
 /**
  * Marca o jogador local como online e inicia heartbeat + lifecycle.
  */
@@ -929,8 +940,21 @@ export async function restoreSession() {
       return fail('RESTORE_CANCELLED', 'Restauración cancelada.');
     }
     if (!exists) {
+      saveLastRoomCode(session.roomCode);
+      const rejoinPlayer = {
+        id: session.playerId,
+        name: session.playerName,
+        joinedAt: session.joinedAt,
+      };
       clearLocalRoom();
-      return fail('PLAYER_NOT_FOUND', 'Ya no estás en esta sala.');
+      if (generation !== restoreGeneration) {
+        return fail('RESTORE_CANCELLED', 'Restauración cancelada.');
+      }
+      const rejoin = await joinRoom(session.roomCode, rejoinPlayer);
+      if (rejoin.success) {
+        return { success: true, room: getCurrentRoom(), restored: true, rejoined: true };
+      }
+      return fail('PLAYER_NOT_FOUND', rejoin.message || 'Ya no estás en esta sala. Pulsa Entrar con el código.');
     }
 
     const room = await fetchRoom(db, session.roomCode);
@@ -1517,6 +1541,8 @@ export const CloudManager = {
   leaveRoom,
   forceClearRoomSession,
   ensureCleanRoomState,
+  rejoinRoom,
+  getSavedRoomCode,
   submitScore,
   getCoupleStats,
   getCoupleRanking,

@@ -3,6 +3,7 @@
  * Único módulo autorizado a acessar localStorage para dados de sala online.
  */
 const SESSION_KEY = 'ChocolateCerezaRoomSession';
+const LAST_ROOM_CODE_KEY = 'ChocolateCerezaLastRoomCode';
 
 /**
  * @typedef {Object} RoomSessionData
@@ -55,17 +56,34 @@ export function getSession() {
 export function saveSession(data) {
   if (!isValidSession(data)) return;
   try {
-    localStorage.setItem(
-      SESSION_KEY,
-      JSON.stringify({
-        roomCode: data.roomCode.trim().toUpperCase(),
-        playerId: data.playerId.trim(),
-        playerName: data.playerName.trim(),
-        joinedAt: data.joinedAt,
-      })
-    );
+    const payload = {
+      roomCode: data.roomCode.trim().toUpperCase(),
+      playerId: data.playerId.trim(),
+      playerName: data.playerName.trim(),
+      joinedAt: data.joinedAt,
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(payload));
+    saveLastRoomCode(payload.roomCode);
   } catch (err) {
     console.warn('[RoomSession] Erro ao salvar sessão:', err);
+  }
+}
+
+/** Último código de sala (sobrevive a limpeza de sessão). */
+export function saveLastRoomCode(code) {
+  if (typeof code !== 'string' || !code.trim()) return;
+  try {
+    localStorage.setItem(LAST_ROOM_CODE_KEY, code.trim().toUpperCase());
+  } catch (_) { /* ignore */ }
+}
+
+/** @returns {string | null} */
+export function getLastRoomCode() {
+  try {
+    const code = localStorage.getItem(LAST_ROOM_CODE_KEY);
+    return code && code.trim().length === 6 ? code.trim().toUpperCase() : null;
+  } catch (_) {
+    return null;
   }
 }
 
@@ -87,6 +105,8 @@ export const RoomSession = {
   saveSession,
   clearSession,
   hasSession,
+  saveLastRoomCode,
+  getLastRoomCode,
 };
 
 export default RoomSession;

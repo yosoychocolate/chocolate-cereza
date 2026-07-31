@@ -114,11 +114,35 @@ function showToast(message) {
 function showLobby() {
   els.lobby?.classList.remove('hidden');
   els.roomPanel?.classList.add('hidden');
+  updateRecoveryBar();
+  enableLobbyControls(true);
 }
 
 function showRoomPanel() {
   els.lobby?.classList.add('hidden');
   els.roomPanel?.classList.remove('hidden');
+  els.recoveryBar?.classList.add('hidden');
+  enableLobbyControls(true);
+}
+
+function enableLobbyControls(enabled) {
+  if (els.createBtn) els.createBtn.disabled = !enabled;
+  if (els.joinBtn) els.joinBtn.disabled = !enabled;
+  if (els.resetBtn) els.resetBtn.disabled = !enabled;
+  if (els.rejoinBtn) els.rejoinBtn.disabled = !enabled;
+}
+
+function updateRecoveryBar() {
+  if (!els.recoveryBar || !els.recoveryText || !els.rejoinBtn) return;
+  const saved = CloudManager.getSavedRoomCode?.();
+  if (CloudManager.getCurrentRoom() || !saved) {
+    els.recoveryBar.classList.add('hidden');
+    return;
+  }
+  els.recoveryText.textContent = `¿Volviste? Tu sala era ${saved}. Pulsa reconectar o escribe el código abajo.`;
+  els.rejoinBtn.textContent = `Reconectar a ${saved}`;
+  els.recoveryBar.classList.remove('hidden');
+  if (els.joinCode && !els.joinCode.value) els.joinCode.value = saved;
 }
 
 function getPlayerPayload() {
@@ -653,15 +677,17 @@ async function tryJoinRoom(code) {
 
 async function onCreateRoom() {
   setStatus('Creando sala…');
-  els.createBtn.disabled = true;
+  enableLobbyControls(false);
 
   try {
     await CloudManager.whenSessionReady();
+    await CloudManager.ensureCleanRoomState();
     const result = await tryCreateRoom();
 
     if (!result.success) {
       console.error('[CoupleUI] createRoom failed:', result.error, result.message);
       setStatus(result.message || 'No se pudo crear la sala.', true);
+      showLobby();
       return;
     }
 
@@ -675,29 +701,35 @@ async function onCreateRoom() {
     console.error('[CoupleUI] createRoom error:', err);
     if (err instanceof Error) console.error(err.stack);
     setStatus(err instanceof Error ? err.message : String(err), true);
+    showLobby();
   } finally {
-    els.createBtn.disabled = false;
+    enableLobbyControls(true);
   }
 }
 
-async function onJoinRoom() {
-  const code = (els.joinCode?.value || '').trim().toUpperCase();
-  if (code.length !== 6) {
+async function connectToRoom(code, { viaRejoin = false } = {}) {
+  const roomCode = (code || '').trim().toUpperCase();
+  if (roomCode.length !== 6) {
     setStatus('Introduce un código de 6 caracteres.', true);
-    return;
+    return false;
   }
 
-  setStatus('Entrando en la sala…');
-  els.joinBtn.disabled = true;
+  setStatus(viaRejoin ? `Reconectando a ${roomCode}…` : 'Entrando en la sala…');
+  enableLobbyControls(false);
 
   try {
     await CloudManager.whenSessionReady();
-    const result = await tryJoinRoom(code);
+    await CloudManager.ensureCleanRoomState();
+    const player = getPlayerPayload();
+    const result = viaRejoin
+      ? await CloudManager.rejoinRoom(roomCode, player)
+      : await tryJoinRoom(roomCode);
 
     if (!result.success) {
-      console.error('[CoupleUI] joinRoom failed:', result.error, result.message);
+      console.error('[CoupleUI] connect failed:', result.error, result.message);
       setStatus(result.message || 'No se pudo entrar.', true);
-      return;
+      showLobby();
+      return false;
     }
 
     setStatus('');
@@ -710,14 +742,63 @@ async function onJoinRoom() {
       scheduleHugScene(partner?.name || 'Tu pareja');
     }
     notifyHubRoomChanged();
-    showToast(`Conectado a la sala ${code}`);
+    showToast(viaRejoin ? `Reconectado a ${roomCode}` : `Conectado a la sala ${roomCode}`);
+    return true;
   } catch (err) {
-    console.error('[CoupleUI] joinRoom error:', err);
+    console.error('[CoupleUI] connect error:', err);
     if (err instanceof Error) console.error(err.stack);
     setStatus(err instanceof Error ? err.message : String(err), true);
+    showLobby();
+    return false;
   } finally {
-    els.joinBtn.disabled = false;
+    enableLobbyControls(true);
   }
+}
+
+async function onRejoinSavedRoom() {
+  const saved = CloudManager.getSavedRoomCode?.()
+    || (els.joinCode?.value || '').trim().toUpperCase();
+  if (saved.length !== 6) {
+    setStatus('No hay código guardado — escribe ATGVMV (o tu código) abajo.', true);
+    showLobby();
+    return;
+  }
+  await connectToRoom(saved, { viaRejoin: true });
+}
+
+async function onJoinRoom() {
+  const code = (els.joinCode?.value || '').trim().toUpperCase();
+  await connectToRoom(code);
+}
+
+async function validateRoomMembership() {
+  const room = CloudManager.getCurrentRoom();
+  if (!room) return;
+  const localId = getLocalPlayerId();
+  const listed = room.players.some((p) => p.id === localId);
+  if (listed) return;
+  const saved = room.code || CloudManager.getSavedRoomCode?.();
+  CloudManager.forceClearRoomSession();
+  showLobby();
+  if (saved && els.joinCode) els.joinCode.value = saved;
+  setStatus('Desconectado de la sala — pulsa Reconectar o Entrar.', true);
+}
+
+async function runStartupRecovery() {
+  if (CloudManager.getCurrentRoom()) {
+    await validateRoomMembership();
+    if (CloudManager.getCurrentRoom()) return;
+  }
+
+  const saved = CloudManager.getSavedRoomCode?.();
+  if (!saved) {
+    updateRecoveryBar();
+    return;
+  }
+
+  if (els.joinCode) els.joinCode.value = saved;
+  updateRecoveryBar();
+  await connectToRoom(saved, { viaRejoin: true });
 }
 
 async function onResetSession() {
@@ -814,6 +895,9 @@ function cacheElements() {
   els.createBtn = $('couple-create-btn');
   els.joinBtn = $('couple-join-btn');
   els.resetBtn = $('couple-reset-session');
+  els.rejoinBtn = $('couple-rejoin-btn');
+  els.recoveryBar = $('couple-recovery-bar');
+  els.recoveryText = $('couple-recovery-text');
   els.leaveBtn = $('couple-leave-room');
   els.copyBtn = $('couple-copy-code');
   els.roomCode = $('couple-room-code');
@@ -859,7 +943,9 @@ async function init() {
   els.createBtn?.addEventListener('click', onCreateRoom);
   els.joinBtn?.addEventListener('click', onJoinRoom);
   els.resetBtn?.addEventListener('click', onResetSession);
+  els.rejoinBtn?.addEventListener('click', onRejoinSavedRoom);
   els.leaveBtn?.addEventListener('click', onLeaveRoom);
+  enableLobbyControls(true);
   els.copyBtn?.addEventListener('click', onCopyCode);
   els.chatForm?.addEventListener('submit', onChatSubmit);
   els.chatEmojis?.addEventListener('click', onEmojiClick);
@@ -893,7 +979,13 @@ async function init() {
     await CloudManager.ensureCleanRoomState();
   } catch (err) {
     console.error('[CoupleUI] whenSessionReady error:', err);
-    setStatus(err instanceof Error ? err.message : String(err), true);
+    CloudManager.forceClearRoomSession();
+    setStatus('Sesión bloqueada — pulsa Reconectar o Reiniciar sesión.', true);
+    showLobby();
+  }
+
+  if (CloudManager.getCurrentRoom()) {
+    await validateRoomMembership();
   }
 
   if (CloudManager.getCurrentRoom()) {
@@ -908,6 +1000,7 @@ async function init() {
     notifyHubRoomChanged();
   } else {
     showLobby();
+    await runStartupRecovery();
   }
 }
 
