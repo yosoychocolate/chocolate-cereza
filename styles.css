@@ -1042,15 +1042,28 @@ html.intro-lock body {
 }
 
 .spaceship-hud {
-  position: absolute;
-  top: 0.45rem;
-  left: 0.45rem;
-  right: 0.45rem;
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  z-index: 10;
+  z-index: 1;
   pointer-events: none;
+}
+
+.spaceship-top-ui {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  right: 3.1rem;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  pointer-events: none;
+  isolation: isolate;
 }
 
 .spaceship-hud-pill {
@@ -1221,10 +1234,14 @@ html.intro-lock body {
     touch-action: none;
   }
 
-  .spaceship-container.spaceship-mobile .spaceship-hud {
+  .spaceship-container.spaceship-mobile .spaceship-top-ui {
     top: 0.28rem;
     left: 0.28rem;
     right: 2.75rem;
+    gap: 0.28rem;
+  }
+
+  .spaceship-container.spaceship-mobile .spaceship-hud {
     gap: 0.22rem;
   }
 
@@ -1284,15 +1301,20 @@ html.intro-lock body {
   }
 
   .spaceship-container.spaceship-mobile .spaceship-toast {
-    bottom: 7.5rem;
+    top: auto;
+    bottom: calc(8.35rem + env(safe-area-inset-bottom, 0px));
     font-size: 0.72rem;
+    max-width: min(88%, 16rem);
   }
 
   .spaceship-container.spaceship-mobile .spaceship-missions {
-    width: min(10rem, 46vw);
-    top: 0.35rem;
-    left: 0.35rem;
+    max-width: min(10rem, 56vw);
+    max-height: 6.2rem;
     padding: 0.35rem 0.45rem;
+  }
+
+  .spaceship-container.spaceship-mobile .spaceship-missions-list {
+    max-height: 4.8rem;
   }
 
   .spaceship-container.spaceship-mobile .spaceship-mission-title {
@@ -1315,11 +1337,11 @@ html.intro-lock body {
   }
 
   .spaceship-container.spaceship-mobile .spaceship-hud {
-    right: 2.35rem;
+    right: auto;
   }
 
   .spaceship-container.spaceship-mobile .spaceship-missions {
-    width: min(8.5rem, 44vw);
+    max-width: min(9rem, 54vw);
   }
 }
 
@@ -1350,40 +1372,47 @@ html.intro-lock body {
 
 .spaceship-toast {
   position: absolute;
-  bottom: 4.5rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 15;
-  max-width: 90%;
+  z-index: 18;
+  max-width: min(92%, 18rem);
   padding: 0.5rem 0.85rem;
   font-family: 'Quicksand', sans-serif;
   font-size: clamp(0.78rem, 2.2vw, 0.88rem);
   font-weight: 600;
   color: #fff;
-  background: rgba(26, 16, 36, 0.88);
-  border: 1px solid rgba(255, 79, 163, 0.4);
+  background: rgba(18, 10, 28, 0.96);
+  border: 1px solid rgba(255, 79, 163, 0.45);
   border-radius: 999px;
   text-align: center;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.25s ease;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+  top: 34%;
+  bottom: auto;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
 .spaceship-toast.show {
   opacity: 1;
+  visibility: visible;
 }
 
 .spaceship-missions {
-  position: absolute;
-  top: 0.55rem;
-  left: 0.55rem;
-  z-index: 12;
-  width: min(11.5rem, 42vw);
+  position: relative;
+  top: auto;
+  left: auto;
+  z-index: 1;
+  width: 100%;
+  max-width: 11.5rem;
+  max-height: 7.5rem;
+  overflow: hidden;
   padding: 0.45rem 0.55rem 0.5rem;
   border-radius: 14px;
-  background: rgba(12, 6, 22, 0.72);
+  background: rgba(12, 6, 22, 0.94);
   border: 1px solid rgba(255, 88, 168, 0.28);
-  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
   pointer-events: none;
 }
 
@@ -1403,6 +1432,29 @@ html.intro-lock body {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  max-height: 6rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 79, 163, 0.5) rgba(18, 10, 28, 0.45);
+}
+
+.spaceship-missions-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.spaceship-missions-list::-webkit-scrollbar-track {
+  background: rgba(18, 10, 28, 0.45);
+  border-radius: 999px;
+}
+
+.spaceship-missions-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 79, 163, 0.65) 0%,
+    rgba(160, 90, 220, 0.55) 100%
+  );
+  border-radius: 999px;
 }
 
 .spaceship-mission-item {
@@ -1456,7 +1508,7 @@ html.intro-lock body {
 }
 
 .spaceship-mission-item.is-done .spaceship-mission-title {
-  color: rgba(160, 255, 190, 0.95);
+  color: rgba(255, 230, 245, 0.95);
 }
 
 .spaceship-mission-item.is-done-all {

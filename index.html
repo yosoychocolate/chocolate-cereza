@@ -427,31 +427,33 @@
         <canvas id="spaceship-bg-canvas" class="spaceship-bg-canvas" aria-hidden="true"></canvas>
         <div id="spaceship-partner-badge" class="spaceship-partner-badge hidden" aria-live="polite"></div>
         <canvas id="spaceship-canvas" class="spaceship-canvas"></canvas>
-        <div id="spaceship-hud" class="spaceship-hud">
-          <div class="spaceship-hud-pill spaceship-hud-score">
-            <span class="spaceship-hud-icon" aria-hidden="true">⭐</span>
-            <span class="spaceship-score-num">0</span>
+        <div class="spaceship-top-ui">
+          <div id="spaceship-hud" class="spaceship-hud">
+            <div class="spaceship-hud-pill spaceship-hud-score">
+              <span class="spaceship-hud-icon" aria-hidden="true">⭐</span>
+              <span class="spaceship-score-num">0</span>
+            </div>
+            <div class="spaceship-hud-pill spaceship-hud-record">
+              <span class="spaceship-hud-icon" aria-hidden="true">🏆</span>
+              <span id="spaceship-high-score-val">0</span>
+            </div>
+            <div class="spaceship-hud-pill spaceship-hud-wallet" title="Chocolates para la tienda">
+              <span class="spaceship-hud-icon" aria-hidden="true">🍫</span>
+              <span id="spaceship-wallet-val">0</span>
+            </div>
+            <div class="spaceship-hud-pill spaceship-hud-time">
+              <span class="spaceship-hud-icon" aria-hidden="true">⏱</span>
+              <span id="spaceship-time-val">0:00</span>
+            </div>
+            <div class="spaceship-hud-pill spaceship-hud-hits">
+              <span class="spaceship-hud-icon" aria-hidden="true">🎯</span>
+              <span id="spaceship-hits-val">0</span>
+            </div>
           </div>
-          <div class="spaceship-hud-pill spaceship-hud-record">
-            <span class="spaceship-hud-icon" aria-hidden="true">🏆</span>
-            <span id="spaceship-high-score-val">0</span>
+          <div id="spaceship-missions" class="spaceship-missions" aria-label="Misiones de la partida">
+            <div class="spaceship-missions-head">🎯 Misiones</div>
+            <ul id="spaceship-missions-list" class="spaceship-missions-list"></ul>
           </div>
-          <div class="spaceship-hud-pill spaceship-hud-wallet" title="Chocolates para la tienda">
-            <span class="spaceship-hud-icon" aria-hidden="true">🍫</span>
-            <span id="spaceship-wallet-val">0</span>
-          </div>
-          <div class="spaceship-hud-pill spaceship-hud-time">
-            <span class="spaceship-hud-icon" aria-hidden="true">⏱</span>
-            <span id="spaceship-time-val">0:00</span>
-          </div>
-          <div class="spaceship-hud-pill spaceship-hud-hits">
-            <span class="spaceship-hud-icon" aria-hidden="true">🎯</span>
-            <span id="spaceship-hits-val">0</span>
-          </div>
-        </div>
-        <div id="spaceship-missions" class="spaceship-missions" aria-label="Misiones de la partida">
-          <div class="spaceship-missions-head">🎯 Misiones</div>
-          <ul id="spaceship-missions-list" class="spaceship-missions-list"></ul>
         </div>
         <div id="spaceship-lives" class="spaceship-lives" aria-label="Vidas">
           <div id="spaceship-lives-hearts" class="spaceship-lives-hearts"></div>

@@ -37,6 +37,18 @@
   /** @type {ReturnType<typeof setTimeout> | null} */
   let toastTimer = null;
 
+  /** @type {boolean} */
+  let toastShowing = false;
+
+  /** @type {typeof RUN_MISSIONS[number][]} */
+  let toastQueue = [];
+
+  /** @type {string} */
+  let lastPanelKey = '';
+
+  /** @type {boolean} */
+  let inited = false;
+
   /**
    * @param {{ score: number, hits: number, currentStreak: number, survivalMs: number }} state
    * @param {{ metric: MissionMetric, goal: number }} mission
@@ -76,6 +88,7 @@
       .filter((m) => !completedRun.has(m.id))
       .slice(0, MAX_VISIBLE)
       .map((m) => m.id);
+    lastPanelKey = '';
   }
 
   /**
@@ -90,12 +103,34 @@
     };
   }
 
-  function showMissionToast(mission) {
-    if (!els.toast) return;
+  function buildPanelKey(state) {
+    if (!activeIds.length) return 'done-all';
+    return activeIds.map((id) => {
+      const mission = RUN_MISSIONS.find((m) => m.id === id);
+      if (!mission) return `${id}:0`;
+      return `${id}:${missionProgressPct(state, mission)}`;
+    }).join('|');
+  }
+
+  function enqueueMissionToast(mission) {
+    toastQueue.push(mission);
+    drainToastQueue();
+  }
+
+  function drainToastQueue() {
+    if (toastShowing || !toastQueue.length || !els.toast) return;
+
+    toastShowing = true;
+    const mission = toastQueue.shift();
     els.toast.textContent = `${mission.icon} ¡Misión completada! ${mission.title}`;
     els.toast.classList.add('show');
+
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => els.toast?.classList.remove('show'), 2800);
+    toastTimer = setTimeout(() => {
+      els.toast?.classList.remove('show');
+      toastShowing = false;
+      toastTimer = setTimeout(drainToastQueue, 220);
+    }, 2600);
   }
 
   /**
@@ -103,8 +138,13 @@
    */
   function renderPanel(engine) {
     if (!els.list) return;
+
     const state = buildState(engine);
-    els.list.innerHTML = '';
+    const panelKey = buildPanelKey(state);
+    if (panelKey === lastPanelKey) return;
+    lastPanelKey = panelKey;
+
+    els.list.replaceChildren();
 
     if (!activeIds.length) {
       const li = document.createElement('li');
@@ -118,16 +158,39 @@
       const mission = RUN_MISSIONS.find((m) => m.id === activeIds[i]);
       if (!mission) continue;
       const pct = missionProgressPct(state, mission);
+
       const li = document.createElement('li');
-      li.className = 'spaceship-mission-item' + (pct >= 100 ? ' is-done' : '');
-      li.innerHTML = `
-        <span class="spaceship-mission-icon" aria-hidden="true">${mission.icon}</span>
-        <span class="spaceship-mission-body">
-          <span class="spaceship-mission-title">${mission.title}</span>
-          <span class="spaceship-mission-desc">${mission.desc}</span>
-          <span class="spaceship-mission-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>
-        </span>
-      `;
+      li.className = 'spaceship-mission-item';
+      li.dataset.missionId = mission.id;
+
+      const icon = document.createElement('span');
+      icon.className = 'spaceship-mission-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = mission.icon;
+
+      const body = document.createElement('span');
+      body.className = 'spaceship-mission-body';
+
+      const title = document.createElement('span');
+      title.className = 'spaceship-mission-title';
+      title.textContent = mission.title;
+
+      const desc = document.createElement('span');
+      desc.className = 'spaceship-mission-desc';
+      desc.textContent = mission.desc;
+
+      const bar = document.createElement('span');
+      bar.className = 'spaceship-mission-bar';
+      bar.setAttribute('aria-hidden', 'true');
+      const fill = document.createElement('span');
+      fill.style.width = `${pct}%`;
+      bar.appendChild(fill);
+
+      body.appendChild(title);
+      body.appendChild(desc);
+      body.appendChild(bar);
+      li.appendChild(icon);
+      li.appendChild(body);
       els.list.appendChild(li);
     }
   }
@@ -138,25 +201,36 @@
   function checkMissions(engine) {
     const state = buildState(engine);
     let changed = false;
+    const completedNow = [];
 
     for (let i = 0; i < activeIds.length; i++) {
       const id = activeIds[i];
+      if (completedRun.has(id)) continue;
       const mission = RUN_MISSIONS.find((m) => m.id === id);
-      if (!mission || completedRun.has(id)) continue;
+      if (!mission) continue;
       if (isMissionDone(state, mission)) {
         completedRun.add(id);
-        showMissionToast(mission);
-        global.GameMeta?.sounds?.playMilestone?.();
+        completedNow.push(mission);
         changed = true;
       }
     }
 
-    if (changed) pickActiveMissions();
+    if (changed) {
+      for (let i = 0; i < completedNow.length; i++) {
+        enqueueMissionToast(completedNow[i]);
+        global.GameMeta?.sounds?.playMilestone?.();
+      }
+      pickActiveMissions();
+    }
+
     renderPanel(engine);
   }
 
   const CannonMissions = {
     init() {
+      if (inited) return;
+      inited = true;
+
       els.list = document.getElementById('spaceship-missions-list');
       els.toast = document.getElementById('spaceship-mission-toast');
       els.panel = document.getElementById('spaceship-missions');
@@ -165,6 +239,10 @@
 
     resetRun() {
       completedRun = new Set();
+      toastQueue = [];
+      toastShowing = false;
+      clearTimeout(toastTimer);
+      toastTimer = null;
       pickActiveMissions();
       renderPanel(null);
       els.toast?.classList.remove('show');
@@ -181,7 +259,6 @@
      * @param {import('./spaceship-engine.js').SpaceshipEngine | null} engine
      */
     onTick(engine) {
-      renderPanel(engine);
       checkMissions(engine);
     },
 
