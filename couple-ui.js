@@ -588,7 +588,7 @@ async function handleRoomEvent(event) {
     renderGiftPanel(null);
     showLobby();
     notifyHubRoomChanged();
-    setStatus('La sala ya no existe.');
+    setStatus('La sala se cerró. Crea una nueva o entra con otro código.');
     return;
   }
 
@@ -631,14 +631,33 @@ function notifyHubRoomChanged() {
   window.dispatchEvent(new CustomEvent('couple:roomChanged'));
 }
 
+async function tryCreateRoom() {
+  const player = getPlayerPayload();
+  let result = await CloudManager.createRoom(player);
+  if (!result.success && (result.error === 'ALREADY_IN_ROOM' || result.error === 'RESTORE_CANCELLED')) {
+    CloudManager.forceClearRoomSession();
+    result = await CloudManager.createRoom(player);
+  }
+  return result;
+}
+
+async function tryJoinRoom(code) {
+  const player = getPlayerPayload();
+  let result = await CloudManager.joinRoom(code, player);
+  if (!result.success && (result.error === 'ALREADY_IN_ROOM' || result.error === 'ROOM_CLOSED')) {
+    CloudManager.forceClearRoomSession();
+    result = await CloudManager.joinRoom(code, player);
+  }
+  return result;
+}
+
 async function onCreateRoom() {
   setStatus('Creando sala…');
   els.createBtn.disabled = true;
 
   try {
     await CloudManager.whenSessionReady();
-    const player = getPlayerPayload();
-    const result = await CloudManager.createRoom(player);
+    const result = await tryCreateRoom();
 
     if (!result.success) {
       console.error('[CoupleUI] createRoom failed:', result.error, result.message);
@@ -673,8 +692,7 @@ async function onJoinRoom() {
 
   try {
     await CloudManager.whenSessionReady();
-    const player = getPlayerPayload();
-    const result = await CloudManager.joinRoom(code, player);
+    const result = await tryJoinRoom(code);
 
     if (!result.success) {
       console.error('[CoupleUI] joinRoom failed:', result.error, result.message);
@@ -700,6 +718,29 @@ async function onJoinRoom() {
   } finally {
     els.joinBtn.disabled = false;
   }
+}
+
+async function onResetSession() {
+  CloudManager.forceClearRoomSession();
+  if (unsubscribeRoom) {
+    unsubscribeRoom();
+    unsubscribeRoom = null;
+  }
+  if (unsubscribeChat) {
+    unsubscribeChat();
+    unsubscribeChat = null;
+  }
+  renderChatMessages([]);
+  setChatEnabled(false);
+  lastPlayerCount = 0;
+  lastBestPlayerId = null;
+  forcedSceneMode = null;
+  hideCoupleScoreHud();
+  renderGiftPanel(null);
+  showLobby();
+  notifyHubRoomChanged();
+  setStatus('Sesión reiniciada — ya puedes crear o entrar en una sala.');
+  showToast('Sesión de sala reiniciada');
 }
 
 async function onLeaveRoom() {
@@ -772,6 +813,7 @@ function cacheElements() {
   els.joinCode = $('couple-join-code');
   els.createBtn = $('couple-create-btn');
   els.joinBtn = $('couple-join-btn');
+  els.resetBtn = $('couple-reset-session');
   els.leaveBtn = $('couple-leave-room');
   els.copyBtn = $('couple-copy-code');
   els.roomCode = $('couple-room-code');
@@ -816,6 +858,7 @@ async function init() {
 
   els.createBtn?.addEventListener('click', onCreateRoom);
   els.joinBtn?.addEventListener('click', onJoinRoom);
+  els.resetBtn?.addEventListener('click', onResetSession);
   els.leaveBtn?.addEventListener('click', onLeaveRoom);
   els.copyBtn?.addEventListener('click', onCopyCode);
   els.chatForm?.addEventListener('submit', onChatSubmit);
@@ -847,6 +890,7 @@ async function init() {
 
   try {
     await CloudManager.whenSessionReady();
+    await CloudManager.ensureCleanRoomState();
   } catch (err) {
     console.error('[CoupleUI] whenSessionReady error:', err);
     setStatus(err instanceof Error ? err.message : String(err), true);

@@ -2392,6 +2392,12 @@ html.intro-lock body {
   color: rgba(255, 200, 220, 0.75);
 }
 
+.couple-reset-btn {
+  width: 100%;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+}
+
 .couple-room-head {
   display: flex;
   flex-wrap: wrap;

@@ -170,12 +170,7 @@ roomListener.subscribe((event) => {
   } else if (event.type === 'couple_updated' && event.couple) {
     currentCoupleStats = /** @type {CoupleStats} */ (event.couple);
   } else if (event.type === 'room_removed') {
-    stopPresenceLifecycle();
-    currentRoom = null;
-    currentPlayerId = null;
-    currentCoupleStats = null;
-    clearSession();
-    roomListener.stop();
+    clearLocalRoom();
   }
 });
 
@@ -551,11 +546,32 @@ export async function sendChocolateGift(amount) {
 }
 
 /**
- * Remove estado local obsoleto (sessão órfã ou jogador já removido da nuvem).
+ * Remove estado local obsoleto (sessão órfã, sala apagada/fechada ou jogador removido).
  */
 async function reconcileLocalRoomState() {
-  if (!currentRoom && hasSession()) {
-    clearSession();
+  const session = getSession();
+
+  if (!currentRoom && session) {
+    try {
+      const db = requireDb();
+      const roomSnap = await getDoc(roomDocRef(db, session.roomCode));
+      if (!roomSnap.exists()) {
+        clearLocalRoom();
+        return;
+      }
+      const data = roomSnap.data() || {};
+      if (data.status === 'closed') {
+        clearLocalRoom();
+        return;
+      }
+      const exists = await playerExistsInRoom(db, session.roomCode, session.playerId);
+      if (!exists) {
+        clearLocalRoom();
+      }
+    } catch (err) {
+      console.warn('[CloudManager] reconcileLocalRoomState (session):', err);
+      clearLocalRoom();
+    }
     return;
   }
 
@@ -563,13 +579,35 @@ async function reconcileLocalRoomState() {
 
   try {
     const db = requireDb();
+    const roomSnap = await getDoc(roomDocRef(db, currentRoom.code));
+    if (!roomSnap.exists()) {
+      clearLocalRoom();
+      return;
+    }
+    const data = roomSnap.data() || {};
+    if (data.status === 'closed') {
+      clearLocalRoom();
+      return;
+    }
     const exists = await playerExistsInRoom(db, currentRoom.code, currentPlayerId);
     if (!exists) {
       clearLocalRoom();
     }
   } catch (err) {
     console.warn('[CloudManager] reconcileLocalRoomState:', err);
+    clearLocalRoom();
   }
+}
+
+/** Valida la sala local contra Firebase y limpia sesiones obsoletas. */
+export async function ensureCleanRoomState() {
+  await reconcileLocalRoomState();
+}
+
+/** Limpia por completo la sesión local de sala (recuperación manual). */
+export function forceClearRoomSession() {
+  clearLocalRoom();
+  return { success: true };
 }
 
 /**
@@ -852,21 +890,38 @@ export async function restoreSession() {
   try {
     const db = requireDb();
     const roomSnap = await getDoc(roomDocRef(db, session.roomCode));
+    if (generation !== restoreGeneration) {
+      return fail('RESTORE_CANCELLED', 'Restauración cancelada.');
+    }
     if (!roomSnap.exists()) {
-      clearSession();
+      clearLocalRoom();
       return fail('ROOM_NOT_FOUND', 'La sala ya no existe.');
     }
 
+    const roomData = roomSnap.data() || {};
+    if (roomData.status === 'closed') {
+      clearLocalRoom();
+      return fail('ROOM_CLOSED', 'La sala está cerrada.');
+    }
+
     const exists = await playerExistsInRoom(db, session.roomCode, session.playerId);
+    if (generation !== restoreGeneration) {
+      return fail('RESTORE_CANCELLED', 'Restauración cancelada.');
+    }
     if (!exists) {
-      clearSession();
+      clearLocalRoom();
       return fail('PLAYER_NOT_FOUND', 'Ya no estás en esta sala.');
     }
 
     const room = await fetchRoom(db, session.roomCode);
     if (!room) {
-      clearSession();
+      clearLocalRoom();
       return fail('ROOM_NOT_FOUND', 'La sala ya no existe.');
+    }
+
+    if (room.status === 'closed') {
+      clearLocalRoom();
+      return fail('ROOM_CLOSED', 'La sala está cerrada.');
     }
 
     if (generation !== restoreGeneration) {
@@ -1005,6 +1060,9 @@ export async function joinRoom(code, player) {
       }
 
       const data = roomSnap.data();
+      if (data.status === 'closed') {
+        throw new Error('ROOM_CLOSED');
+      }
       const maxPlayers = typeof data.maxPlayers === 'number' ? data.maxPlayers : MAX_PLAYERS;
       const existingPlayerSnap = await transaction.get(rootRef);
 
@@ -1058,6 +1116,9 @@ export async function joinRoom(code, player) {
     }
     if (message === 'ROOM_FULL') {
       return fail('ROOM_FULL', 'Sala llena — máximo 2 jugadores.');
+    }
+    if (message === 'ROOM_CLOSED') {
+      return fail('ROOM_CLOSED', 'La sala está cerrada. Crea una nueva sala.');
     }
     return fail('JOIN_FAILED', message);
   }
@@ -1420,6 +1481,8 @@ export const CloudManager = {
   createRoom,
   joinRoom,
   leaveRoom,
+  forceClearRoomSession,
+  ensureCleanRoomState,
   submitScore,
   getCoupleStats,
   getCoupleRanking,
