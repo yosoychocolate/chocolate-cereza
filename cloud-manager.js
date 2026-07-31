@@ -51,6 +51,14 @@ import {
   playerStatsFromSnapshot,
   transactionDeleteCouple,
 } from './cloud-couple.js?v=__APP_VERSION__';
+import {
+  createChocolateGift,
+  claimGiftTransaction,
+  createGiftListener,
+  normalizeGiftAmount,
+  MIN_GIFT_AMOUNT,
+  MAX_GIFT_AMOUNT,
+} from './cloud-gifts.js?v=__APP_VERSION__';
 
 /** @typedef {'ready' | 'config_invalid' | 'error' | 'disconnected'} ConnectionStatusCode */
 /** @typedef {'waiting' | 'full' | 'closed'} RoomStatus */
@@ -121,6 +129,13 @@ let restoreGeneration = 0;
 
 const roomListener = createRoomListener(fetchRoom);
 const chatListener = createChatListener();
+const giftListener = createGiftListener();
+
+/** @type {Set<string>} */
+const processedGiftIds = new Set();
+
+/** @type {boolean} */
+let giftClaimInFlight = false;
 
 roomListener.subscribe((event) => {
   if (event.type === 'room_updated' && event.room) {
@@ -143,6 +158,9 @@ function startRoomListener() {
     const db = requireDb();
     roomListener.start(db, currentRoom.code);
     chatListener.start(db, currentRoom.code);
+    if (currentPlayerId) {
+      giftListener.start(db, currentRoom.code, currentPlayerId);
+    }
   } catch (err) {
     console.warn('[CloudManager] Listener não iniciado:', err);
   }
@@ -151,6 +169,8 @@ function startRoomListener() {
 function stopRoomListener() {
   roomListener.stop();
   chatListener.stop();
+  giftListener.stop();
+  processedGiftIds.clear();
 }
 
 /**
@@ -334,7 +354,138 @@ function clearLocalRoom() {
   currentRoom = null;
   currentPlayerId = null;
   currentCoupleStats = null;
+  processedGiftIds.clear();
   clearSession();
+}
+
+/**
+ * Credita chocolates recebidos de presentes pendentes.
+ * @param {import('./cloud-gifts.js').ChocolateGift[]} gifts
+ */
+async function processPendingGifts(gifts) {
+  if (!currentRoom || !currentPlayerId || !gifts?.length || giftClaimInFlight) return;
+
+  giftClaimInFlight = true;
+  try {
+    const db = requireDb();
+    for (let i = 0; i < gifts.length; i++) {
+      const gift = gifts[i];
+      if (!gift?.id || processedGiftIds.has(gift.id)) continue;
+      if (gift.status !== 'pending' || gift.toPlayerId !== currentPlayerId) continue;
+
+      processedGiftIds.add(gift.id);
+
+      let claimed = null;
+      try {
+        claimed = await claimGiftTransaction(db, currentRoom.code, gift.id, currentPlayerId);
+      } catch (err) {
+        processedGiftIds.delete(gift.id);
+        console.warn('[CloudManager] claim gift failed:', err);
+        continue;
+      }
+
+      if (!claimed?.amount) continue;
+
+      const shop = typeof globalThis !== 'undefined' ? globalThis.GameShop : null;
+      if (shop?.addCoins) {
+        shop.addCoins(claimed.amount);
+      }
+
+      if (typeof globalThis !== 'undefined') {
+        globalThis.dispatchEvent(new CustomEvent('couple:gift-received', {
+          detail: {
+            amount: claimed.amount,
+            fromName: claimed.fromPlayerName || gift.fromPlayerName || 'Tu pareja',
+            giftId: gift.id,
+          },
+        }));
+      }
+    }
+  } finally {
+    giftClaimInFlight = false;
+  }
+}
+
+giftListener.subscribe((event) => {
+  if (event.type === 'gift_pending') {
+    processPendingGifts(event.gifts).catch((err) => {
+      console.warn('[CloudManager] processPendingGifts:', err);
+    });
+  }
+});
+
+/**
+ * Parceiro(a) na sala atual (outro jogador).
+ * @returns {RoomPlayer | null}
+ */
+export function getPartnerPlayer() {
+  if (!currentRoom || !currentPlayerId) return null;
+  return currentRoom.players.find((p) => p.id !== currentPlayerId) || null;
+}
+
+/**
+ * Envia chocolates 🍫 da carteira local para o parceiro na sala.
+ * @param {number} amount
+ */
+export async function sendChocolateGift(amount) {
+  if (!currentRoom || !currentPlayerId) {
+    return fail('NOT_IN_ROOM', 'No estás en una sala.');
+  }
+
+  const partner = getPartnerPlayer();
+  if (!partner) {
+    return fail('NO_PARTNER', 'Tu pareja aún no está en la sala.');
+  }
+
+  const normalized = normalizeGiftAmount(amount);
+  if (!normalized) {
+    return fail('INVALID_AMOUNT', `Cantidad inválida (${MIN_GIFT_AMOUNT}–${MAX_GIFT_AMOUNT}).`);
+  }
+
+  const shop = typeof globalThis !== 'undefined' ? globalThis.GameShop : null;
+  if (!shop?.getWallet || shop.getWallet() < normalized) {
+    return fail('INSUFFICIENT_WALLET', 'No tienes suficientes chocolates 🍫.');
+  }
+
+  const local = getLocalPlayer();
+  const fromName = local?.name || 'Jugador';
+
+  try {
+    const db = requireDb();
+    const created = await createChocolateGift(db, currentRoom.code, {
+      fromPlayerId: currentPlayerId,
+      fromPlayerName: fromName,
+      toPlayerId: partner.id,
+      toPlayerName: partner.name || 'Pareja',
+      amount: normalized,
+    });
+
+    const spent = shop.spendCoins(normalized);
+    if (!spent.ok) {
+      return fail('INSUFFICIENT_WALLET', 'No tienes suficientes chocolates 🍫.');
+    }
+
+    await sendSystemMessage(
+      db,
+      currentRoom.code,
+      `🎁 ${fromName} envió ${normalized.toLocaleString('es')} 🍫 a ${partner.name || 'su pareja'}`
+    );
+
+    if (typeof globalThis !== 'undefined') {
+      globalThis.dispatchEvent(new CustomEvent('couple:gift-sent', {
+        detail: {
+          amount: normalized,
+          toName: partner.name || 'Pareja',
+          giftId: created.id,
+        },
+      }));
+    }
+
+    return { success: true, amount: normalized, partnerName: partner.name, giftId: created.id };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return fail('GIFT_FAILED', message);
+  }
 }
 
 /**
@@ -1042,7 +1193,9 @@ export const CloudManager = {
   getCoupleRanking,
   getCurrentRoom,
   getLocalPlayer,
+  getPartnerPlayer,
   getRoomPresence,
+  sendChocolateGift,
   subscribeToRoom,
   unsubscribeFromRoom,
   isListeningToRoom,
@@ -1051,6 +1204,8 @@ export const CloudManager = {
   subscribeToChat,
   unsubscribeFromChat,
   MAX_CHAT_LENGTH,
+  MIN_GIFT_AMOUNT,
+  MAX_GIFT_AMOUNT,
   restoreSession,
   whenSessionReady,
   hasSession,

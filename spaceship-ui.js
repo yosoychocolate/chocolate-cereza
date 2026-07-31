@@ -1,0 +1,464 @@
+/**
+ * Cañón Chocolate — UI e input numérico.
+ */
+(function (global) {
+  'use strict';
+
+  let engine = null;
+  let container = null;
+  let gameOver = false;
+  let gamePaused = false;
+  let active = false;
+  let inputBuffer = '';
+  let metaPanelPaused = false;
+  let els = {};
+
+  function formatTime(ms) {
+    const sec = Math.floor(ms / 1000);
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  function loadRecords() {
+    const save = global.SaveManager.getSave();
+    return {
+      highScore: save.records?.spaceshipHighScore || 0,
+      bestTime: save.records?.spaceshipBestTime || 0,
+    };
+  }
+
+  function saveRecords(score, timeMs) {
+    const save = global.SaveManager.getSave();
+    const rec = save.records || {};
+    const next = { ...rec };
+    let updated = false;
+    if (score > (rec.spaceshipHighScore || 0)) {
+      next.spaceshipHighScore = score;
+      updated = true;
+    }
+    if (timeMs > (rec.spaceshipBestTime || 0)) {
+      next.spaceshipBestTime = timeMs;
+      updated = true;
+    }
+    if (updated) global.SaveManager.updateSection('records', next);
+    return next;
+  }
+
+  function updateInputDisplay(correct = false) {
+    if (els.input) {
+      els.input.textContent = inputBuffer || '—';
+      els.input.classList.toggle('has-value', !!inputBuffer);
+      els.input.classList.toggle('is-correct', correct);
+    }
+    if (els.answerPanel) {
+      els.answerPanel.classList.toggle('is-correct', correct);
+    }
+  }
+
+  function clearInput() {
+    inputBuffer = '';
+    updateInputDisplay(false);
+  }
+
+  function flashCorrectAnswer(answer) {
+    if (els.input) {
+      els.input.textContent = `✔ ${answer}`;
+      updateInputDisplay(true);
+    }
+    clearTimeout(els._correctTimer);
+    els._correctTimer = setTimeout(() => clearInput(), 400);
+  }
+
+  function getVisibleAnswers() {
+    if (!engine?.cherryPool?.active) return [];
+    const out = [];
+    const list = engine.cherryPool.active;
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].state === 'idle') out.push(list[i].answer);
+    }
+    return out;
+  }
+
+  /** Há cereja na tela cujo resultado ainda pode completar este prefixo? (ex: "2" → 20) */
+  function canPrefixExtend(prefix) {
+    if (!prefix) return false;
+    const answers = getVisibleAnswers();
+    for (let i = 0; i < answers.length; i++) {
+      const s = String(answers[i]);
+      if (s.startsWith(prefix) && s.length > prefix.length) return true;
+    }
+    return false;
+  }
+
+  function appendDigit(digit) {
+    if (inputBuffer.length >= 2) inputBuffer = '';
+    inputBuffer += digit;
+    updateInputDisplay(false);
+    tryFireFromInput(false);
+  }
+
+  function tryFireFromInput(force) {
+    if (!inputBuffer || !engine) return;
+    const answer = parseInt(inputBuffer, 10);
+    if (Number.isNaN(answer)) return;
+
+    if (!force && inputBuffer.length < 2 && canPrefixExtend(inputBuffer)) {
+      return;
+    }
+
+    const fired = engine.tryShoot(answer);
+    if (!fired && (force || inputBuffer.length >= 2)) {
+      els.answerPanel?.classList.add('is-wrong');
+      clearTimeout(els._wrongTimer);
+      els._wrongTimer = setTimeout(() => els.answerPanel?.classList.remove('is-wrong'), 320);
+      if (force) clearInput();
+    }
+  }
+
+  function updateLivesHud() {
+    if (!engine || !els.lives) return;
+    const full = engine.lives;
+    const hearts = els.lives.querySelectorAll('.spaceship-life');
+    if (hearts.length === 3) {
+      hearts.forEach((el, i) => el.classList.toggle('is-full', i < full));
+      return;
+    }
+    els.lives.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+      const span = document.createElement('span');
+      span.className = 'spaceship-life' + (i < full ? ' is-full' : '');
+      span.textContent = '❤️';
+      els.lives.appendChild(span);
+    }
+  }
+
+  function updateHud(full = false) {
+    if (!engine) return;
+    if (full || els._lastScore !== engine.score) {
+      els._lastScore = engine.score;
+      if (els.score) els.score.textContent = String(engine.score);
+    }
+    if (full || els._lastHits !== engine.hits) {
+      els._lastHits = engine.hits;
+      if (els.hits) els.hits.textContent = String(engine.hits);
+    }
+    if (full) updateLivesHud();
+    if (full || els._lastTime !== Math.floor(engine.survivalMs / 1000)) {
+      els._lastTime = Math.floor(engine.survivalMs / 1000);
+      if (els.time) els.time.textContent = formatTime(engine.survivalMs);
+    }
+    if (full && els.wallet) {
+      els.wallet.textContent = String(global.GameShop?.getWallet?.() ?? 0);
+    }
+  }
+
+  function syncBlocked() {
+    engine?.setBlocked(gamePaused || gameOver || !active || metaPanelPaused);
+  }
+
+  function triggerGameOver() {
+    gameOver = true;
+    syncBlocked();
+    engine?.stop();
+    clearInput();
+
+    const score = engine?.score || 0;
+    const timeMs = engine?.survivalMs || 0;
+    const rec = saveRecords(score, timeMs);
+
+    els.gameOverScreen?.classList.remove('hidden');
+    els.gameOverScreen?.setAttribute('aria-hidden', 'false');
+    if (els.gameOverScore) els.gameOverScore.textContent = String(score);
+    if (els.gameOverTime) els.gameOverTime.textContent = formatTime(timeMs);
+    if (els.gameOverHits) els.gameOverHits.textContent = String(engine?.hits || 0);
+    if (els.highScore) els.highScore.textContent = String(rec.highScore);
+
+    submitOnlineScore(score);
+  }
+
+  function submitOnlineScore(finalScore) {
+    if (!global.CloudManager?.getCurrentRoom?.()) return;
+    const player = global.CloudManager.getLocalPlayer();
+    if (!player) return;
+    global.CloudManager.submitScore(player.id, player.name, finalScore)
+      .then((r) => global.dispatchEvent(new CustomEvent('couple:score-submitted', { detail: r })))
+      .catch(() => {});
+  }
+
+  function hideGameOver() {
+    gameOver = false;
+    els.gameOverScreen?.classList.add('hidden');
+    els.gameOverScreen?.setAttribute('aria-hidden', 'true');
+  }
+
+  function restartGame() {
+    hideGameOver();
+    gamePaused = false;
+    clearInput();
+    engine?.resetSession();
+    updateHud(true);
+    syncBlocked();
+    engine?.start();
+    updatePauseBtn();
+  }
+
+  function togglePause() {
+    if (gameOver || !active) return;
+    gamePaused = !gamePaused;
+    syncBlocked();
+    updatePauseBtn();
+    els.pauseScreen?.classList.toggle('hidden', !gamePaused);
+    els.pauseScreen?.setAttribute('aria-hidden', gamePaused ? 'false' : 'true');
+  }
+
+  function updatePauseBtn() {
+    if (!els.pauseBtn) return;
+    const icon = els.pauseBtn.querySelector('.spaceship-pause-icon');
+    const label = els.pauseBtn.querySelector('.spaceship-pause-label');
+    if (icon) icon.textContent = gamePaused ? '▶' : '⏸';
+    if (label) label.textContent = gamePaused ? 'Reanudar' : 'Pausar';
+  }
+
+  function resizeGame() {
+    if (!container || !engine) return;
+    const rect = container.getBoundingClientRect();
+    const w = Math.max(280, Math.floor(rect.width));
+    const perfLite = global.matchMedia('(max-width: 768px)').matches;
+    const mobileSm = w < 340;
+    const aspect = perfLite ? (mobileSm ? 460 / 360 : 440 / 360) : 400 / 360;
+    const h = Math.max(240, Math.floor(w * aspect));
+    container.classList.toggle('spaceship-mobile', perfLite);
+    container.classList.toggle('spaceship-mobile-sm', mobileSm);
+    engine.perfLite = perfLite;
+    engine.resize(w, h, perfLite ? 1 : Math.min(global.devicePixelRatio || 1, 1.5));
+    updateHud(true);
+  }
+
+  function isTypingElsewhere(target) {
+    const el = target instanceof Element ? target : document.activeElement;
+    if (!el || !(el instanceof HTMLElement)) return false;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+  }
+
+  function bindInput() {
+    global.addEventListener('keydown', (e) => {
+      if (!active || gameOver || gamePaused || metaPanelPaused || isTypingElsewhere(e.target)) return;
+
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        appendDigit(e.key);
+        return;
+      }
+
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        inputBuffer = inputBuffer.slice(0, -1);
+        updateInputDisplay(false);
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        tryFireFromInput(true);
+        return;
+      }
+
+      if (e.key === 'd' || e.key === 'D') {
+        if (!engine) return;
+        engine.cannonDebug = !engine.cannonDebug;
+      }
+    });
+
+    els.numpad?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-digit]');
+      if (!btn || !active || gameOver || gamePaused || metaPanelPaused) return;
+      appendDigit(btn.dataset.digit);
+    });
+
+    els.pauseBtn?.addEventListener('click', togglePause);
+    els.restartBtn?.addEventListener('click', restartGame);
+    els.gameOverRestart?.addEventListener('click', restartGame);
+    els.resumeBtn?.addEventListener('click', togglePause);
+
+    global.addEventListener('resize', () => { if (active) resizeGame(); });
+    global.addEventListener('gameshop:wallet-changed', () => updateHud(true));
+
+    document.addEventListener('visibilitychange', () => {
+      if (!active || gameOver) return;
+      if (document.hidden) engine?.stop();
+      else if (!gamePaused) engine?.start();
+    });
+  }
+
+  function wireEngine() {
+    engine.onCorrect = () => {
+      updateHud();
+      if (engine.hits % 5 === 0 && global.GameShop?.addCoins) {
+        global.GameShop.addCoins(1);
+        if (els.wallet) els.wallet.textContent = String(global.GameShop.getWallet());
+      }
+    };
+
+    engine.onResolve = (answer) => {
+      flashCorrectAnswer(answer);
+    };
+
+    engine.onMiss = () => {
+      updateLivesHud();
+      updateHud();
+      container?.classList.add('spaceship-hit-flash');
+      setTimeout(() => container?.classList.remove('spaceship-hit-flash'), 280);
+      if (engine.lives <= 0) triggerGameOver();
+    };
+
+    engine.onActiveTick = () => updateHud(false);
+  }
+
+  function applyShopCosmetics() {
+    const eq = global.GameShop?.state?.equipped;
+    if (!eq || !engine) return;
+    engine.setCosmetics({ shipId: eq.spaceship || 'ship_chocolate' });
+  }
+
+  function activate() {
+    active = true;
+    hideGameOver();
+    gamePaused = false;
+    clearInput();
+    syncBlocked();
+    resizeGame();
+    applyShopCosmetics();
+    if (!engine.running) engine.start();
+    engine.loadSprites();
+    updateHud(true);
+    if (els.highScore) els.highScore.textContent = String(loadRecords().highScore);
+    updatePauseBtn();
+  }
+
+  function deactivate() {
+    active = false;
+    gamePaused = false;
+    clearInput();
+    engine?.setBlocked(true);
+    engine?.stop();
+    els.pauseScreen?.classList.add('hidden');
+  }
+
+  function initGameRouter() {
+    const tabs = document.querySelectorAll('[data-game-mode]');
+    const cherryWrap = document.getElementById('game-container');
+    const shipWrap = document.getElementById('spaceship-container');
+    const hint = document.getElementById('game-mode-hint');
+    const saved = global.SaveManager.getSave()?.settings?.activeGame || 'cherry';
+
+    function setMode(mode) {
+      const isCannon = mode === 'spaceship';
+      tabs.forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.gameMode === mode);
+        btn.setAttribute('aria-selected', btn.dataset.gameMode === mode ? 'true' : 'false');
+      });
+      cherryWrap?.classList.toggle('hidden', isCannon);
+      shipWrap?.classList.toggle('hidden', !isCannon);
+      if (hint) {
+        hint.textContent = isCannon
+          ? 'Escribe la respuesta (ej: 4 para 2×2) — primero ✔, luego el cañón dispara'
+          : 'Controla la cereza con ← → , el mouse o tocando la pantalla';
+      }
+      global.SaveManager.updateSection('settings', { activeGame: mode });
+      if (isCannon) {
+        global.dispatchEvent(new CustomEvent('spaceship:activate'));
+        global.dispatchEvent(new CustomEvent('cherrygame:deactivate'));
+      } else {
+        global.dispatchEvent(new CustomEvent('spaceship:deactivate'));
+        global.dispatchEvent(new CustomEvent('cherrygame:activate'));
+      }
+    }
+
+    tabs.forEach((btn) => btn.addEventListener('click', () => setMode(btn.dataset.gameMode)));
+    setMode(saved === 'spaceship' ? 'spaceship' : 'cherry');
+  }
+
+  function observeVisibility() {
+    if (!container || !('IntersectionObserver' in global)) return;
+    let wasRunning = false;
+    new IntersectionObserver((entries) => {
+      if (!active || metaPanelPaused) return;
+      const visible = entries.some((e) => e.isIntersecting && e.intersectionRatio > 0.08);
+      if (!visible && engine?.running) {
+        wasRunning = true;
+        engine.stop();
+      } else if (visible && wasRunning && !gameOver && !gamePaused && !metaPanelPaused) {
+        wasRunning = false;
+        engine.start();
+      }
+    }, { threshold: [0, 0.08, 0.2] }).observe(container);
+  }
+
+  function bindMetaPanelPause() {
+    global.addEventListener('gamemeta:panel-change', (e) => {
+      if (!active) return;
+      metaPanelPaused = !!e.detail?.open;
+      syncBlocked();
+    });
+  }
+
+  function init() {
+    container = document.getElementById('spaceship-container');
+    if (!container || !global.SpaceshipEngine) return;
+
+    els = {
+      canvas: document.getElementById('spaceship-canvas'),
+      bgCanvas: document.getElementById('spaceship-bg-canvas'),
+      score: document.querySelector('.spaceship-score-num'),
+      highScore: document.getElementById('spaceship-high-score-val'),
+      lives: document.getElementById('spaceship-lives-hearts'),
+      time: document.getElementById('spaceship-time-val'),
+      hits: document.getElementById('spaceship-hits-val'),
+      wallet: document.getElementById('spaceship-wallet-val'),
+      input: document.getElementById('spaceship-answer-input'),
+      answerPanel: document.querySelector('.spaceship-answer-panel'),
+      numpad: document.getElementById('spaceship-numpad'),
+      pauseScreen: document.getElementById('spaceship-pause-screen'),
+      gameOverScreen: document.getElementById('spaceship-game-over-screen'),
+      gameOverScore: document.getElementById('spaceship-go-score'),
+      gameOverTime: document.getElementById('spaceship-go-time'),
+      gameOverHits: document.getElementById('spaceship-go-hits'),
+      pauseBtn: document.getElementById('spaceship-pause'),
+      restartBtn: document.getElementById('spaceship-reload'),
+      gameOverRestart: document.getElementById('spaceship-over-restart'),
+      resumeBtn: document.getElementById('spaceship-resume'),
+    };
+
+    const qs = new URLSearchParams(global.location.search);
+    engine = new global.SpaceshipEngine({
+      container,
+      canvas: els.canvas,
+      bgCanvas: els.bgCanvas,
+      perfLite: global.matchMedia('(max-width: 768px)').matches,
+      useHtmlBg: !!document.getElementById('spaceship-bg'),
+      cannonDebug: qs.get('cannonDebug') === '1',
+    });
+
+    resizeGame();
+    engine.loadSprites().catch(() => {});
+
+    wireEngine();
+    bindInput();
+    bindMetaPanelPause();
+    initGameRouter();
+    observeVisibility();
+
+    global.addEventListener('spaceship:activate', activate);
+    global.addEventListener('spaceship:deactivate', deactivate);
+    global.addEventListener('gameshop:cosmetics-applied', applyShopCosmetics);
+
+    if (global.SaveManager.getSave()?.settings?.activeGame === 'spaceship') activate();
+    else engine.setBlocked(true);
+
+    global.SpaceshipUI = { engine, activate, deactivate, applyShopCosmetics, restartGame };
+  }
+
+  global.SpaceshipUI = { init };
+})(typeof window !== 'undefined' ? window : globalThis);

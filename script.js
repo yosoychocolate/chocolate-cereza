@@ -787,14 +787,26 @@ function initGame() {
     phase: Math.random() * Math.PI * 2,
   }));
 
+  let cherryGameActive = SaveManager.getSave()?.settings?.activeGame !== 'spaceship';
+
   function syncEngineBlocked() {
     engine.setBlocked(isGameplayBlocked());
   }
 
   function ensureEngineRunning() {
-    if (!engine.spritesReady || gameOver) return;
+    if (!cherryGameActive || !engine.spritesReady || gameOver) return;
     if (!engine.running) engine.forceRestart();
   }
+
+  document.addEventListener('cherrygame:deactivate', () => {
+    cherryGameActive = false;
+    engine.stop();
+  });
+
+  document.addEventListener('cherrygame:activate', () => {
+    cherryGameActive = true;
+    if (!gameOver && engine.spritesReady) ensureEngineRunning();
+  });
 
   function resizeGame() {
     if (!gameContainer) return;
@@ -1522,7 +1534,7 @@ function initGame() {
     engine.setScore(score);
     console.log('[MiniGame] Engine pronto — camadas + pools + sprites cacheados.');
     syncEngineBlocked();
-    engine.start();
+    if (cherryGameActive) engine.start();
     if (score >= FINAL_MILESTONE && milestones[FINAL_MILESTONE]) {
       applyEndlessModeUI();
       syncLivesHudVisibility(false);
@@ -1733,7 +1745,7 @@ function initGame() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       engine.stop();
-    } else if (engine.spritesReady && !gameOver) {
+    } else if (cherryGameActive && engine.spritesReady && !gameOver) {
       ensureEngineRunning();
     }
   });
@@ -1948,6 +1960,8 @@ const musicState = {
   fallbackStep: 0,
   fallbackStart: 0,
   fallbackLoopSec: 18,
+  currentTrackId: '',
+  repeatMode: 'off',
 };
 
 let audioEl = null;
@@ -1975,6 +1989,111 @@ function formatMusicTime(sec) {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function getSavedMusicTrackId() {
+  const id = SaveManager.getSave()?.settings?.musicTrackId;
+  if (id && MusicPlaylist?.get?.(id)) return id;
+  return MusicPlaylist?.defaultId || '';
+}
+
+function getSavedMusicRepeatMode() {
+  const mode = SaveManager.getSave()?.settings?.musicRepeatMode;
+  return mode === 'one' ? 'one' : 'off';
+}
+
+function updateMusicRepeatUI() {
+  const btn = document.getElementById('music-repeat-btn');
+  if (!btn) return;
+  const active = musicState.repeatMode === 'one';
+  btn.classList.toggle('is-active', active);
+  btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  btn.textContent = active ? '🔂' : '🔁';
+  btn.title = active ? 'Repetir canción activado' : 'Repetir canción';
+  btn.setAttribute('aria-label', active ? 'Desactivar repetición' : 'Repetir canción');
+}
+
+function toggleMusicRepeat() {
+  musicState.repeatMode = musicState.repeatMode === 'one' ? 'off' : 'one';
+  SaveManager.updateSection('settings', { musicRepeatMode: musicState.repeatMode });
+  updateMusicRepeatUI();
+}
+
+function handleMusicTrackEnded() {
+  if (!musicState.playing || musicState.useFallback) return;
+  if (musicState.repeatMode === 'one' && audioEl) {
+    audioEl.currentTime = 0;
+    audioEl.play().catch(() => {});
+    return;
+  }
+  playNextMusicTrack(true);
+}
+
+function updateMusicTrackUI(track) {
+  if (!track) return;
+  const subtitle = document.getElementById('music-subtitle');
+  const title = document.getElementById('music-track-title');
+  const quote = document.getElementById('music-quote');
+  if (subtitle) subtitle.textContent = track.subtitle || track.title;
+  if (title) title.textContent = track.title;
+  if (quote && track.quote) quote.textContent = track.quote;
+
+  document.querySelectorAll('#music-playlist .music-playlist-item').forEach((btn) => {
+    const active = btn.dataset.trackId === track.id;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-current', active ? 'true' : 'false');
+  });
+}
+
+function renderMusicPlaylist() {
+  const list = document.getElementById('music-playlist');
+  if (!list || !MusicPlaylist?.tracks?.length) return;
+  list.innerHTML = '';
+  MusicPlaylist.tracks.forEach((track) => {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'music-playlist-item';
+    btn.dataset.trackId = track.id;
+    btn.setAttribute('aria-label', `Reproducir ${track.title}`);
+    btn.innerHTML = `<span class="music-playlist-icon" aria-hidden="true">🎵</span><span class="music-playlist-name">${track.title}</span>`;
+    btn.addEventListener('click', () => selectMusicTrack(track.id, true));
+    li.appendChild(btn);
+    list.appendChild(li);
+  });
+}
+
+function selectMusicTrack(id, resume = false) {
+  loadMusicTrack(id, { resume: resume || musicState.playing });
+}
+
+function loadMusicTrack(id, options = {}) {
+  const track = MusicPlaylist?.get?.(id);
+  if (!track || !audioEl) return;
+
+  const resume = !!options.resume;
+  if (musicState.playing) pauseMusic();
+
+  musicState.currentTrackId = track.id;
+  musicState.useFallback = false;
+  audioEl.src = track.src;
+  audioEl.load();
+
+  updateMusicTrackUI(track);
+  SaveManager.updateSection('settings', { musicTrackId: track.id });
+
+  if (resume) playMusic();
+  else updateMusicProgress();
+}
+
+function playNextMusicTrack(resume = true) {
+  const next = MusicPlaylist?.next?.(musicState.currentTrackId);
+  if (next) loadMusicTrack(next.id, { resume });
+}
+
+function playPrevMusicTrack(resume = true) {
+  const prev = MusicPlaylist?.prev?.(musicState.currentTrackId);
+  if (prev) loadMusicTrack(prev.id, { resume });
 }
 
 function setMusicPlayingEffects(active) {
@@ -2226,6 +2345,16 @@ function initMusic() {
   const pauseBtn = document.getElementById('music-pause-btn');
   const autoplayBtn = document.getElementById('music-autoplay-btn');
   const progressTrack = document.getElementById('music-progress-track');
+  const prevBtn = document.getElementById('music-prev');
+  const nextBtn = document.getElementById('music-next');
+  const repeatBtn = document.getElementById('music-repeat-btn');
+
+  musicState.repeatMode = getSavedMusicRepeatMode();
+  updateMusicRepeatUI();
+
+  renderMusicPlaylist();
+  const initialId = getSavedMusicTrackId();
+  if (initialId) loadMusicTrack(initialId, { resume: false });
 
   if (audioEl) {
     audioEl.volume = 0.35;
@@ -2239,13 +2368,19 @@ function initMusic() {
     audioEl.addEventListener('timeupdate', () => {
       if (!musicState.useFallback && musicState.playing) updateMusicProgress();
     });
+    audioEl.addEventListener('ended', () => {
+      handleMusicTrackEnded();
+    });
     audioEl.addEventListener('error', () => {
       musicState.useFallback = true;
       const durationEl = document.getElementById('music-duration');
       if (durationEl) durationEl.textContent = formatMusicTime(musicState.fallbackLoopSec);
     });
-    audioEl.load();
   }
+
+  prevBtn?.addEventListener('click', () => playPrevMusicTrack(true));
+  nextBtn?.addEventListener('click', () => playNextMusicTrack(true));
+  repeatBtn?.addEventListener('click', () => toggleMusicRepeat());
 
   toggle?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -2283,6 +2418,7 @@ function initMainSections() {
   initPoem();
   initMeter();
   initGame();
+  if (window.SpaceshipUI?.init) window.SpaceshipUI.init();
   initLetter();
   createStars();
   initFinalMeeting();

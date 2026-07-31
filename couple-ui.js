@@ -124,6 +124,123 @@ function getLocalPlayerId() {
   return CloudManager.getLocalPlayer()?.id || PlayerIdentity.getOrCreatePlayerId();
 }
 
+function getPartnerFromRoom(room) {
+  if (!room) return null;
+  const localId = getLocalPlayerId();
+  return room.players.find((p) => p.id !== localId) || null;
+}
+
+function getWalletBalance() {
+  if (typeof globalThis.GameShop?.getWallet === 'function') {
+    return globalThis.GameShop.getWallet();
+  }
+  return 0;
+}
+
+function setGiftStatus(message, kind = '') {
+  if (!els.giftStatus) return;
+  els.giftStatus.textContent = message || '';
+  els.giftStatus.classList.remove('is-error', 'is-success');
+  if (kind) els.giftStatus.classList.add(kind);
+}
+
+function renderGiftPanel(room) {
+  const partner = getPartnerFromRoom(room);
+  const show = !!(room && partner);
+
+  els.giftPanel?.classList.toggle('hidden', !show);
+  els.giftDivider?.classList.toggle('hidden', !show);
+
+  if (!show) {
+    setGiftStatus('');
+    if (els.giftSend) els.giftSend.disabled = true;
+    els.giftPresets?.querySelectorAll('.couple-gift-preset').forEach((btn) => {
+      btn.disabled = true;
+    });
+    return;
+  }
+
+  const wallet = getWalletBalance();
+  if (els.giftWallet) els.giftWallet.textContent = wallet.toLocaleString('es');
+  if (els.giftPartner) els.giftPartner.textContent = partner.name || 'Tu pareja';
+  if (els.giftSend) els.giftSend.disabled = wallet < 1;
+  els.giftPresets?.querySelectorAll('.couple-gift-preset').forEach((btn) => {
+    btn.disabled = wallet < 1;
+  });
+}
+
+async function onSendGift() {
+  const room = CloudManager.getCurrentRoom();
+  const partner = getPartnerFromRoom(room);
+  if (!partner) {
+    setGiftStatus('Espera a que tu pareja entre en la sala.', 'is-error');
+    return;
+  }
+
+  const raw = els.giftAmount?.value;
+  const amount = raw === '' || raw == null ? NaN : Number(raw);
+  if (!Number.isFinite(amount) || amount < 1) {
+    setGiftStatus('Indica una cantidad válida.', 'is-error');
+    return;
+  }
+
+  if (els.giftSend) els.giftSend.disabled = true;
+  setGiftStatus('Enviando regalo…');
+
+  try {
+    const result = await CloudManager.sendChocolateGift(amount);
+    if (!result.success) {
+      setGiftStatus(result.message || 'No se pudo enviar.', 'is-error');
+      return;
+    }
+
+    if (els.giftAmount) els.giftAmount.value = '';
+    setGiftStatus(`¡Enviaste ${result.amount.toLocaleString('es')} 🍫 a ${result.partnerName || partner.name}!`, 'is-success');
+    showToast(`🎁 Enviaste ${result.amount.toLocaleString('es')} 🍫 a ${result.partnerName || partner.name}`);
+    playGuardianAnim(els.guardians, resolveMascotType(partner.name, partner.id, room.players), 'wave');
+    renderGiftPanel(room);
+  } catch (err) {
+    setGiftStatus(err instanceof Error ? err.message : String(err), 'is-error');
+  } finally {
+    if (els.giftSend) els.giftSend.disabled = getWalletBalance() < 1;
+  }
+}
+
+function onGiftPresetClick(event) {
+  const btn = event.target.closest('.couple-gift-preset');
+  if (!btn || btn.disabled) return;
+
+  const preset = btn.dataset.gift;
+  const wallet = getWalletBalance();
+  if (preset === 'all') {
+    if (els.giftAmount) els.giftAmount.value = String(Math.max(0, wallet));
+  } else {
+    const n = Number(preset);
+    if (Number.isFinite(n) && els.giftAmount) els.giftAmount.value = String(n);
+  }
+}
+
+function onGiftReceived(event) {
+  const detail = event.detail || {};
+  const amount = detail.amount || 0;
+  const fromName = detail.fromName || 'Tu pareja';
+  if (!amount) return;
+
+  showToast(`🎁 ${fromName} te envió ${amount.toLocaleString('es')} 🍫`);
+  setGiftStatus(`Recibiste ${amount.toLocaleString('es')} 🍫 de ${fromName}`, 'is-success');
+  renderGiftPanel(CloudManager.getCurrentRoom());
+
+  const room = CloudManager.getCurrentRoom();
+  const fromPlayer = room?.players?.find((p) => p.name === fromName);
+  const fromType = resolveMascotType(fromName, fromPlayer?.id, room?.players);
+  playGuardianAnim(els.guardians, fromType, 'blink');
+  triggerMascotFx('fx-join', 900);
+}
+
+function onWalletChanged() {
+  renderGiftPanel(CloudManager.getCurrentRoom());
+}
+
 function triggerMascotFx(fxClass, durationMs = 1200) {
   if (!els.mascotScene) return;
   els.mascotScene.classList.remove('fx-record', 'fx-crown', 'fx-join');
@@ -195,7 +312,7 @@ function renderMascotScene(room, couple, overrideMode) {
   const localPlayer = room.players.find((p) => p.id === localId) || CloudManager.getLocalPlayer();
   const localName = localPlayer?.name || 'Jugador';
   const localType = resolveMascotType(localName, localId, room.players);
-  const partner = room.players.find((p) => p.id !== localId);
+  const partner = getPartnerFromRoom(room);
   const partnerName = partner?.name || '';
   const partnerType = partner ? resolveMascotType(partner.name, partner.id, room.players) : localType === 'chocolate' ? 'cereza' : 'chocolate';
 
@@ -386,6 +503,8 @@ async function refreshRoomPanel() {
     renderRanking(rankRes.ranking, coupleRes.success ? coupleRes.couple : null);
     renderCoupleScoreHud(rankRes.ranking, coupleRes.success ? coupleRes.couple : null);
   }
+
+  renderGiftPanel(room);
 }
 
 function handleCoupleUpdated(couple) {
@@ -413,6 +532,7 @@ async function handleRoomEvent(event) {
     lastBestPlayerId = null;
     forcedSceneMode = null;
     hideCoupleScoreHud();
+    renderGiftPanel(null);
     showLobby();
     setStatus('La sala ya no existe.');
     return;
@@ -534,7 +654,7 @@ async function onLeaveRoom() {
     lastBestPlayerId = null;
     forcedSceneMode = null;
     hideCoupleScoreHud();
-
+    renderGiftPanel(null);
     showLobby();
     setStatus(
       result.success
@@ -604,6 +724,14 @@ function cacheElements() {
   els.guardians = $('couple-guardians');
   els.scoreHud = $('couple-score-hud');
   els.footerMascots = $('site-footer-mascots');
+  els.giftPanel = $('couple-gift-panel');
+  els.giftDivider = $('couple-gift-divider');
+  els.giftWallet = $('couple-gift-wallet');
+  els.giftPartner = $('couple-gift-partner');
+  els.giftAmount = $('couple-gift-amount');
+  els.giftSend = $('couple-gift-send');
+  els.giftPresets = $('couple-gift-presets');
+  els.giftStatus = $('couple-gift-status');
 }
 
 async function init() {
@@ -623,6 +751,14 @@ async function init() {
   els.copyBtn?.addEventListener('click', onCopyCode);
   els.chatForm?.addEventListener('submit', onChatSubmit);
   els.chatEmojis?.addEventListener('click', onEmojiClick);
+  els.giftSend?.addEventListener('click', onSendGift);
+  els.giftPresets?.addEventListener('click', onGiftPresetClick);
+  els.giftAmount?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSendGift();
+    }
+  });
 
   els.chatMessages?.addEventListener('scroll', () => {
     if (!els.chatMessages) return;
@@ -637,6 +773,8 @@ async function init() {
   });
 
   window.addEventListener('couple:score-submitted', onScoreSubmitted);
+  window.addEventListener('couple:gift-received', onGiftReceived);
+  window.addEventListener('gameshop:wallet-changed', onWalletChanged);
 
   await CloudManager.whenSessionReady();
 

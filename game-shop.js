@@ -9,9 +9,10 @@
     theme: 'theme_classic',
     effect: 'effect_hearts',
     mascot: 'mascot_none',
+    spaceship: 'ship_chocolate',
   };
 
-  const FREE_IDS = new Set(['cherry_classic', 'theme_classic', 'effect_hearts', 'mascot_none']);
+  const FREE_IDS = new Set(['cherry_classic', 'theme_classic', 'effect_hearts', 'mascot_none', 'ship_chocolate']);
 
   const CATALOG = [
     { id: 'cherry_classic', cat: 'cherry', icon: '🍒', name: 'Cereza Clásica', desc: 'La cereza original.', price: 0 },
@@ -47,6 +48,13 @@
     { id: 'letter_06', cat: 'album', icon: '💌', name: 'Carta #06', desc: '"Te amo mais do que palavras cabem."', price: 750, letter: 'Te amo mais do que palavras cabem.' },
 
     { id: 'ring_love', cat: 'special', icon: '💍', name: 'Anel do Amor', desc: 'Símbolo do amor eterno. Sem vantagem — só amor.', price: 9999, badge: '💍' },
+
+    { id: 'ship_chocolate', cat: 'spaceship', icon: '🚀', name: 'Cohete Clásico', desc: 'Nave genérica plateada.', price: 0 },
+    { id: 'ship_cherry', cat: 'spaceship', icon: '🚀', name: 'Cohete Cereza', desc: 'Casco rojo romántico.', price: 0 },
+    { id: 'ship_rosa', cat: 'spaceship', icon: '🚀', name: 'Cohete Rosa', desc: 'Rosa suave.', price: 350 },
+    { id: 'ship_neon', cat: 'spaceship', icon: '🚀', name: 'Cohete Neon', desc: 'Brilla al disparar.', price: 600 },
+    { id: 'ship_sakura', cat: 'spaceship', icon: '🚀', name: 'Cohete Sakura', desc: 'Pétalos dulces.', price: 850 },
+    { id: 'ship_galaxy', cat: 'spaceship', icon: '🚀', name: 'Cohete Galaxia', desc: 'Entre las estrellas.', price: 1200 },
   ];
 
   const CAT_LABELS = {
@@ -56,6 +64,7 @@
     mascot: '🧸 Mascotes',
     album: '💌 Álbum',
     special: '💖 Especial',
+    spaceship: '🍫 Cañones',
   };
 
   const ITEM_MAP = Object.fromEntries(CATALOG.map((i) => [i.id, i]));
@@ -152,10 +161,31 @@
 
     addCoins(amount) {
       const n = Math.max(0, Math.floor(amount || 0));
-      if (!n) return;
+      if (!n) return 0;
       this.state.wallet += n;
       this.persist();
       this.renderWallet();
+      this._emitWalletChanged();
+      return n;
+    },
+
+    spendCoins(amount) {
+      const n = Math.max(0, Math.floor(amount || 0));
+      if (!n) return { ok: false, reason: 'invalid', spent: 0 };
+      if (this.state.wallet < n) {
+        return { ok: false, reason: 'insufficient', spent: 0 };
+      }
+      this.state.wallet -= n;
+      this.persist();
+      this.renderWallet();
+      this._emitWalletChanged();
+      return { ok: true, reason: 'ok', spent: n };
+    },
+
+    _emitWalletChanged() {
+      global.dispatchEvent(new CustomEvent('gameshop:wallet-changed', {
+        detail: { wallet: this.state.wallet },
+      }));
     },
 
     owns(id) {
@@ -183,6 +213,7 @@
       this.persist();
       this.render();
       this.applyCosmetics();
+      this._emitWalletChanged();
       return true;
     },
 
@@ -218,6 +249,12 @@
           catchColors: effect?.colors || null,
         });
       }
+
+      if (global.SpaceshipUI?.applyShopCosmetics) {
+        global.SpaceshipUI.applyShopCosmetics();
+      }
+
+      global.dispatchEvent(new CustomEvent('gameshop:cosmetics-applied'));
 
       const mascotEl = this.els.mascot;
       if (mascotEl) {
