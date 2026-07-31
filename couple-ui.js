@@ -776,7 +776,12 @@ async function init() {
   window.addEventListener('couple:gift-received', onGiftReceived);
   window.addEventListener('gameshop:wallet-changed', onWalletChanged);
 
-  await CloudManager.whenSessionReady();
+  try {
+    await CloudManager.whenSessionReady();
+  } catch (err) {
+    console.error('[CoupleUI] whenSessionReady error:', err);
+    setStatus(err instanceof Error ? err.message : String(err), true);
+  }
 
   if (CloudManager.getCurrentRoom()) {
     bindRoomListener();

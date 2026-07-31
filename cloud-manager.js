@@ -823,8 +823,19 @@ export async function restoreSession() {
 }
 
 export async function whenSessionReady() {
-  if (restorePromise) {
-    await restorePromise;
+  if (!restorePromise) return;
+  const RESTORE_TIMEOUT_MS = 20000;
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error('Tiempo de espera al restaurar la sesión — recarga la página (Ctrl+F5).')),
+      RESTORE_TIMEOUT_MS
+    );
+  });
+  try {
+    await Promise.race([restorePromise, timeout]);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
