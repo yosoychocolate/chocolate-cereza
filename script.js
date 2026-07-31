@@ -1962,7 +1962,13 @@ const musicState = {
   fallbackLoopSec: 18,
   currentTrackId: '',
   repeatMode: 'off',
+  volume: 0.35,
 };
+
+const MUSIC_VOLUME_DEFAULT = 0.35;
+const MUSIC_VOLUME_STEP = 0.05;
+const MUSIC_VOLUME_MIN = 0;
+const MUSIC_VOLUME_MAX = 1;
 
 let audioEl = null;
 let audioCtx = null;
@@ -2000,6 +2006,52 @@ function getSavedMusicTrackId() {
 function getSavedMusicRepeatMode() {
   const mode = SaveManager.getSave()?.settings?.musicRepeatMode;
   return mode === 'one' ? 'one' : 'off';
+}
+
+function getSavedMusicVolume() {
+  const v = SaveManager.getSave()?.settings?.musicVolume;
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    return Math.max(MUSIC_VOLUME_MIN, Math.min(MUSIC_VOLUME_MAX, v));
+  }
+  return MUSIC_VOLUME_DEFAULT;
+}
+
+function getFallbackNoteGain() {
+  return musicState.volume * (0.05 / MUSIC_VOLUME_DEFAULT);
+}
+
+function updateMusicVolumeUI() {
+  const pct = Math.round(musicState.volume * 100);
+  document.querySelectorAll('.music-vol-label').forEach((el) => {
+    el.textContent = `${pct}%`;
+  });
+  document.querySelectorAll('[data-music-vol-down]').forEach((btn) => {
+    btn.disabled = musicState.volume <= MUSIC_VOLUME_MIN;
+  });
+  document.querySelectorAll('[data-music-vol-up]').forEach((btn) => {
+    btn.disabled = musicState.volume >= MUSIC_VOLUME_MAX;
+  });
+}
+
+function applyMusicVolume(vol, persist = true) {
+  musicState.volume = Math.max(MUSIC_VOLUME_MIN, Math.min(MUSIC_VOLUME_MAX, vol));
+  if (audioEl) audioEl.volume = musicState.volume;
+  if (persist) SaveManager.updateSection('settings', { musicVolume: musicState.volume });
+  updateMusicVolumeUI();
+}
+
+function changeMusicVolume(delta) {
+  applyMusicVolume(musicState.volume + delta);
+}
+
+function bindMusicVolumeControls() {
+  document.querySelectorAll('[data-music-vol-down]').forEach((btn) => {
+    btn.addEventListener('click', () => changeMusicVolume(-MUSIC_VOLUME_STEP));
+  });
+  document.querySelectorAll('[data-music-vol-up]').forEach((btn) => {
+    btn.addEventListener('click', () => changeMusicVolume(MUSIC_VOLUME_STEP));
+  });
+  updateMusicVolumeUI();
 }
 
 function updateMusicRepeatUI() {
@@ -2210,7 +2262,8 @@ function startFallbackMusic() {
     filter.type = 'lowpass';
     filter.frequency.value = 900;
     gain.gain.setValueAtTime(0, audioCtx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.08);
+    const peak = getFallbackNoteGain();
+    gain.gain.linearRampToValueAtTime(peak, audioCtx.currentTime + 0.08);
     gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.75);
 
     osc.connect(filter);
@@ -2250,7 +2303,7 @@ async function playMusic() {
       musicState.useFallback = true;
     } else {
       try {
-        audioEl.volume = 0.35;
+        audioEl.volume = musicState.volume;
         await audioEl.play();
         started = true;
       } catch (_) {
@@ -2310,7 +2363,7 @@ async function tryAutoplayMusic() {
     return;
   }
 
-  audioEl.volume = 0.35;
+  audioEl.volume = musicState.volume;
   try {
     await audioEl.play();
     musicState.playing = true;
@@ -2350,14 +2403,16 @@ function initMusic() {
   const repeatBtn = document.getElementById('music-repeat-btn');
 
   musicState.repeatMode = getSavedMusicRepeatMode();
+  musicState.volume = getSavedMusicVolume();
   updateMusicRepeatUI();
+  bindMusicVolumeControls();
 
   renderMusicPlaylist();
   const initialId = getSavedMusicTrackId();
   if (initialId) loadMusicTrack(initialId, { resume: false });
 
   if (audioEl) {
-    audioEl.volume = 0.35;
+    audioEl.volume = musicState.volume;
     audioEl.addEventListener('loadedmetadata', () => {
       musicState.useFallback = false;
       updateMusicProgress();
@@ -2422,6 +2477,7 @@ function initMainSections() {
   initLetter();
   createStars();
   initFinalMeeting();
+  if (window.DailyChargeMission?.init) window.DailyChargeMission.init();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

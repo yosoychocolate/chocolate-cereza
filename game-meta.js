@@ -78,6 +78,7 @@
     { id: 'weekend', icon: '📅', title: 'Fin de Semana', desc: 'Juega un sábado o domingo.' },
     { id: 'silent_heart', icon: '🤫', title: 'Amor Silencioso', desc: 'Juega 5 minutos con el sonido apagado.' },
     { id: 'explorer', icon: '🗺️', title: 'Explorador', desc: 'Abre estadísticas, logros y ajustes.', toastScope: 'site' },
+    { id: 'charge_care_7', icon: '🏆', title: 'Cuidando do Chocolate', desc: '7 dias seguidos cuidando do Chocolate.', toastScope: 'site' },
     /* Supervivencia & partidas */
     { id: 'last_stand', icon: '🛡️', title: 'Última Vida', desc: 'Alcanza 35+ estando a 1 vida.' },
     { id: 'games_10', icon: '🎮', title: 'Jugador Fiel', desc: 'Completa 10 partidas.' },
@@ -214,7 +215,12 @@
   }
 
   function getToastScope(achievement) {
-    return achievement.toastScope === 'site' ? 'site' : 'game';
+    if (achievement.toastScope === 'site') return 'site';
+    const shipWrap = typeof document !== 'undefined'
+      ? document.getElementById('spaceship-container')
+      : null;
+    if (shipWrap && !shipWrap.classList.contains('hidden')) return 'site';
+    return 'game';
   }
 
   const GameMeta = {
@@ -465,6 +471,9 @@
         poemRoundsCompleted: save.site?.poemRoundsCompleted || 0,
         meterFullReached: !!save.site?.meterFullReached,
         meterSecretUnlocked: !!save.site?.meterSecretUnlocked,
+        careStreak: save.dailyCharge?.careStreak || 0,
+        bestCareStreak: save.dailyCharge?.bestCareStreak || 0,
+        totalCareDays: save.dailyCharge?.totalCareDays || 0,
         panelsOpened: panels,
         hadOneLife: !!this.session.hadOneLife,
         inOnlineRoom: !!p.inOnlineRoom,
@@ -579,6 +588,8 @@
           return ctx.playTimeMutedMs >= 5 * MIN;
         case 'explorer':
           return ctx.panelsOpened.stats && ctx.panelsOpened.achievements && ctx.panelsOpened.settings;
+        case 'charge_care_7':
+          return Math.max(ctx.bestCareStreak || 0, ctx.careStreak || 0) >= 7;
         case 'last_stand':
           return ctx.hadOneLife && ctx.score >= 35;
         case 'games_10':

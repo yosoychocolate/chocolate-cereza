@@ -17,7 +17,9 @@ const DEBOUNCE_MS = 60;
 
 /**
  * @typedef {Object} RoomUpdateEvent
- * @property {'room_updated' | 'room_removed' | 'couple_updated' | 'error'} type
+ * @property {'room_updated' | 'room_removed' | 'couple_updated' | 'presence_updated' | 'error'} type
+ * @property {string} [playerId]
+ * @property {import('./cloud-presence.js').CloudPresence} [presence]
  * @property {import('./cloud-presence.js').CloudPlayer[] | Array} [players]
  * @property {Object | null} [room]
  * @property {import('./cloud-couple.js').CoupleStats | null} [couple]
@@ -181,7 +183,22 @@ export function createRoomListener(fetchRoom) {
 
       const presenceUnsub = onSnapshot(
         presenceRef(db, roomCode, playerId),
-        () => scheduleRefresh(`presence:${playerId}`),
+        (snap) => {
+          if (!snap.exists()) return;
+          const data = snap.data() || {};
+          emit({
+            type: 'presence_updated',
+            playerId,
+            presence: {
+              online: data.online === true,
+              lastSeen: typeof data.lastSeen === 'number' ? data.lastSeen : 0,
+            },
+            room: null,
+            players: [],
+            timestamp: Date.now(),
+            source: `presence:${playerId}`,
+          });
+        },
         (err) => console.warn('[CloudListener] presence error:', err)
       );
 

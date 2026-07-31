@@ -32,12 +32,51 @@ let chatStickToBottom = true;
 /** @type {ReturnType<typeof setTimeout> | null} */
 let refreshRoomTimer = null;
 
-function scheduleRefreshRoomPanel() {
+/** @type {boolean} */
+let cherryGameActive = false;
+
+/** @type {boolean} */
+let cannonGameActive = false;
+
+function isGameplayActive() {
+  return cherryGameActive || cannonGameActive;
+}
+
+function bindGameplayRefreshGuard() {
+  window.addEventListener('cherrygame:activate', () => { cherryGameActive = true; });
+  window.addEventListener('cherrygame:deactivate', () => {
+    cherryGameActive = false;
+    if (!isGameplayActive()) scheduleRefreshRoomPanel(true);
+  });
+  window.addEventListener('spaceship:activate', () => { cannonGameActive = true; });
+  window.addEventListener('spaceship:deactivate', () => {
+    cannonGameActive = false;
+    if (!isGameplayActive()) scheduleRefreshRoomPanel(true);
+  });
+}
+
+function scheduleRefreshRoomPanel(forceFull = false) {
   if (refreshRoomTimer) clearTimeout(refreshRoomTimer);
+  const delay = isGameplayActive() && !forceFull ? 2500 : 400;
   refreshRoomTimer = setTimeout(() => {
     refreshRoomTimer = null;
+    if (isGameplayActive() && !forceFull) {
+      refreshRoomPanelLight().catch(() => {});
+      scheduleRefreshRoomPanel(true);
+      return;
+    }
     refreshRoomPanel().catch(() => {});
-  }, 400);
+  }, delay);
+}
+
+async function refreshRoomPanelLight() {
+  const room = CloudManager.getCurrentRoom();
+  if (!room) {
+    showLobby();
+    return;
+  }
+  renderPlayers(room.players);
+  renderGiftPanel(room);
 }
 
 /** @type {number} */
@@ -554,7 +593,14 @@ async function handleRoomEvent(event) {
 
   if (event.type === 'couple_updated') {
     handleCoupleUpdated(event.couple);
+    if (isGameplayActive()) return;
     scheduleRefreshRoomPanel();
+    return;
+  }
+
+  if (event.type === 'presence_updated') {
+    const room = CloudManager.getCurrentRoom();
+    if (room) renderPlayers(room.players);
     return;
   }
 
@@ -752,6 +798,7 @@ async function init() {
   cacheElements();
   if (!els.lobby) return;
 
+  bindGameplayRefreshGuard();
   initGuardians();
 
   const identity = PlayerIdentity.getIdentity();

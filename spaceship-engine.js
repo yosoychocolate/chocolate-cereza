@@ -770,8 +770,8 @@
       this.difficulty = 0;
 
       this.lastSpawn = 0;
-      this.spawnInterval = 2200;
-      this.baseFall = 1.4;
+      this.spawnInterval = this.perfLite ? 2700 : 2200;
+      this.baseFall = this.perfLite ? 1.15 : 1.4;
       this.maxCherries = 6;
 
       this.running = false;
@@ -1022,7 +1022,7 @@
       this.survivalMs = 0;
       this.difficulty = 0;
       this.lastSpawn = 0;
-      this.spawnInterval = 2200;
+      this.spawnInterval = this.perfLite ? 2700 : 2200;
       this._nextId = 1;
       this.cannon.angle = -Math.PI / 2;
       this.cannon.flashUntil = 0;
@@ -1059,7 +1059,7 @@
     }
 
     _fallSpeed() {
-      return this.baseFall * (1 + this.difficulty * 0.12) * (this.perfLite ? 0.85 : 1);
+      return this.baseFall * (1 + this.difficulty * 0.12) * (this.perfLite ? 0.78 : 1);
     }
 
     _spawnCherry() {
@@ -1661,7 +1661,8 @@
       const newDiff = Math.floor(this.survivalMs / 45000);
       if (newDiff > this.difficulty) {
         this.difficulty = newDiff;
-        this.spawnInterval = Math.max(1200, 2200 - this.difficulty * 180);
+        const baseSpawn = this.perfLite ? 2700 : 2200;
+        this.spawnInterval = Math.max(this.perfLite ? 1500 : 1200, baseSpawn - this.difficulty * 180);
       }
 
       if (time - this.lastSpawn >= this.spawnInterval) {

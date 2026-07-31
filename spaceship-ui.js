@@ -407,18 +407,45 @@
 
   function observeVisibility() {
     if (!container || !('IntersectionObserver' in global)) return;
+
+    let hideTimer = null;
     let wasRunning = false;
+
     new IntersectionObserver((entries) => {
-      if (!active || metaPanelPaused) return;
-      const visible = entries.some((e) => e.isIntersecting && e.intersectionRatio > 0.08);
-      if (!visible && engine?.running) {
-        wasRunning = true;
-        engine.stop();
-      } else if (visible && wasRunning && !gameOver && !gamePaused && !metaPanelPaused) {
-        wasRunning = false;
-        engine.start();
+      if (!active || metaPanelPaused || gameOver || gamePaused) return;
+      if (document.hidden) return;
+      if (global.CloudManager?.getCurrentRoom?.()) return;
+
+      const ratio = entries.reduce((max, e) => Math.max(max, e.intersectionRatio), 0);
+
+      if (ratio >= 0.2) {
+        if (hideTimer) {
+          clearTimeout(hideTimer);
+          hideTimer = null;
+        }
+        if (wasRunning && engine && !engine.running) {
+          wasRunning = false;
+          engine.start();
+        }
+        return;
       }
-    }, { threshold: [0, 0.08, 0.2] }).observe(container);
+
+      if (ratio >= 0.05 || !engine?.running) return;
+
+      if (hideTimer) return;
+      hideTimer = setTimeout(() => {
+        hideTimer = null;
+        if (!active || metaPanelPaused || gameOver || gamePaused || document.hidden) return;
+        if (global.CloudManager?.getCurrentRoom?.()) return;
+
+        const rect = container.getBoundingClientRect();
+        const inViewport = rect.bottom > 8 && rect.top < global.innerHeight - 8 && rect.width > 0;
+        if (!inViewport && engine?.running) {
+          wasRunning = true;
+          engine.stop();
+        }
+      }, 900);
+    }, { threshold: [0, 0.05, 0.2, 0.5] }).observe(container);
   }
 
   function bindMetaPanelPause() {

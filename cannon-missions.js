@@ -23,7 +23,13 @@
     { id: 'run_streak_8', icon: '🌟', title: 'Racha x8', desc: '8 aciertos seguidos', metric: 'streak', goal: 8 },
   ];
 
-  const MAX_VISIBLE = 3;
+  const MAX_VISIBLE_DESKTOP = 3;
+  const MAX_VISIBLE_MOBILE = 2;
+
+  function getMaxVisible() {
+    if (typeof global.matchMedia !== 'function') return MAX_VISIBLE_DESKTOP;
+    return global.matchMedia('(max-width: 768px)').matches ? MAX_VISIBLE_MOBILE : MAX_VISIBLE_DESKTOP;
+  }
 
   /** @type {Set<string>} */
   let completedRun = new Set();
@@ -86,7 +92,7 @@
   function pickActiveMissions() {
     activeIds = RUN_MISSIONS
       .filter((m) => !completedRun.has(m.id))
-      .slice(0, MAX_VISIBLE)
+      .slice(0, getMaxVisible())
       .map((m) => m.id);
     lastPanelKey = '';
   }
@@ -235,6 +241,12 @@
       els.toast = document.getElementById('spaceship-mission-toast');
       els.panel = document.getElementById('spaceship-missions');
       this.resetRun();
+      if (typeof global.matchMedia === 'function') {
+        global.matchMedia('(max-width: 768px)').addEventListener('change', () => {
+          pickActiveMissions();
+          renderPanel(null);
+        });
+      }
     },
 
     resetRun() {

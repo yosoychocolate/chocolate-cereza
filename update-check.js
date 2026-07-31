@@ -3,6 +3,7 @@
  * version.json é gerado no deploy com o hash do commit.
  */
 (function checkAppVersion() {
+  if (location.protocol === 'file:') return;
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
 

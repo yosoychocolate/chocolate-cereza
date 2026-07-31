@@ -140,6 +140,11 @@ let giftClaimInFlight = false;
 roomListener.subscribe((event) => {
   if (event.type === 'room_updated' && event.room) {
     currentRoom = /** @type {Room} */ (event.room);
+  } else if (event.type === 'presence_updated' && event.playerId && currentRoom) {
+    const player = currentRoom.players.find((p) => p.id === event.playerId);
+    if (player && event.presence) {
+      player.presence = { ...event.presence };
+    }
   } else if (event.type === 'couple_updated' && event.couple) {
     currentCoupleStats = /** @type {CoupleStats} */ (event.couple);
   } else if (event.type === 'room_removed') {

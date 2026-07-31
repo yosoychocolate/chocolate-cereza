@@ -20,9 +20,18 @@
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     document.documentElement.classList.add('intro-lock');
     window.scrollTo(0, 0);
+    window.__FILE_PROTOCOL__ = location.protocol === 'file:';
   </script>
 </head>
 <body>
+  <div id="file-protocol-warning" class="file-protocol-warning" hidden>
+    <div class="file-protocol-warning-inner">
+      <button type="button" id="file-protocol-dismiss" class="file-protocol-dismiss" aria-label="Fechar aviso">✕</button>
+      <strong>⚠️ Este link não funciona direto da pasta</strong>
+      <p>Feche esta aba. Na pasta do site, dê <strong>dois cliques em <code>ABRIR-SITE.bat</code></strong> (ou <code>serve.bat</code>).</p>
+      <p>O navegador abrirá sozinho em <code>http://localhost:8080</code>.</p>
+    </div>
+  </div>
   <!-- Chuva de pétalas e corações -->
   <div id="petal-rain" aria-hidden="true"></div>
   <div id="ambient-bg" aria-hidden="true"></div>
@@ -88,6 +97,11 @@
             <span id="music-current">00:00</span>
             <span id="music-duration">00:00</span>
           </div>
+        </div>
+        <div class="music-volume" aria-label="Volumen">
+          <button type="button" class="music-vol-btn" data-music-vol-down aria-label="Bajar volumen">🔉</button>
+          <span class="music-vol-label" aria-live="polite">35%</span>
+          <button type="button" class="music-vol-btn" data-music-vol-up aria-label="Subir volumen">🔊</button>
         </div>
       </div>
       <p id="music-quote" class="music-quote">"Cada vez que esta canción suena, me recuerda a ti." 🍫🍒❤️</p>
@@ -556,11 +570,29 @@
     <button type="button" id="music-autoplay-btn" class="music-autoplay-btn">🎵 Reproducir nuestra canción</button>
   </div>
 
+  <!-- Missão diária — 20:30 (horário EUA) 🔋🐻 -->
+  <div id="daily-charge-overlay" class="daily-charge-overlay hidden" aria-hidden="true" role="dialog" aria-labelledby="daily-charge-label">
+    <div id="daily-charge-rain" class="daily-charge-rain" aria-hidden="true"></div>
+    <div class="daily-charge-card">
+      <div id="daily-charge-bear" class="daily-charge-bear"></div>
+      <p id="daily-charge-label" class="daily-charge-label">🐻 Teddy:</p>
+      <div id="daily-charge-message" class="daily-charge-message"></div>
+      <div id="daily-charge-rewards" class="daily-charge-rewards hidden" aria-live="polite"></div>
+      <button type="button" id="daily-charge-action" class="btn-neon daily-charge-btn">🔌 Coloquei para carregar</button>
+      <button type="button" id="daily-charge-notif-btn" class="daily-charge-notif-btn">🔔 Ativar lembretes às 20:30</button>
+      <button type="button" id="daily-charge-dismiss" class="daily-charge-dismiss hidden">Fechar</button>
+    </div>
+  </div>
+
   <div id="music-float-wrap" class="music-float-wrap">
     <div id="music-notes" class="music-notes" aria-hidden="true"></div>
-    <button type="button" id="music-toggle" class="music-toggle" aria-label="Reproducir música">
-      <span id="music-icon" class="music-icon">🎵</span>
-    </button>
+    <div class="music-float-controls">
+      <button type="button" class="music-float-vol-btn" data-music-vol-down aria-label="Bajar volumen">−</button>
+      <button type="button" id="music-toggle" class="music-toggle" aria-label="Reproducir música">
+        <span id="music-icon" class="music-icon">🎵</span>
+      </button>
+      <button type="button" class="music-float-vol-btn" data-music-vol-up aria-label="Subir volumen">+</button>
+    </div>
   </div>
 
   <script src="music-playlist.js?v=__APP_VERSION__"></script>
@@ -573,9 +605,29 @@
   <script src="spaceship-engine.js?v=__APP_VERSION__"></script>
   <script src="game-meta.js?v=__APP_VERSION__"></script>
   <script src="game-shop.js?v=__APP_VERSION__"></script>
+  <script src="daily-charge-mission.js?v=__APP_VERSION__"></script>
   <script src="cannon-missions.js?v=__APP_VERSION__"></script>
   <script src="spaceship-ui.js?v=__APP_VERSION__"></script>
   <script src="script.js?v=__APP_VERSION__"></script>
-  <script type="module" src="couple-ui.js?v=__APP_VERSION__"></script>
+  <script>
+    if (window.__FILE_PROTOCOL__) {
+      document.documentElement.classList.add('file-protocol-active');
+      const warn = document.getElementById('file-protocol-warning');
+      const dismiss = document.getElementById('file-protocol-dismiss');
+      if (warn && !sessionStorage.getItem('fileProtocolWarnDismissed')) {
+        warn.hidden = false;
+      }
+      dismiss?.addEventListener('click', () => {
+        sessionStorage.setItem('fileProtocolWarnDismissed', '1');
+        if (warn) warn.hidden = true;
+        document.documentElement.classList.remove('file-protocol-active');
+      });
+    } else {
+      const mod = document.createElement('script');
+      mod.type = 'module';
+      mod.src = 'couple-ui.js?v=__APP_VERSION__';
+      document.body.appendChild(mod);
+    }
+  </script>
 </body>
 </html>
