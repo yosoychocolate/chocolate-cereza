@@ -379,11 +379,31 @@ async function fetchRoom(db, roomCode) {
   return buildRoom(roomSnap, players);
 }
 
-function resolvePlayerCount(roomData, fallbackCount) {
-  if (typeof roomData.playerCount === 'number' && Number.isFinite(roomData.playerCount)) {
-    return Math.max(0, roomData.playerCount);
+function resolvePlayerCount(roomData, listedPlayerCount) {
+  const listed = Math.max(0, listedPlayerCount);
+  const stored =
+    typeof roomData.playerCount === 'number' && Number.isFinite(roomData.playerCount)
+      ? Math.max(0, roomData.playerCount)
+      : null;
+  // Si el contador guardado es mayor que los documentos reales, está desactualizado.
+  if (stored !== null && stored > listed) return listed;
+  if (stored !== null) return Math.max(stored, listed);
+  return listed;
+}
+
+/** Repara profile/presencia si el jugador ya está en la sala pero incompleto. */
+async function repairPlayerMembership(db, roomCode, player) {
+  const profileSnap = await getDoc(profileRef(db, roomCode, player.id));
+  if (!profileSnap.exists()) {
+    await writePlayerCloud(db, roomCode, player);
+    return;
   }
-  return Math.max(0, fallbackCount);
+  await setDoc(
+    profileRef(db, roomCode, player.id),
+    { id: player.id, name: player.name, joinedAt: player.joinedAt },
+    { merge: true }
+  );
+  await setPlayerOnline(db, roomCode, player.id);
 }
 
 function persistSession(room, player) {
@@ -1060,25 +1080,38 @@ export async function joinRoom(code, player) {
       }
 
       const data = roomSnap.data();
-      if (data.status === 'closed') {
-        throw new Error('ROOM_CLOSED');
-      }
       const maxPlayers = typeof data.maxPlayers === 'number' ? data.maxPlayers : MAX_PLAYERS;
       const existingPlayerSnap = await transaction.get(rootRef);
+      const activeCount = resolvePlayerCount(data, listedPlayerCount);
 
       if (existingPlayerSnap.exists()) {
         joinedExisting = true;
+        const repairedStatus = activeCount >= maxPlayers ? 'full' : 'waiting';
+        if (
+          data.playerCount !== activeCount
+          || data.status === 'closed'
+          || (data.status === 'full' && activeCount < maxPlayers)
+        ) {
+          transaction.update(roomRef, {
+            playerCount: activeCount,
+            status: repairedStatus,
+            updatedAt: serverTimestamp(),
+          });
+        }
         return;
       }
 
-      const currentCount = resolvePlayerCount(data, listedPlayerCount);
-      if (currentCount >= maxPlayers) {
+      if (data.status === 'closed' && activeCount >= maxPlayers) {
+        throw new Error('ROOM_CLOSED');
+      }
+
+      if (activeCount >= maxPlayers) {
         throw new Error('ROOM_FULL');
       }
 
       transactionCreatePlayer(transaction, db, roomCode, normalized);
 
-      const newCount = currentCount + 1;
+      const newCount = activeCount + 1;
       transaction.update(roomRef, {
         playerCount: newCount,
         status: newCount >= maxPlayers ? 'full' : 'waiting',
@@ -1086,7 +1119,9 @@ export async function joinRoom(code, player) {
       });
     });
 
-    if (!joinedExisting) {
+    if (joinedExisting) {
+      await repairPlayerMembership(db, roomCode, normalized);
+    } else {
       await setPlayerOnline(db, roomCode, normalized.id);
       postJoinChatMessage(db, roomCode, normalized.name).catch((err) => {
         console.warn('[CloudManager] postJoinChatMessage:', err);
@@ -1115,7 +1150,7 @@ export async function joinRoom(code, player) {
       return fail('ROOM_NOT_FOUND', 'Sala no encontrada.');
     }
     if (message === 'ROOM_FULL') {
-      return fail('ROOM_FULL', 'Sala llena — máximo 2 jugadores.');
+      return fail('ROOM_FULL', 'Sala llena (2 jugadores). Pide a tu pareja que salga o crea otra sala.');
     }
     if (message === 'ROOM_CLOSED') {
       return fail('ROOM_CLOSED', 'La sala está cerrada. Crea una nueva sala.');
@@ -1155,10 +1190,9 @@ export async function leaveRoom() {
       if (!roomSnap.exists()) return;
 
       const data = roomSnap.data();
-      const currentCount = resolvePlayerCount(data, listedPlayerCount);
       transactionDeletePlayer(transaction, db, roomId, playerId);
 
-      const newCount = Math.max(0, currentCount - 1);
+      const newCount = Math.max(0, listedPlayerCount - 1);
 
       if (newCount === 0) {
         transactionDeleteCouple(transaction, db, roomId);
