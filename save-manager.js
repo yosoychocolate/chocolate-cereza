@@ -108,10 +108,10 @@
 
   function createDefaultCoupleHubTasks() {
     return [
-      { id: 'seed_1', text: 'Carregar o carro', emoji: '🔋', done: false, order: 0 },
+      { id: 'seed_1', text: 'Cargar el auto', emoji: '🔋', done: false, order: 0 },
       { id: 'seed_2', text: 'Comprar café', emoji: '☕', done: false, order: 1 },
       { id: 'seed_3', text: 'Comprar chocolate', emoji: '🍫', done: false, order: 2 },
-      { id: 'seed_4', text: 'Ligar para mamãe', emoji: '📞', done: false, order: 3 },
+      { id: 'seed_4', text: 'Llamar a mamá', emoji: '📞', done: false, order: 3 },
       { id: 'seed_5', text: 'Ir ao mercado', emoji: '🛒', done: false, order: 4 },
     ];
   }
@@ -119,10 +119,10 @@
   function createDefaultCoupleHubEvents() {
     const year = new Date().getFullYear();
     return [
-      { id: 'ev_1', title: 'Nosso encontro', date: `${year}-08-15`, emoji: '❤️', note: '' },
-      { id: 'ev_2', title: 'Revisão do carro', date: `${year}-08-20`, emoji: '🚗', note: '' },
-      { id: 'ev_3', title: 'Aniversário', date: `${year}-09-02`, emoji: '🎂', note: '' },
-      { id: 'ev_4', title: 'Viagem', date: `${year}-10-18`, emoji: '✈️', note: '' },
+      { id: 'ev_1', title: 'Nuestro encuentro', date: `${year}-08-15`, emoji: '❤️', note: '' },
+      { id: 'ev_2', title: 'Revisión del auto', date: `${year}-08-20`, emoji: '🚗', note: '' },
+      { id: 'ev_3', title: 'Cumpleaños', date: `${year}-09-02`, emoji: '🎂', note: '' },
+      { id: 'ev_4', title: 'Viaje', date: `${year}-10-18`, emoji: '✈️', note: '' },
     ];
   }
 

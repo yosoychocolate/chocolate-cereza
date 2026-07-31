@@ -78,7 +78,7 @@
     { id: 'weekend', icon: '📅', title: 'Fin de Semana', desc: 'Juega un sábado o domingo.' },
     { id: 'silent_heart', icon: '🤫', title: 'Amor Silencioso', desc: 'Juega 5 minutos con el sonido apagado.' },
     { id: 'explorer', icon: '🗺️', title: 'Explorador', desc: 'Abre estadísticas, logros y ajustes.', toastScope: 'site' },
-    { id: 'charge_care_7', icon: '🏆', title: 'Cuidando do Chocolate', desc: '7 dias seguidos cuidando do Chocolate.', toastScope: 'site' },
+    { id: 'charge_care_7', icon: '🏆', title: 'Cuidando del Chocolate', desc: '7 días seguidos cuidando del Chocolate.', toastScope: 'site' },
     /* Supervivencia & partidas */
     { id: 'last_stand', icon: '🛡️', title: 'Última Vida', desc: 'Alcanza 35+ estando a 1 vida.' },
     { id: 'games_10', icon: '🎮', title: 'Jugador Fiel', desc: 'Completa 10 partidas.' },

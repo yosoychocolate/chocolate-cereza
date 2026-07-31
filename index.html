@@ -26,10 +26,10 @@
 <body>
   <div id="file-protocol-warning" class="file-protocol-warning" hidden>
     <div class="file-protocol-warning-inner">
-      <button type="button" id="file-protocol-dismiss" class="file-protocol-dismiss" aria-label="Fechar aviso">✕</button>
-      <strong>⚠️ Este link não funciona direto da pasta</strong>
-      <p>Feche esta aba. Na pasta do site, dê <strong>dois cliques em <code>ABRIR-SITE.bat</code></strong> (ou <code>serve.bat</code>).</p>
-      <p>O navegador abrirá sozinho em <code>http://localhost:8080</code>.</p>
+      <button type="button" id="file-protocol-dismiss" class="file-protocol-dismiss" aria-label="Cerrar aviso">✕</button>
+      <strong>⚠️ Este enlace no funciona directo desde la carpeta</strong>
+      <p>Cierra esta pestaña. En la carpeta del sitio, haz <strong>doble clic en <code>ABRIR-SITE.bat</code></strong> (o <code>serve.bat</code>).</p>
+      <p>El navegador abrirá solo en <code>http://localhost:8080</code>.</p>
     </div>
   </div>
   <!-- Chuva de pétalas e corações -->
@@ -52,7 +52,7 @@
           <span>❤️ Entrar en nuestra historia</span>
         </button>
         <button type="button" id="btn-intro-notifications" class="btn-notif-pink">
-          <span>🔔 Notificações</span>
+          <span>🔔 Notificaciones</span>
         </button>
         <p id="intro-notif-hint" class="intro-notif-hint hidden" aria-live="polite"></p>
       </div>
@@ -78,10 +78,10 @@
       <span class="header-title">🍫 El Chocolate & La Cereza 🍒</span>
     </header>
 
-    <nav class="site-hub-nav glass" aria-label="Menu do casal">
-      <button type="button" class="site-hub-nav-btn" data-scroll="section-couple-hub">🏡 Nossa Casa</button>
-      <button type="button" class="site-hub-nav-btn" data-scroll="section-timeline">📖 História</button>
-      <button type="button" class="site-hub-nav-btn" data-scroll="section-game">🎮 Jogos</button>
+    <nav class="site-hub-nav glass" aria-label="Menú de la pareja">
+      <button type="button" class="site-hub-nav-btn" data-scroll="section-couple-hub">🏡 Nuestro Hogar</button>
+      <button type="button" class="site-hub-nav-btn" data-scroll="section-timeline">📖 Historia</button>
+      <button type="button" class="site-hub-nav-btn" data-scroll="section-game">🎮 Juegos</button>
     </nav>
 
     <!-- Nuestra canción -->
@@ -144,9 +144,9 @@
       <div id="poem-output" class="poem-output" aria-live="polite"></div>
     </section>
 
-    <!-- Medidor do Amor -->
+    <!-- Medidor del Amor -->
     <section class="section glass" id="section-meter">
-      <h2>Medidor do Amor</h2>
+      <h2>Medidor del Amor</h2>
       <div class="meter-labels">
         <span>🤎</span>
         <span>❤️</span>
@@ -171,7 +171,7 @@
 
     <!-- Timeline -->
     <section class="section glass" id="section-timeline">
-      <h2>Nossa história</h2>
+      <h2>Nuestra historia</h2>
       <div class="timeline">
         <div class="timeline-item">
           <span class="timeline-icon">🍫</span>
@@ -195,44 +195,44 @@
       </div>
     </section>
 
-    <!-- Central do Casal / Nossa Casa -->
+    <!-- Hogar del casal / Nuestro Hogar -->
     <section class="section glass" id="section-couple-hub">
-      <h2>🏡 Nossa Casa</h2>
-      <p id="hub-sync-badge" class="hub-sync-badge">Carregando…</p>
+      <h2>🏡 Nuestro Hogar</h2>
+      <p id="hub-sync-badge" class="hub-sync-badge">Cargando…</p>
 
       <div class="hub-tabs visually-hidden" aria-hidden="true">
-        <button type="button" class="hub-tab is-active" data-hub-tab="nossa-casa" role="tab" aria-selected="true">🏡 Casa</button>
+        <button type="button" class="hub-tab is-active" data-hub-tab="nossa-casa" role="tab" aria-selected="true">🏡 Hogar</button>
         <button type="button" class="hub-tab" data-hub-tab="agenda" role="tab" aria-selected="false">📝 Agenda</button>
-        <button type="button" class="hub-tab" data-hub-tab="calendario" role="tab" aria-selected="false">📅 Calendário</button>
-        <button type="button" class="hub-tab" data-hub-tab="cartinhas" role="tab" aria-selected="false">💌 Cartinhas</button>
-        <button type="button" class="hub-tab" data-hub-tab="memorias" role="tab" aria-selected="false">📸 Memórias</button>
+        <button type="button" class="hub-tab" data-hub-tab="calendario" role="tab" aria-selected="false">📅 Calendario</button>
+        <button type="button" class="hub-tab" data-hub-tab="cartinhas" role="tab" aria-selected="false">💌 Cartitas</button>
+        <button type="button" class="hub-tab" data-hub-tab="memorias" role="tab" aria-selected="false">📸 Recuerdos</button>
         <button type="button" class="hub-tab" data-hub-tab="contador" role="tab" aria-selected="false">❤️ Contador</button>
-        <button type="button" class="hub-tab" data-hub-tab="missoes" role="tab" aria-selected="false">🎯 Missões</button>
-        <button type="button" class="hub-tab" data-hub-tab="lembretes" role="tab" aria-selected="false">🔔 Lembretes</button>
+        <button type="button" class="hub-tab" data-hub-tab="missoes" role="tab" aria-selected="false">🎯 Misiones</button>
+        <button type="button" class="hub-tab" data-hub-tab="lembretes" role="tab" aria-selected="false">🔔 Recordatorios</button>
       </div>
 
       <div class="hub-panel" data-hub-panel="nossa-casa">
-        <div id="nossa-casa-scene" class="nossa-casa-scene" aria-label="Nossa casa"></div>
+        <div id="nossa-casa-scene" class="nossa-casa-scene" aria-label="Nuestro hogar"></div>
       </div>
 
       <div class="hub-panel visually-hidden" aria-hidden="true" data-hub-panel="agenda">
-        <p class="hub-panel-desc">Lista simples — marque quando concluir.</p>
+        <p class="hub-panel-desc">Lista simple — marca cuando completes.</p>
         <ul id="hub-task-list" class="hub-task-list"></ul>
         <form id="hub-task-form" class="hub-inline-form">
           <input id="hub-task-emoji" class="hub-input hub-input-emoji" type="text" maxlength="4" placeholder="🔋" aria-label="Emoji">
-          <input id="hub-task-input" class="hub-input" type="text" maxlength="80" placeholder="Nova tarefa…" required>
-          <button type="submit" class="couple-btn couple-btn-small couple-btn-primary">Adicionar</button>
+          <input id="hub-task-input" class="hub-input" type="text" maxlength="80" placeholder="Nueva tarea…" required>
+          <button type="submit" class="couple-btn couple-btn-small couple-btn-primary">Añadir</button>
         </form>
       </div>
 
       <div class="hub-panel hidden" data-hub-panel="calendario">
         <div class="hub-cal-head">
-          <button type="button" id="hub-cal-prev" class="hub-cal-nav" aria-label="Mês anterior">◀</button>
+          <button type="button" id="hub-cal-prev" class="hub-cal-nav" aria-label="Mes anterior">◀</button>
           <h3 id="hub-cal-title" class="hub-cal-title"></h3>
-          <button type="button" id="hub-cal-next" class="hub-cal-nav" aria-label="Próximo mês">▶</button>
+          <button type="button" id="hub-cal-next" class="hub-cal-nav" aria-label="Mes siguiente">▶</button>
         </div>
         <div class="hub-cal-weekdays" aria-hidden="true">
-          <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
+          <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
         </div>
         <div id="hub-cal-grid" class="hub-cal-grid"></div>
         <div id="hub-day-panel" class="hub-day-panel"></div>
@@ -241,7 +241,7 @@
       <div class="hub-panel hidden" data-hub-panel="cartinhas">
         <div id="hub-letter-list" class="hub-letter-list"></div>
         <form id="hub-letter-form" class="hub-stack-form">
-          <textarea id="hub-letter-input" class="hub-textarea" rows="3" maxlength="500" placeholder="Escreva uma cartinha…" required></textarea>
+          <textarea id="hub-letter-input" class="hub-textarea" rows="3" maxlength="500" placeholder="Escribe una cartita…" required></textarea>
           <button type="submit" class="couple-btn couple-btn-primary">Enviar 💌</button>
         </form>
       </div>
@@ -249,53 +249,53 @@
       <div class="hub-panel hidden" data-hub-panel="memorias">
         <div id="hub-memory-grid" class="hub-memory-grid"></div>
         <form id="hub-memory-form" class="hub-stack-form">
-          <input id="hub-memory-title" class="hub-input" type="text" maxlength="60" placeholder="Título (ex: Praia)">
-          <input id="hub-memory-url" class="hub-input" type="url" placeholder="URL da foto (opcional)">
-          <label class="hub-file-label">📷 Ou escolha uma foto <input id="hub-memory-file" type="file" accept="image/*"></label>
-          <button type="submit" class="couple-btn couple-btn-primary">Salvar memória</button>
+          <input id="hub-memory-title" class="hub-input" type="text" maxlength="60" placeholder="Título (ej: Playa)">
+          <input id="hub-memory-url" class="hub-input" type="url" placeholder="URL de la foto (opcional)">
+          <label class="hub-file-label">📷 O elige una foto <input id="hub-memory-file" type="file" accept="image/*"></label>
+          <button type="submit" class="couple-btn couple-btn-primary">Guardar recuerdo</button>
         </form>
       </div>
 
       <div class="hub-panel hidden" data-hub-panel="contador">
         <div class="hub-counter-cards">
           <div class="hub-counter-card">
-            <p class="hub-counter-heading">Juntos há</p>
+            <p class="hub-counter-heading">Juntos hace</p>
             <div id="hub-counter-together"></div>
           </div>
           <div class="hub-counter-card">
-            <p class="hub-counter-heading">Próximo encontro</p>
+            <p class="hub-counter-heading">Próximo encuentro</p>
             <div id="hub-counter-meeting"></div>
           </div>
         </div>
         <form id="hub-counter-form" class="hub-stack-form">
-          <label class="hub-field">Início do relacionamento<input id="hub-relationship-start" class="hub-input" type="date"></label>
-          <label class="hub-field">Próximo encontro<input id="hub-next-meeting" class="hub-input" type="date"></label>
-          <button type="submit" class="couple-btn couple-btn-primary">Salvar datas</button>
+          <label class="hub-field">Inicio de la relación<input id="hub-relationship-start" class="hub-input" type="date"></label>
+          <label class="hub-field">Próximo encuentro<input id="hub-next-meeting" class="hub-input" type="date"></label>
+          <button type="submit" class="couple-btn couple-btn-primary">Guardar fechas</button>
         </form>
       </div>
 
       <div class="hub-panel hidden" data-hub-panel="missoes">
-        <p class="hub-panel-desc">Todo dia missões diferentes — cada uma rende 🍫.</p>
+        <p class="hub-panel-desc">Cada día misiones diferentes — cada una da 🍫.</p>
         <ul id="hub-mission-list" class="hub-mission-list"></ul>
       </div>
 
       <div class="hub-panel hidden" data-hub-panel="lembretes">
-        <p class="hub-panel-desc">Sophie pode escolher o horário nos EUA 🇺🇸 — você vê o mesmo evento no Brasil 🇧🇷.</p>
+        <p class="hub-panel-desc">Sophie puede elegir la hora en EE.UU. 🇺🇸 — tú ves el mismo evento en Brasil 🇧🇷.</p>
         <form id="hub-reminder-form" class="hub-stack-form">
           <label class="hub-check-row">
             <input id="hub-reminder-enabled" type="checkbox">
-            <span>🔋 Carregar o carro — ativar lembrete</span>
+            <span>🔋 Cargar el auto — activar recordatorio</span>
           </label>
-          <label class="hub-field">Horário<input id="hub-reminder-time" class="hub-input" type="time" value="20:30"></label>
-          <label class="hub-field">Fuso horário
+          <label class="hub-field">Hora<input id="hub-reminder-time" class="hub-input" type="time" value="20:30"></label>
+          <label class="hub-field">Zona horaria
             <select id="hub-reminder-tz" class="hub-input">
-              <option value="America/New_York">EUA — Nova York (Sophie)</option>
+              <option value="America/New_York">EE.UU. — Nueva York (Sophie)</option>
               <option value="America/Sao_Paulo">Brasil — São Paulo</option>
-              <option value="America/Chicago">EUA — Chicago</option>
-              <option value="America/Los_Angeles">EUA — Los Angeles</option>
+              <option value="America/Chicago">EE.UU. — Chicago</option>
+              <option value="America/Los_Angeles">EE.UU. — Los Angeles</option>
             </select>
           </label>
-          <button type="submit" class="couple-btn couple-btn-primary">Salvar lembrete</button>
+          <button type="submit" class="couple-btn couple-btn-primary">Guardar recordatorio</button>
         </form>
       </div>
 
@@ -458,7 +458,7 @@
         </div>
         <div id="game-shop-panel" class="game-meta-panel game-shop-panel hidden" role="region" aria-label="Tienda del chocolate">
           <div class="game-shop-head">
-            <h3 class="game-meta-panel-title">🍫 Loja do Chocolate</h3>
+            <h3 class="game-meta-panel-title">🍫 Tienda del Chocolate</h3>
             <p class="game-shop-wallet">Saldo: <strong id="game-shop-wallet">0</strong> 🍫</p>
           </div>
           <nav id="game-shop-tabs" class="game-shop-tabs" aria-label="Categorías de la tienda">
@@ -490,7 +490,7 @@
           <span class="game-score-label" aria-hidden="true">🍫</span>
           <span class="game-score-num">0</span>
           <span id="game-wallet-inline" class="game-wallet-inline" title="Chocolates para la tienda">🛒 <span>0</span></span>
-          <span id="game-ring-badge" class="game-ring-badge hidden" aria-hidden="true" title="Anel do Amor">💍</span>
+          <span id="game-ring-badge" class="game-ring-badge hidden" aria-hidden="true" title="Anillo del Amor">💍</span>
           <span id="game-shield-badge" class="game-shield-badge hidden" aria-label="Escudo activo" title="Escudo — protege 1 chocolate perdido">🛡️</span>
           <span class="game-record-inline" aria-label="Récord">🏆 <span id="game-high-score-val">0</span></span>
           <span id="game-endless-badge" class="game-endless-badge hidden">✨ Modo Infinito</span>
@@ -637,7 +637,7 @@
     <section class="section glass" id="section-letter">
       <h2>Carta</h2>
       <div id="envelope" class="envelope" role="button" tabindex="0" aria-label="Abrir carta">
-        <img id="envelope-img" class="envelope-img" src="assets/envelope.png" alt="Sobre com coração">
+        <img id="envelope-img" class="envelope-img" src="assets/envelope.png" alt="Sobre con corazón">
       </div>
       <div id="letter-content" class="letter-content hidden">
         <p>No sé cuánto tiempo pase.</p>
@@ -698,11 +698,11 @@
       <p id="daily-charge-label" class="daily-charge-label">🐻 Teddy:</p>
       <div id="daily-charge-message" class="daily-charge-message"></div>
       <div id="daily-charge-rewards" class="daily-charge-rewards hidden" aria-live="polite"></div>
-      <button type="button" id="daily-charge-action" class="btn-neon daily-charge-btn">🔌 Coloquei para carregar</button>
+      <button type="button" id="daily-charge-action" class="btn-neon daily-charge-btn">🔌 Lo conecté a cargar</button>
       <button type="button" id="daily-charge-notif-btn" class="btn-notif-pink daily-charge-notif-btn hidden">
-        <span>🔔 Notificações</span>
+        <span>🔔 Notificaciones</span>
       </button>
-      <button type="button" id="daily-charge-dismiss" class="daily-charge-dismiss hidden">Fechar</button>
+      <button type="button" id="daily-charge-dismiss" class="daily-charge-dismiss hidden">Cerrar</button>
     </div>
   </div>
 
@@ -717,10 +717,10 @@
     </div>
   </div>
 
-  <div id="casa-mascot-widget" class="casa-mascot-widget hidden" role="complementary" aria-label="Mascote do casal">
+  <div id="casa-mascot-widget" class="casa-mascot-widget hidden" role="complementary" aria-label="Mascota de la pareja">
     <div class="casa-mascot-inner">
       <span id="casa-mascot-emoji" class="casa-mascot-emoji" aria-hidden="true">🐻</span>
-      <p id="casa-mascot-bubble" class="casa-mascot-bubble">Olá!</p>
+      <p id="casa-mascot-bubble" class="casa-mascot-bubble">¡Hola!</p>
     </div>
   </div>
   <div id="casa-toast" class="casa-toast hidden" role="status" aria-live="polite"></div>

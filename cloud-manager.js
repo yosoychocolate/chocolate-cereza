@@ -309,11 +309,11 @@ function ok(room) {
 function requireDb() {
   refreshConnection();
   if (!isFirebaseReady()) {
-    throw new Error('Firebase não conectado.');
+    throw new Error('Firebase no conectado.');
   }
   const db = getFirestoreDb();
   if (!db) {
-    throw new Error('Firestore indisponível.');
+    throw new Error('Firestore no disponible.');
   }
   return db;
 }
@@ -613,7 +613,7 @@ export function getConnectionStatus() {
       connected: false,
       status: 'config_invalid',
       provider: 'firebase',
-      error: 'Configuração Firebase inválida.',
+      error: 'Configuración de Firebase inválida.',
     };
   }
 
@@ -672,7 +672,7 @@ export function getLocalPlayer() {
  */
 export async function getRoomPresence() {
   if (!currentRoom) {
-    return fail('NOT_IN_ROOM', 'Você não está em uma sala.');
+    return fail('NOT_IN_ROOM', 'No estás en una sala.');
   }
 
   try {
@@ -704,7 +704,7 @@ export async function getRoomPresence() {
  */
 export async function getCoupleStats() {
   if (!currentRoom) {
-    return fail('NOT_IN_ROOM', 'Você não está em uma sala.');
+    return fail('NOT_IN_ROOM', 'No estás en una sala.');
   }
 
   try {
@@ -726,7 +726,7 @@ export async function getCoupleStats() {
  */
 export async function submitScore(playerId, playerName, score) {
   if (!currentRoom) {
-    return fail('NOT_IN_ROOM', 'Você não está em uma sala.');
+    return fail('NOT_IN_ROOM', 'No estás en una sala.');
   }
 
   const pid = typeof playerId === 'string' ? playerId.trim() : '';
@@ -737,7 +737,7 @@ export async function submitScore(playerId, playerName, score) {
   }
 
   if (typeof score !== 'number' || !Number.isFinite(score) || score < 0) {
-    return fail('INVALID_SCORE', 'Pontuação inválida.');
+    return fail('INVALID_SCORE', 'Puntuación inválida.');
   }
 
   try {
@@ -775,7 +775,7 @@ export async function submitScore(playerId, playerName, score) {
  */
 export async function getCoupleRanking() {
   if (!currentRoom) {
-    return fail('NOT_IN_ROOM', 'Você não está em uma sala.');
+    return fail('NOT_IN_ROOM', 'No estás en una sala.');
   }
 
   try {
@@ -817,7 +817,7 @@ async function generateUniqueRoomCode(db) {
     const snap = await getDoc(roomDocRef(db, code));
     if (!snap.exists()) return code;
   }
-  throw new Error('Não foi possível gerar um código de sala único.');
+  throw new Error('No se pudo generar un código de sala único.');
 }
 
 /**
@@ -842,7 +842,7 @@ export async function restoreSession() {
   const generation = restoreGeneration;
   const session = getSession();
   if (!session) {
-    return fail('NO_SESSION', 'Nenhuma sessão de sala encontrada.');
+    return fail('NO_SESSION', 'No hay sesión de sala guardada.');
   }
 
   if (currentRoom) {
@@ -941,7 +941,7 @@ export async function createRoom(player) {
 
     const room = await fetchRoom(db, code);
     if (!room) {
-      return fail('CREATE_FAILED', 'Sala criada, mas não foi possível carregá-la.');
+      return fail('CREATE_FAILED', 'Sala creada, pero no se pudo cargar.');
     }
 
     setLocalRoom(room, normalized.id);
@@ -960,7 +960,7 @@ export async function createRoom(player) {
 export async function joinRoom(code, player) {
   const normalized = normalizePlayer(player);
   if (!normalized) {
-    return fail('INVALID_PLAYER', 'Jogador inválido — informe ao menos um id.');
+    return fail('INVALID_PLAYER', 'Jugador inválido — indica al menos un id.');
   }
 
   const roomCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
@@ -1037,7 +1037,7 @@ export async function joinRoom(code, player) {
 
     const room = await fetchRoom(db, roomCode);
     if (!room) {
-      return fail('JOIN_FAILED', 'Não foi possível entrar na sala.');
+      return fail('JOIN_FAILED', 'No se pudo entrar en la sala.');
     }
 
     setLocalRoom(room, normalized.id);
@@ -1054,10 +1054,10 @@ export async function joinRoom(code, player) {
 
     const message = err instanceof Error ? err.message : String(err);
     if (message === 'ROOM_NOT_FOUND') {
-      return fail('ROOM_NOT_FOUND', 'Sala não encontrada.');
+      return fail('ROOM_NOT_FOUND', 'Sala no encontrada.');
     }
     if (message === 'ROOM_FULL') {
-      return fail('ROOM_FULL', 'Sala cheia — máximo de 2 jogadores.');
+      return fail('ROOM_FULL', 'Sala llena — máximo 2 jugadores.');
     }
     return fail('JOIN_FAILED', message);
   }
@@ -1288,7 +1288,7 @@ export async function fetchHubData() {
     return ok(snap);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    if (message === 'NO_ROOM') return fail('NO_ROOM', 'Entre em uma sala para sincronizar.');
+    if (message === 'NO_ROOM') return fail('NO_ROOM', 'Entra en una sala para sincronizar.');
     return fail('HUB_FETCH_FAILED', message);
   }
 }

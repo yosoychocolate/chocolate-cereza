@@ -16,18 +16,18 @@
 
   const MSGS = {
     main: [
-      'Sophie... chegou em casa? 🥺',
-      'O Chocolate está esperando um pouquinho de energia.',
-      'Não esqueça de colocar o carro para carregar. 🔋❤️',
+      'Sophie... ¿llegaste a casa? 🥺',
+      'El Chocolate está esperando un poquito de energía.',
+      'No olvides poner el auto a cargar. 🔋❤️',
     ],
     nudge: [
-      'Pssiu...',
-      'O Chocolate ainda está acordado esperando você. 🥺🔋',
+      'Pssst...',
+      'El Chocolate sigue despierto esperándote. 🥺🔋',
     ],
-    thanks: 'Obrigada por cuidar dele. Boa noite! 🌙❤️',
+    thanks: 'Gracias por cuidarlo. ¡Buenas noches! 🌙❤️',
     streak: (days) => [
-      '🏆 Cuidando do Chocolate',
-      `🔥 Sequência: ${days} dias`,
+      '🏆 Cuidando del Chocolate',
+      `🔥 Racha: ${days} días`,
       `Recompensa: 🍫 +${STREAK_BONUS_COINS} chocolates`,
     ],
   };
@@ -182,7 +182,7 @@
     if (!els.rewards) return;
     const lines = [
       `<span class="daily-charge-reward-line">✨ +${REWARD_COINS} 🍫 chocolates</span>`,
-      '<span class="daily-charge-reward-line">❤️ +1 dia de cuidado</span>',
+      '<span class="daily-charge-reward-line">❤️ +1 día de cuidado</span>',
       ...extraLines,
     ];
     els.rewards.innerHTML = lines.join('');
@@ -194,14 +194,14 @@
     if (els.label) els.label.textContent = '🐻 Teddy:';
     setMessage(MSGS.main);
     if (els.action) {
-      els.action.textContent = '🔌 Coloquei para carregar';
+      els.action.textContent = '🔌 Lo conecté a cargar';
       els.action.classList.remove('hidden');
       els.action.disabled = false;
     }
     if (els.notifBtn) {
       els.notifBtn.classList.toggle('hidden', Notification.permission === 'granted');
       if (Notification.permission !== 'granted' && els.notifBtn.querySelector('span')) {
-        els.notifBtn.querySelector('span').textContent = '🔔 Notificações';
+        els.notifBtn.querySelector('span').textContent = '🔔 Notificaciones';
       }
     }
     showOverlay('main');
@@ -213,7 +213,7 @@
     if (els.label) els.label.textContent = '🐻';
     setMessage(MSGS.nudge);
     if (els.action) {
-      els.action.textContent = '🔌 Coloquei para carregar';
+      els.action.textContent = '🔌 Lo conecté a cargar';
       els.action.classList.remove('hidden');
       els.action.disabled = false;
     }
@@ -265,7 +265,7 @@
     renderBear(true);
     showRewards(
       bonusCoins
-        ? [`<span class="daily-charge-reward-line streak-bonus">🏆 +${bonusCoins} 🍫 bônus de sequência!</span>`]
+        ? [`<span class="daily-charge-reward-line streak-bonus">🏆 +${bonusCoins} 🍫 bono de racha!</span>`]
         : []
     );
 
@@ -326,7 +326,7 @@
     btn.classList.remove('hidden', 'is-active', 'is-denied');
 
     if (Notification.permission === 'granted') {
-      btn.innerHTML = '<span>✅ Ativas</span>';
+      btn.innerHTML = '<span>✅ Activas</span>';
       btn.disabled = true;
       btn.classList.add('is-active');
       setIntroNotifHint('');
@@ -337,11 +337,11 @@
       btn.innerHTML = '<span>🔕 Bloqueadas</span>';
       btn.disabled = true;
       btn.classList.add('is-denied');
-      setIntroNotifHint('Ative em ajustes do navegador.', 'is-error');
+      setIntroNotifHint('Actívalas en los ajustes del navegador.', 'is-error');
       return;
     }
 
-    btn.innerHTML = '<span>🔔 Notificações</span>';
+    btn.innerHTML = '<span>🔔 Notificaciones</span>';
     btn.disabled = false;
     setIntroNotifHint('');
   }
@@ -370,7 +370,7 @@
       }
 
       if (Notification.permission === 'denied') {
-        setIntroNotifHint('Bloqueadas nos ajustes.', 'is-error');
+        setIntroNotifHint('Bloqueadas en los ajustes.', 'is-error');
       }
     });
   }
@@ -387,7 +387,7 @@
     if (Notification.permission !== 'granted') return;
 
     const title = '❤️ Chocolate & Cereza';
-    const body = 'Hora de colocar o carro para carregar. O Chocolate está esperando por você. 🔋🐻';
+    const body = 'Hora de poner el auto a cargar. El Chocolate te está esperando. 🔋🐻';
     const opts = {
       body,
       icon: 'assets/chocolate.png',

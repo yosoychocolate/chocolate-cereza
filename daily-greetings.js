@@ -1,88 +1,89 @@
-/**
- * DailyGreeting — mensagem personalizada diferente a cada dia (intro).
- */
-(function (global) {
-  'use strict';
-
-  const TIMEZONE = 'America/New_York';
-  const NAME = 'Sophie';
-
-  const GREETINGS = [
-    `🌸 Bom te ver de novo, ${NAME}.`,
-    '🍫 Hoje também reservei um cantinho do meu dia para você.',
-    '🍒 Pronta para bater meu recorde hoje? ❤️',
-    `☀️ Mais um dia, ${NAME} — e você continua sendo meu favorito.`,
-    '🐻 O Chocolate mandou um abraço antes de você entrar.',
-    '💫 Entre devagar… preparei coisinhas para você hoje.',
-    '🌙 Que bom que você apareceu. Eu estava te esperando.',
-    '❤️ Seu lugar aqui sempre está guardado.',
-    '🎵 Hoje a trilha sonora combina com você.',
-    '🔋 Lembrete carinhoso: cuidar do Chocolate também é cuidar de nós.',
-    '🍫🍒 Chocolate + Cereza = meu dia fica completo quando você vem.',
-    `✨ ${NAME}, você transforma um site em um lar.`,
-    '🌷 Pequeno ritual do dia: abrir isso e pensar em você.',
-    '🎯 Vamos fazer hoje valer a pena juntos?',
-    '💕 Mais um capítulo da nossa história começa agora.',
-    '🧸 Teddy diz: ela chegou! Esconda os segredos… ou não. 😄',
-    '🌈 Hoje eu escolhi esta mensagem só para você.',
-    '⭐ Você é a estrela que eu mais gosto de ver brilhar.',
-    '🍫 Um chocolate virtual para aquecer seu dia.',
-    '🍒 Cuidado: jogar comigo pode causar sorriso involuntário.',
-    `💗 Oi, ${NAME}. Senti sua falta — mesmo que tenha sido ontem.`,
-    '🎮 Modo carinho ativado. Pode entrar.',
-    '🌸 Flores digitais para a pessoa mais especial.',
-    '❤️‍🔥 Pronta? Porque eu já estou.',
-    '🕊️ Respira fundo… hoje vai ser bonito.',
-    '📖 Página nova do nosso diário. Vamos escrever juntos?',
-    '🍫 O Chocolate prometeu se comportar hoje. (Mentira.)',
-    `🌟 ${NAME}, obrigado por existir no meu mundo.`,
-    '💌 Esta mensagem é seu passe VIP de hoje.',
-    '🎁 Tem surpresas escondidas… mas só se você explorar.',
-    '🍒 Bater recorde é opcional. Te amar não é.',
-  ];
-
-  function getTodayKey(date = new Date()) {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(date);
-  }
-
-  function pickIndexForDay(dayKey, count) {
-    let hash = 0;
-    for (let i = 0; i < dayKey.length; i++) {
-      hash = ((hash << 5) - hash + dayKey.charCodeAt(i)) | 0;
-    }
-    return Math.abs(hash) % count;
-  }
-
-  function getGreetingForToday(date = new Date()) {
-    if (!GREETINGS.length) return '';
-    const dayKey = getTodayKey(date);
-    const index = pickIndexForDay(dayKey, GREETINGS.length);
-    return GREETINGS[index];
-  }
-
-  function renderIntroGreeting() {
-    const el = document.getElementById('intro-daily-greeting');
-    if (!el) return;
-    const text = getGreetingForToday();
-    el.textContent = text;
-    el.classList.add('is-visible');
-  }
-
-  function init() {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', renderIntroGreeting);
-    } else {
-      renderIntroGreeting();
-    }
-  }
-
-  global.DailyGreeting = {
-    init,
-    getGreetingForToday,
-    getTodayKey,
-    GREETINGS,
-    TIMEZONE,
-  };
-
-  init();
-})(typeof window !== 'undefined' ? window : globalThis);
+/**
+ * DailyGreeting — mensaje personalizada diferente cada día (intro).
+ */
+(function (global) {
+  'use strict';
+
+  const TIMEZONE = 'America/New_York';
+  const NAME = 'Sophie';
+
+  const GREETINGS = [
+    `🌸 Qué bueno verte de nuevo, ${NAME}.`,
+    '🍫 Hoy también reservé un rincón de mi día para ti.',
+    '🍒 ¿Lista para batir mi récord hoy? ❤️',
+    `☀️ Un día más, ${NAME} — y sigues siendo mi favorita.`,
+    '🐻 El Chocolate mandó un abrazo antes de que entraras.',
+    '💫 Entra despacio… preparé cositas para ti hoy.',
+    '🌙 Qué bueno que apareciste. Te estaba esperando.',
+    '❤️ Tu lugar aquí siempre está guardado.',
+    '🎵 Hoy la banda sonora combina contigo.',
+    '🔋 Recordatorio cariñoso: cuidar del Chocolate también es cuidar de nosotros.',
+    '🍫🍒 Chocolate + Cereza = mi día se completa cuando vienes.',
+    `✨ ${NAME}, conviertes un sitio en un hogar.`,
+    '🌷 Pequeño ritual del día: abrir esto y pensar en ti.',
+    '🎯 ¿Hacemos que hoy valga la pena juntos?',
+    '💕 Un capítulo más de nuestra historia empieza ahora.',
+    '🧸 Teddy dice: ¡llegó ella! Esconde los secretos… o no. 😄',
+    '🌈 Hoy elegí este mensaje solo para ti.',
+    '⭐ Eres la estrella que más me gusta ver brillar.',
+    '🍫 Un chocolate virtual para calentar tu día.',
+    '🍒 Cuidado: jugar conmigo puede causar sonrisa involuntaria.',
+    `💗 Hola, ${NAME}. Te extrañé — aunque haya sido ayer.`,
+    '🎮 Modo cariño activado. Puedes entrar.',
+    '🌸 Flores digitales para la persona más especial.',
+    '❤️‍🔥 ¿Lista? Porque yo ya lo estoy.',
+    '🕊️ Respira hondo… hoy va a ser bonito.',
+    '📖 Página nueva de nuestro diario. ¿La escribimos juntos?',
+    '🍫 El Chocolate prometió portarse bien hoy. (Mentira.)',
+    `🌟 ${NAME}, gracias por existir en mi mundo.`,
+    '💌 Este mensaje es tu pase VIP de hoy.',
+    '🎁 Hay sorpresas escondidas… pero solo si exploras.',
+    '🍒 Batir récord es opcional. Quererte no lo es.',
+  ];
+
+  function getTodayKey(date = new Date()) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(date);
+  }
+
+  function pickIndexForDay(dayKey, count) {
+    let hash = 0;
+    for (let i = 0; i < dayKey.length; i++) {
+      hash = ((hash << 5) - hash + dayKey.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash) % count;
+  }
+
+  function getGreetingForToday(date = new Date()) {
+    if (!GREETINGS.length) return '';
+    const dayKey = getTodayKey(date);
+    const index = pickIndexForDay(dayKey, GREETINGS.length);
+    return GREETINGS[index];
+  }
+
+  function renderIntroGreeting() {
+    const el = document.getElementById('intro-daily-greeting');
+    if (!el) return;
+    const text = getGreetingForToday();
+    el.textContent = text;
+    el.classList.add('is-visible');
+  }
+
+  function init() {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', renderIntroGreeting);
+    } else {
+      renderIntroGreeting();
+    }
+  }
+
+  global.DailyGreeting = {
+    init,
+    getGreetingForToday,
+    getTodayKey,
+    GREETINGS,
+    TIMEZONE,
+  };
+
+  init();
+})(typeof window !== 'undefined' ? window : globalThis);
+

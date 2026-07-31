@@ -13,8 +13,8 @@
   const createDefaultHubData = HS.createDefaultHubData || function () { return {}; };
 
   const MONTH_NAMES = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ];
 
 const els = {};
@@ -143,7 +143,7 @@ function setSyncBadge() {
     els.syncBadge.textContent = room ? `☁️ Sincronizado · Sala ${room.code}` : '☁️ Sincronizado';
     els.syncBadge.classList.add('is-cloud');
   } else {
-    els.syncBadge.textContent = '📱 Só neste aparelho — entre na sala para sincronizar BR ↔ EUA';
+    els.syncBadge.textContent = '📱 Solo en este dispositivo — entra en la sala para sincronizar BR ↔ EE.UU.';
     els.syncBadge.classList.remove('is-cloud');
   }
 }
@@ -169,7 +169,7 @@ function renderTasks() {
   if (!els.taskList) return;
   const tasks = [...hubState.tasks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   if (!tasks.length) {
-    els.taskList.innerHTML = '<li class="hub-empty">Nenhuma tarefa ainda.</li>';
+    els.taskList.innerHTML = '<li class="hub-empty">Ninguna tarea todavía.</li>';
     return;
   }
   els.taskList.innerHTML = tasks.map((task) => {
@@ -180,7 +180,7 @@ function renderTasks() {
         <input type="checkbox" class="hub-task-check" data-task-id="${escapeHtml(task.id)}" ${checked}>
         <span class="hub-task-text">${escapeHtml(task.emoji || '✓')} ${escapeHtml(task.text)}</span>
       </label>
-      <button type="button" class="hub-icon-btn hub-task-del" data-task-id="${escapeHtml(task.id)}" aria-label="Excluir">🗑</button>
+      <button type="button" class="hub-icon-btn hub-task-del" data-task-id="${escapeHtml(task.id)}" aria-label="Eliminar">🗑</button>
     </li>`;
   }).join('');
 }
@@ -189,14 +189,14 @@ function renderLetters() {
   if (!els.letterList) return;
   const letters = [...hubState.letters].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   if (!letters.length) {
-    els.letterList.innerHTML = '<p class="hub-empty">Nenhuma cartinha ainda. Escreva a primeira ❤️</p>';
+    els.letterList.innerHTML = '<p class="hub-empty">Ninguna cartita todavía. Escribe la primera ❤️</p>';
     return;
   }
   els.letterList.innerHTML = letters.map((letter) => {
-    const when = letter.createdAt ? new Date(letter.createdAt).toLocaleString('pt-BR') : '';
+    const when = letter.createdAt ? new Date(letter.createdAt).toLocaleString('es') : '';
     return `<article class="hub-letter-card">
       <header class="hub-letter-head">
-        <strong>${escapeHtml(letter.fromName || 'Alguém')}</strong>
+        <strong>${escapeHtml(letter.fromName || 'Alguien')}</strong>
         <time>${escapeHtml(when)}</time>
       </header>
       <p>${escapeHtml(letter.text)}</p>
@@ -208,7 +208,7 @@ function renderMemories() {
   if (!els.memoryGrid) return;
   const memories = [...hubState.memories].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   if (!memories.length) {
-    els.memoryGrid.innerHTML = '<p class="hub-empty">Adicione fotos favoritas 📸</p>';
+    els.memoryGrid.innerHTML = '<p class="hub-empty">Añade fotos favoritas 📸</p>';
     return;
   }
   els.memoryGrid.innerHTML = memories.map((mem) => {
@@ -217,8 +217,8 @@ function renderMemories() {
       : '<div class="hub-memory-placeholder">📷</div>';
     return `<figure class="hub-memory-card" data-memory-id="${escapeHtml(mem.id)}">
       ${img}
-      <figcaption>${escapeHtml(mem.title || 'Memória')}</figcaption>
-      <button type="button" class="hub-icon-btn hub-memory-del" data-memory-id="${escapeHtml(mem.id)}" aria-label="Excluir">🗑</button>
+      <figcaption>${escapeHtml(mem.title || 'Recuerdo')}</figcaption>
+      <button type="button" class="hub-icon-btn hub-memory-del" data-memory-id="${escapeHtml(mem.id)}" aria-label="Eliminar">🗑</button>
     </figure>`;
   }).join('');
 }
@@ -228,18 +228,18 @@ function renderCounter() {
   const { relationshipStart, nextMeetingDate } = hubState.settings;
   const together = daysBetween(relationshipStart);
   if (together !== null) {
-    els.counterTogether.innerHTML = `<span class="hub-counter-num">❤️ ${together.toLocaleString('pt-BR')}</span><span class="hub-counter-label">dias juntos</span>`;
+    els.counterTogether.innerHTML = `<span class="hub-counter-num">❤️ ${together.toLocaleString('es')}</span><span class="hub-counter-label">días juntos</span>`;
   } else {
-    els.counterTogether.innerHTML = '<span class="hub-counter-hint">Defina a data em que começaram 💕</span>';
+    els.counterTogether.innerHTML = '<span class="hub-counter-hint">Define la fecha en que empezaron 💕</span>';
   }
 
   const until = daysUntil(nextMeetingDate);
   if (until !== null && until >= 0) {
-    els.counterMeeting.innerHTML = `<span class="hub-counter-num">⏳ ${until}</span><span class="hub-counter-label">${until === 1 ? 'dia' : 'dias'} para nosso encontro</span>`;
+    els.counterMeeting.innerHTML = `<span class="hub-counter-num">⏳ ${until}</span><span class="hub-counter-label">${until === 1 ? 'día' : 'días'} para nuestro encuentro</span>`;
   } else if (until !== null && until < 0) {
-    els.counterMeeting.innerHTML = '<span class="hub-counter-hint">O encontro já passou — marquem o próximo ✈️</span>';
+    els.counterMeeting.innerHTML = '<span class="hub-counter-hint">El encuentro ya pasó — marquen el próximo ✈️</span>';
   } else {
-    els.counterMeeting.innerHTML = '<span class="hub-counter-hint">Marquem a data do próximo encontro</span>';
+    els.counterMeeting.innerHTML = '<span class="hub-counter-hint">Marquen la fecha del próximo encuentro</span>';
   }
 
   if (els.inputRelationshipStart) els.inputRelationshipStart.value = relationshipStart || '';
@@ -309,11 +309,11 @@ function renderCalendar() {
 function renderDayPanel() {
   if (!els.dayPanel) return;
   if (!selectedDate) {
-    els.dayPanel.innerHTML = '<p class="hub-empty">Toque em um dia para ver ou adicionar eventos.</p>';
+    els.dayPanel.innerHTML = '<p class="hub-empty">Toca un día para ver o añadir eventos.</p>';
     return;
   }
   const events = hubState.events.filter((e) => e.date === selectedDate);
-  const dateLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', {
+  const dateLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('es', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -326,12 +326,12 @@ function renderDayPanel() {
           <button type="button" class="hub-icon-btn hub-event-del" data-event-id="${escapeHtml(ev.id)}">🗑</button>
         </div>
       </div>`).join('')
-    : '<p class="hub-empty">Nenhum evento neste dia.</p>';
+    : '<p class="hub-empty">Ningún evento en este día.</p>';
 
   els.dayPanel.innerHTML = `
     <h4 class="hub-day-title">${escapeHtml(dateLabel)}</h4>
     ${list}
-    <button type="button" class="couple-btn couple-btn-small couple-btn-primary hub-add-event-btn">➕ Adicionar evento</button>
+    <button type="button" class="couple-btn couple-btn-small couple-btn-primary hub-add-event-btn">➕ Añadir evento</button>
   `;
 }
 
@@ -596,7 +596,7 @@ function rewardMission(amount) {
   if (window.GameShop?.addCoins) {
     window.GameShop.addCoins(amount);
   }
-  showHubToast(`Missão concluída! +${amount} 🍫`);
+  showHubToast(`¡Misión completada! +${amount} 🍫`);
 }
 
 function showHubToast(msg) {
@@ -608,7 +608,7 @@ function showHubToast(msg) {
 }
 
 function promptEvent(existing) {
-  const title = window.prompt('Título do evento:', existing?.title || '');
+  const title = window.prompt('Título del evento:', existing?.title || '');
   if (title === null) return null;
   const emoji = window.prompt('Emoji (opcional):', existing?.emoji || '❤️') || '❤️';
   const note = window.prompt('Nota (opcional):', existing?.note || '') || '';
@@ -642,11 +642,11 @@ function checkReminder() {
   const flagKey = `hubReminder_${dateKey}_${target}`;
   if (nowStr === target && !sessionStorage.getItem(flagKey)) {
     sessionStorage.setItem(flagKey, '1');
-    showHubToast('❤️ Chocolate & Cereza — Hora de colocar o carro para carregar. 🔋🐻');
+    showHubToast('❤️ Chocolate & Cereza — Hora de cargar el auto. 🔋🐻');
     if (Notification?.permission === 'granted') {
       try {
         new Notification('Chocolate & Cereza 🔋', {
-          body: 'Hora de colocar o carro para carregar. 🔋🐻',
+          body: 'Hora de poner el auto a cargar. 🔋🐻',
           icon: 'assets/cherry.png',
         });
       } catch (_) { /* ignore */ }
@@ -749,7 +749,7 @@ function bindEvents() {
     const file = els.memoryFile?.files?.[0];
     if (file) {
       if (file.size > 400000) {
-        showHubToast('Imagem muito grande — use URL ou foto menor que 400 KB');
+        showHubToast('Imagen muy grande — usa URL o foto menor de 400 KB');
         return;
       }
       imageUrl = await new Promise((resolve) => {
@@ -759,7 +759,7 @@ function bindEvents() {
       });
     }
     if (!title && !imageUrl) return;
-    await addMemory(title || 'Memória', imageUrl);
+    await addMemory(title || 'Recuerdo', imageUrl);
     els.memoryForm?.reset();
   });
 
@@ -792,7 +792,7 @@ function bindEvents() {
         timezone: els.reminderTz?.value || 'America/New_York',
       },
     });
-    showHubToast('Lembrete salvo ❤️');
+    showHubToast('Recordatorio guardado ❤️');
     window.dispatchEvent(new CustomEvent('hub:reminderChanged'));
   });
 

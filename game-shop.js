@@ -34,20 +34,20 @@
     { id: 'effect_cherries', cat: 'effect', icon: '🍒', name: 'Cerezas', desc: 'Mini cerezas dulces.', price: 600, colors: ['#E53935', '#FF5252', '#FF867C', '#FFAB91'] },
     { id: 'effect_choco', cat: 'effect', icon: '🍫', name: 'Chocolate', desc: 'Pedacitos de cacao.', price: 400, colors: ['#6D4C41', '#8D6E63', '#A1887F', '#BCAAA4'] },
 
-    { id: 'mascot_none', cat: 'mascot', icon: '—', name: 'Sin mascote', desc: 'Solo tú y la cereza.', price: 0 },
+    { id: 'mascot_none', cat: 'mascot', icon: '—', name: 'Sin mascota', desc: 'Solo tú y la cereza.', price: 0 },
     { id: 'mascot_bear_choco', cat: 'mascot', icon: '🧸', name: 'Osito Chocolate', desc: 'Te anima en la partida.', price: 700, emoji: '🧸' },
     { id: 'mascot_bear_cherry', cat: 'mascot', icon: '🍒', name: 'Osita Cereza', desc: 'Compañera kawaii.', price: 700, emoji: '🍒🧸' },
     { id: 'mascot_panda', cat: 'mascot', icon: '🐼', name: 'Panda', desc: 'Tierno y calmado.', price: 900, emoji: '🐼' },
     { id: 'mascot_plush', cat: 'mascot', icon: '🐻', name: 'Peluche', desc: 'Abrazo de peluche.', price: 1100, emoji: '🐻' },
 
-    { id: 'letter_01', cat: 'album', icon: '💌', name: 'Carta #01', desc: '"Obrigado por existir ❤️"', price: 200, letter: 'Obrigado por existir ❤️' },
-    { id: 'letter_02', cat: 'album', icon: '💌', name: 'Carta #02', desc: '"Você é a melhor parte de mim."', price: 350, letter: 'Você é a melhor parte de mim.' },
-    { id: 'letter_03', cat: 'album', icon: '💌', name: 'Carta #03', desc: '"Nunca vou cansar de te escolher."', price: 450, letter: 'Nunca vou cansar de te escolher.' },
-    { id: 'letter_04', cat: 'album', icon: '💌', name: 'Carta #04', desc: '"Meu coração sorri quando penso em você."', price: 550, letter: 'Meu coração sorri quando penso em você.' },
-    { id: 'letter_05', cat: 'album', icon: '💌', name: 'Carta #05', desc: '"Contigo, até o silêncio é bonito."', price: 650, letter: 'Contigo, até o silêncio é bonito.' },
-    { id: 'letter_06', cat: 'album', icon: '💌', name: 'Carta #06', desc: '"Te amo mais do que palavras cabem."', price: 750, letter: 'Te amo mais do que palavras cabem.' },
+    { id: 'letter_01', cat: 'album', icon: '💌', name: 'Carta #01', desc: '"Gracias por existir ❤️"', price: 200, letter: 'Gracias por existir ❤️' },
+    { id: 'letter_02', cat: 'album', icon: '💌', name: 'Carta #02', desc: '"Eres la mejor parte de mí."', price: 350, letter: 'Eres la mejor parte de mí.' },
+    { id: 'letter_03', cat: 'album', icon: '💌', name: 'Carta #03', desc: '"Nunca me cansaré de elegirte."', price: 450, letter: 'Nunca me cansaré de elegirte.' },
+    { id: 'letter_04', cat: 'album', icon: '💌', name: 'Carta #04', desc: '"Mi corazón sonríe cuando pienso en ti."', price: 550, letter: 'Mi corazón sonríe cuando pienso en ti.' },
+    { id: 'letter_05', cat: 'album', icon: '💌', name: 'Carta #05', desc: '"Contigo, hasta el silencio es bonito."', price: 650, letter: 'Contigo, hasta el silencio es bonito.' },
+    { id: 'letter_06', cat: 'album', icon: '💌', name: 'Carta #06', desc: '"Te amo más de lo que caben las palabras."', price: 750, letter: 'Te amo más de lo que caben las palabras.' },
 
-    { id: 'ring_love', cat: 'special', icon: '💍', name: 'Anel do Amor', desc: 'Símbolo do amor eterno. Sem vantagem — só amor.', price: 9999, badge: '💍' },
+    { id: 'ring_love', cat: 'special', icon: '💍', name: 'Anillo del Amor', desc: 'Símbolo del amor eterno. Sin ventaja — solo amor.', price: 9999, badge: '💍' },
 
     { id: 'ship_chocolate', cat: 'spaceship', icon: '🚀', name: 'Cohete Clásico', desc: 'Nave genérica plateada.', price: 0 },
     { id: 'ship_cherry', cat: 'spaceship', icon: '🚀', name: 'Cohete Cereza', desc: 'Casco rojo romántico.', price: 0 },
@@ -61,7 +61,7 @@
     cherry: '🍒 Cereza',
     theme: '🌈 Temas',
     effect: '✨ Efectos',
-    mascot: '🧸 Mascotes',
+    mascot: '🧸 Mascotas',
     album: '💌 Álbum',
     special: '💖 Especial',
     spaceship: '🍫 Cañones',
@@ -203,7 +203,7 @@
       this.state.owned.push(id);
       if (id === 'ring_love') {
         this.state.ringOwned = true;
-        this.toast('💍 Anel do Amor — para sempre!');
+        this.toast('💍 Anillo del Amor — ¡para siempre!');
       } else {
         this.toast(`¡${item.name} desbloqueado!`);
       }

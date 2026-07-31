@@ -11,19 +11,19 @@
   const STAR_DEFS = HS.STAR_DEFS || [];
 
   const HOTSPOTS = [
-    { id: 'correio', label: 'Correio', art: 'mailbox', x: 4, y: 52 },
-    { id: 'quarto', label: 'Quarto', art: 'bedroom', x: 18, y: 28 },
-    { id: 'observatorio', label: 'Observatório', art: 'observatory', x: 72, y: 8 },
-    { id: 'jogos', label: 'Sala de Jogos', art: 'games', x: 8, y: 68 },
+    { id: 'correio', label: 'Buzón', art: 'mailbox', x: 4, y: 52 },
+    { id: 'quarto', label: 'Dormitorio', art: 'bedroom', x: 18, y: 28 },
+    { id: 'observatorio', label: 'Observatorio', art: 'observatory', x: 72, y: 8 },
+    { id: 'jogos', label: 'Sala de Juegos', art: 'games', x: 8, y: 68 },
     { id: 'agenda', label: 'Agenda', art: 'calendar', x: 28, y: 62 },
-    { id: 'jardim', label: 'Jardim', art: 'garden', x: 78, y: 58 },
-    { id: 'radio', label: 'Rádio', art: 'radio', x: 48, y: 68 },
+    { id: 'jardim', label: 'Jardín', art: 'garden', x: 78, y: 58 },
+    { id: 'radio', label: 'Radio', art: 'radio', x: 48, y: 68 },
     { id: 'album', label: 'Álbum', art: 'album', x: 62, y: 38 },
-    { id: 'cozinha', label: 'Cozinha', art: 'kitchen', x: 38, y: 72 },
-    { id: 'cinema', label: 'Cinema', art: 'cinema', x: 52, y: 28 },
+    { id: 'cozinha', label: 'Cocina', art: 'kitchen', x: 38, y: 72 },
+    { id: 'cinema', label: 'Cine', art: 'cinema', x: 52, y: 28 },
     { id: 'biblioteca', label: 'Biblioteca', art: 'library', x: 82, y: 38 },
-    { id: 'teddy', label: 'Quarto do Teddy', art: 'teddy', x: 88, y: 68 },
-    { id: 'viagem', label: 'Sala de Viagem', art: 'travel', x: 58, y: 8 },
+    { id: 'teddy', label: 'Habitación de Teddy', art: 'teddy', x: 88, y: 68 },
+    { id: 'viagem', label: 'Sala de Viaje', art: 'travel', x: 58, y: 8 },
   ];
 
   const ART = {
@@ -87,40 +87,45 @@
   function fireplaceHtml(level) {
     const flames = level <= 0 ? '·' : '🔥'.repeat(Math.min(level, 5));
     const warm = level >= 3 ? 'is-warm' : level >= 1 ? 'is-low' : 'is-cold';
-    return `<div class="casa-hearth ${warm}" aria-label="Lareira do relacionamento">
+    return `<div class="casa-hearth ${warm}" aria-label="Chimenea del amor">
       <div class="casa-hearth-glow"></div>
       <div class="casa-hearth-flames">${flames}</div>
-      <p class="casa-hearth-label">${level >= 3 ? 'Chama forte — vocês aparecem todo dia!' : level >= 1 ? 'Chama acesa — cuide da lareira entrando juntos' : 'Acenda a lareira — entrem na casa juntos'}</p>
+      <p class="casa-hearth-label">${level >= 3 ? '¡Llama fuerte — aparecen todos los días!' : level >= 1 ? 'Llama encendida — cuídenla entrando juntos' : 'Enciendan la chimenea — entren juntos al hogar'}</p>
     </div>`;
   }
 
   function buildExterior() {
     const level = hub()?.getFireplaceLevel?.() || 0;
     const unread = countUnread();
-    const hotspots = HOTSPOTS.map((h) => {
+    const roomCards = HOTSPOTS.map((h) => {
       const badge = h.id === 'correio' && unread > 0
-        ? `<span class="casa-hotspot-badge">${unread > 9 ? '9+' : unread}</span>` : '';
-      return `<button type="button" class="casa-hotspot casa-art-${h.art}" data-room="${h.id}" style="left:${h.x}%;top:${h.y}%" aria-label="Entrar: ${esc(h.label)}">
-        <span class="casa-hotspot-scene" aria-hidden="true">${ART[h.art] || '🏠'}</span>
-        <span class="casa-hotspot-name">${esc(h.label)}</span>
+        ? `<span class="casa-room-badge">${unread > 9 ? '9+' : unread}</span>` : '';
+      return `<button type="button" class="casa-room" data-room="${h.id}" aria-label="Entrar: ${esc(h.label)}">
+        <span class="casa-room-emoji" aria-hidden="true">${ART[h.art] || '🏠'}</span>
+        <span class="casa-room-label">${esc(h.label)}</span>
         ${badge}
       </button>`;
     }).join('');
 
     return `<div class="casa-exterior" id="casa-exterior">
-      <div class="casa-sky ${isNight() ? 'is-night' : ''}"></div>
-      <div class="casa-hill"></div>
-      <div class="casa-house-body">
-        <div class="casa-roof-shape"></div>
-        <div class="casa-walls"></div>
-        ${fireplaceHtml(level)}
-        ${hotspots}
+      <div class="casa-hero">
+        <div class="casa-sky ${isNight() ? 'is-night' : ''}"></div>
+        <div class="casa-hill"></div>
+        <div class="casa-house-body">
+          <div class="casa-roof-shape"></div>
+          <div class="casa-walls"></div>
+          ${fireplaceHtml(level)}
+        </div>
       </div>
-      <p class="casa-enter-hint">Toque em um cômodo para entrar</p>
+      <div class="casa-rooms-wrap">
+        <p class="casa-rooms-heading">Elige un cuarto</p>
+        <div class="casa-rooms-grid">${roomCards}</div>
+        <p class="casa-enter-hint">Toca un cuarto para entrar</p>
+      </div>
     </div>
     <div class="casa-interior hidden" id="casa-interior">
       <header class="casa-room-header">
-        <button type="button" class="casa-back-btn" id="casa-back-btn">← Sair do cômodo</button>
+        <button type="button" class="casa-back-btn" id="casa-back-btn">← Salir del cuarto</button>
         <h3 id="casa-room-title" class="casa-room-title"></h3>
       </header>
       <div id="casa-room-body" class="casa-room-body"></div>
@@ -140,19 +145,23 @@
   function enterRoom(id) {
     currentRoom = id;
     els.app?.classList.add('is-inside');
-    els.exterior?.classList.add('is-zoom-out');
+    global.document.body.classList.add('casa-inside');
+    els.exterior?.classList.add('hidden');
     els.interior?.classList.remove('hidden');
+    els.mascotWidget?.classList.add('hidden');
     const spot = HOTSPOTS.find((h) => h.id === id);
     if (els.roomTitle) els.roomTitle.textContent = spot?.label || id;
     renderRoom(id);
-    els.interior?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    els.interior?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function exitRoom() {
     currentRoom = null;
     els.app?.classList.remove('is-inside');
-    els.exterior?.classList.remove('is-zoom-out');
+    global.document.body.classList.remove('casa-inside');
+    els.exterior?.classList.remove('hidden');
     els.interior?.classList.add('hidden');
+    els.mascotWidget?.classList.remove('hidden');
     if (togetherInterval) { clearInterval(togetherInterval); togetherInterval = null; }
     refreshExterior();
   }
@@ -217,9 +226,9 @@
     const inbox = visible.map((l) => {
       const reacts = Object.values(l.reactions || {}).join(' ');
       const photo = l.photoUrl ? `<img src="${esc(l.photoUrl)}" alt="" class="casa-mail-photo">` : '';
-      const audio = l.audioUrl ? `<p class="casa-mail-audio">🎙️ Áudio anexo</p>` : '';
+      const audio = l.audioUrl ? `<p class="casa-mail-audio">🎙️ Audio adjunto</p>` : '';
       return `<article class="casa-mail-card" data-letter-id="${esc(l.id)}">
-        <header><strong>${esc(l.fromName)}</strong><time>${new Date(l.createdAt).toLocaleString('pt-BR')}</time></header>
+        <header><strong>${esc(l.fromName)}</strong><time>${new Date(l.createdAt).toLocaleString('es')}</time></header>
         <p>${esc(l.text)}</p>${photo}${audio}
         <div class="casa-mail-reactions">${reacts ? `<span>${reacts}</span>` : ''}
           <button type="button" data-react="❤️">❤️</button>
@@ -227,40 +236,40 @@
           <button type="button" data-react="🥹">🥹</button>
         </div>
       </article>`;
-    }).join('') || '<p class="casa-empty">Caixa vazia — escreva a primeira carta!</p>';
+    }).join('') || '<p class="casa-empty">¡Buzón vacío — escribe la primera carta!</p>';
 
     const scheduled = pending.map((l) => {
-      const when = l.type === 'capsule' ? `Abrir em ${l.openAfter}` : `Entregar ${l.deliverDate}`;
+      const when = l.type === 'capsule' ? `Abrir en ${l.openAfter}` : `Entregar el ${l.deliverDate}`;
       return `<li>🔒 ${esc(l.text?.slice(0, 40) || '…')} — <em>${esc(when)}</em></li>`;
     }).join('');
 
     body.innerHTML = `<div class="casa-room-theme theme-mail">
       <div class="casa-mailbox-art">📬</div>
       <nav class="casa-subnav">
-        <button type="button" class="is-active" data-mail-tab="inbox">Caixa de entrada</button>
-        <button type="button" data-mail-tab="write">Escrever</button>
-        <button type="button" data-mail-tab="schedule">Agendar</button>
+        <button type="button" class="is-active" data-mail-tab="inbox">Bandeja de entrada</button>
+        <button type="button" data-mail-tab="write">Escribir</button>
+        <button type="button" data-mail-tab="schedule">Programar</button>
         <button type="button" data-mail-tab="capsule">Cápsula</button>
       </nav>
       <div class="casa-mail-panel" data-mail-panel="inbox">
         <div class="casa-mail-list">${inbox}</div>
-        ${pending.length ? `<ul class="casa-mail-pending"><li><strong>Aguardando:</strong></li>${scheduled}</ul>` : ''}
+        ${pending.length ? `<ul class="casa-mail-pending"><li><strong>En espera:</strong></li>${scheduled}</ul>` : ''}
       </div>
       <form class="casa-mail-panel hidden" data-mail-panel="write">
-        <textarea name="text" rows="4" maxlength="500" placeholder="Sua cartinha…" required></textarea>
+        <textarea name="text" rows="4" maxlength="500" placeholder="Tu cartita…" required></textarea>
         <label class="casa-file">📷 Foto <input type="file" name="photo" accept="image/*"></label>
-        <p class="casa-soon-note">🎙️ Áudios — segure para gravar (em breve nesta versão)</p>
+        <p class="casa-soon-note">🎙️ Audios — mantén pulsado para grabar (próximamente)</p>
         <button type="submit" class="couple-btn couple-btn-primary">Enviar 💌</button>
       </form>
       <form class="casa-mail-panel hidden" data-mail-panel="schedule">
-        <textarea name="text" rows="3" maxlength="500" placeholder="Carta para o futuro…" required></textarea>
-        <label>Entregar em <input type="date" name="deliverDate" required></label>
-        <button type="submit" class="couple-btn couple-btn-primary">Agendar 📅</button>
+        <textarea name="text" rows="3" maxlength="500" placeholder="Carta para el futuro…" required></textarea>
+        <label>Entregar el <input type="date" name="deliverDate" required></label>
+        <button type="submit" class="couple-btn couple-btn-primary">Programar 📅</button>
       </form>
       <form class="casa-mail-panel hidden" data-mail-panel="capsule">
-        <textarea name="text" rows="3" maxlength="500" placeholder="Mensagem para abrir no futuro…" required></textarea>
-        <label>Abrir após <input type="date" name="openAfter" required></label>
-        <button type="submit" class="couple-btn couple-btn-primary">Selar cápsula ⏳</button>
+        <textarea name="text" rows="3" maxlength="500" placeholder="Mensaje para abrir en el futuro…" required></textarea>
+        <label>Abrir después del <input type="date" name="openAfter" required></label>
+        <button type="submit" class="couple-btn couple-btn-primary">Sellar cápsula ⏳</button>
       </form>
     </div>`;
 
@@ -279,7 +288,7 @@
       let photoUrl = '';
       const file = fd.get('photo');
       if (file && file.size) {
-        if (file.size > 400000) { hub()?.showToast?.('Foto muito grande (max 400KB)'); return; }
+        if (file.size > 400000) { hub()?.showToast?.('Foto demasiado grande (máx. 400 KB)'); return; }
         photoUrl = await fileToDataUrl(file);
       }
       await hub()?.addLetterExtended?.({ text: fd.get('text'), type: 'inbox', photoUrl });
@@ -291,7 +300,7 @@
       e.preventDefault();
       const fd = new FormData(e.target);
       await hub()?.addLetterExtended?.({ text: fd.get('text'), type: 'scheduled', deliverDate: fd.get('deliverDate') });
-      hub()?.showToast?.('Carta agendada 📅');
+      hub()?.showToast?.('Carta programada 📅');
       renderRoom('correio');
     });
 
@@ -299,7 +308,7 @@
       e.preventDefault();
       const fd = new FormData(e.target);
       await hub()?.addLetterExtended?.({ text: fd.get('text'), type: 'capsule', openAfter: fd.get('openAfter') });
-      hub()?.showToast?.('Cápsula selada ⏳');
+      hub()?.showToast?.('Cápsula sellada ⏳');
       renderRoom('correio');
     });
 
@@ -326,7 +335,7 @@
       const mins = Math.floor(elapsed / 60000);
       const h = Math.floor(mins / 60);
       const m = mins % 60;
-      togetherHtml = `<p class="casa-together-time">Tempo online juntos: <strong>${h}h ${String(m).padStart(2, '0')}min</strong></p>`;
+      togetherHtml = `<p class="casa-together-time">Tiempo en línea juntos: <strong>${h}h ${String(m).padStart(2, '0')}min</strong></p>`;
       hub()?.logGardenAction?.('together');
     } else {
       SaveManager.updateSection('nossaCasa', { togetherSince: null });
@@ -334,18 +343,18 @@
 
     body.innerHTML = `<div class="casa-room-theme theme-bedroom ${night ? 'is-night' : ''}">
       <div class="casa-bedroom-art">${night ? '🌙' : '🛏'}</div>
-      <h4>${night ? 'Luz apagada…' : 'Quarto'}</h4>
+      <h4>${night ? 'Luces apagadas…' : 'Dormitorio'}</h4>
       ${pres?.inRoom ? `
         <div class="casa-presence">
           <p>${esc(pres.localName)} ${pres.localOnline ? '🟢' : '🔴'}</p>
           <p>${esc(pres.partnerName)} ${pres.partnerOnline ? '🟢' : '🔴'}</p>
         </div>
-        ${together ? '<p class="casa-together-msg">❤️ Os dois estão juntos agora.</p>' + togetherHtml : '<p class="casa-wait-msg">💤 Esperando o outro entrar…</p>'}
-      ` : '<p class="casa-empty">Entrem na <strong>sala do casal</strong> (Mini Games) para ver presença ao vivo.</p>'}
+        ${together ? '<p class="casa-together-msg">❤️ Los dos están juntos ahora.</p>' + togetherHtml : '<p class="casa-wait-msg">💤 Esperando que entre el otro…</p>'}
+      ` : '<p class="casa-empty">Entren en la <strong>sala del casal</strong> (Mini Games) para ver presencia en vivo.</p>'}
       <ul class="casa-last-activity">
-        <li>🎵 Última música: ${esc(nc.lastMusic || '—')}</li>
-        <li>🎮 Último jogo: ${esc(nc.lastGame || '—')}</li>
-        <li>💌 Última mensagem: ${esc(nc.lastMessage || '—')}</li>
+        <li>🎵 Última canción: ${esc(nc.lastMusic || '—')}</li>
+        <li>🎮 Último juego: ${esc(nc.lastGame || '—')}</li>
+        <li>💌 Último mensaje: ${esc(nc.lastMessage || '—')}</li>
       </ul>
     </div>`;
 
@@ -359,14 +368,14 @@
     const rows = rank?.success ? rank.ranking : [];
     const list = rows.length ? rows.map((r) =>
       `<li><strong>${esc(r.name)}</strong> <span>${r.bestScore || 0} pts</span></li>`
-    ).join('') : '<li>Entrem na sala online para ranking ao vivo</li>';
+    ).join('') : '<li>Entren en la sala online para ranking en vivo</li>';
 
     body.innerHTML = `<div class="casa-room-theme theme-games">
       <div class="casa-games-art">🎮</div>
       <h4>🏆 Última partida / Ranking</h4>
       <ol class="casa-rank-list">${list}</ol>
-      <p class="casa-challenge">Desafio: quem chega primeiro a <strong>10.000</strong> pontos? 🏅</p>
-      <button type="button" class="couple-btn couple-btn-primary" id="casa-go-games">Entrar na sala de jogos</button>
+      <p class="casa-challenge">Desafío: ¿quién llega primero a <strong>10.000</strong> puntos? 🏅</p>
+      <button type="button" class="couple-btn couple-btn-primary" id="casa-go-games">Entrar a la sala de juegos</button>
     </div>`;
     body.querySelector('#casa-go-games')?.addEventListener('click', () => {
       $('section-game')?.scrollIntoView({ behavior: 'smooth' });
@@ -376,21 +385,21 @@
 
   function roomAgenda(body) {
     const tasks = [...(state().tasks || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
-    const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const today = new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
     const list = tasks.map((t) => {
       const pri = t.priority === 'high' ? '🔴' : t.priority === 'low' ? '🟢' : '🟡';
       return `<li class="casa-task${t.done ? ' is-done' : ''}" data-task-id="${esc(t.id)}">
         <label><input type="checkbox" ${t.done ? 'checked' : ''}> ${pri} ${esc(t.emoji || '')} ${esc(t.text)}</label>
       </li>`;
-    }).join('') || '<li class="casa-empty">Nenhuma tarefa hoje</li>';
+    }).join('') || '<li class="casa-empty">Ninguna tarea hoy</li>';
 
     body.innerHTML = `<div class="casa-room-theme theme-agenda">
       <div class="casa-agenda-art">📅</div>
-      <h4>Hoje — ${esc(today)}</h4>
+      <h4>Hoy — ${esc(today)}</h4>
       <ul class="casa-task-list">${list}</ul>
       <form id="casa-task-form" class="casa-inline-form">
-        <select name="priority"><option value="normal">🟡 Normal</option><option value="high">🔴 Urgente</option><option value="low">🟢 Depois</option></select>
-        <input name="text" placeholder="Nova tarefa…" maxlength="80" required>
+        <select name="priority"><option value="normal">🟡 Normal</option><option value="high">🔴 Urgente</option><option value="low">🟢 Después</option></select>
+        <input name="text" placeholder="Nueva tarea…" maxlength="80" required>
         <button type="submit" class="couple-btn couple-btn-small">+</button>
       </form>
     </div>`;
@@ -413,13 +422,13 @@
     const log = meta().gardenLog || [];
     const flowers = log.slice(-80).map((g) => `<span class="casa-flower" title="${esc(g.label)}">${g.emoji}</span>`).join('');
     const count = log.length;
-    const stage = count >= 100 ? 'Jardim enorme 🌺' : count >= 50 ? 'Jardim florido 🌸' : count >= 20 ? 'Crescendo 🌿' : 'Começando a florescer 🌱';
+    const stage = count >= 100 ? 'Jardín enorme 🌺' : count >= 50 ? 'Jardín florecido 🌸' : count >= 20 ? 'Creciendo 🌿' : 'Empezando a florecer 🌱';
 
     body.innerHTML = `<div class="casa-room-theme theme-garden">
       <div class="casa-garden-art">🌹</div>
       <h4>${stage}</h4>
-      <p class="casa-garden-count">${count} flores · cada ação de vocês planta uma flor</p>
-      <div class="casa-garden-bed">${flowers || '<span class="casa-empty">Façam coisas juntos para florescer!</span>'}</div>
+      <p class="casa-garden-count">${count} flores · cada acción de ustedes planta una flor</p>
+      <div class="casa-garden-bed">${flowers || '<span class="casa-empty">¡Hagan cosas juntos para florecer!</span>'}</div>
       <ul class="casa-garden-legend">${Object.keys(GARDEN).map((k) => `<li>${GARDEN[k].emoji} ${GARDEN[k].label}</li>`).join('')}</ul>
     </div>`;
   }
@@ -429,10 +438,10 @@
     const title = global.document.getElementById('music-track-title')?.textContent || nc.lastMusic || 'Nuestra canción';
     body.innerHTML = `<div class="casa-room-theme theme-radio">
       <div class="casa-radio-art">📻</div>
-      <h4>🎵 Tocando agora</h4>
+      <h4>🎵 Sonando ahora</h4>
       <p class="casa-now-playing">${esc(title)}</p>
-      <p class="casa-radio-hint">🎧 Entrem na mesma música — abra o rádio abaixo.</p>
-      <button type="button" class="couple-btn couple-btn-primary" id="casa-go-music">Abrir rádio</button>
+      <p class="casa-radio-hint">🎧 Entren en la misma canción — abran el radio abajo.</p>
+      <button type="button" class="couple-btn couple-btn-primary" id="casa-go-music">Abrir radio</button>
     </div>`;
     body.querySelector('#casa-go-music')?.addEventListener('click', () => {
       $('section-music')?.scrollIntoView({ behavior: 'smooth' });
@@ -457,23 +466,23 @@
         <figcaption>${esc(m.title)}</figcaption></figure>`
       ).join('');
       return `<section class="casa-album-year"><h5>${y}</h5><div class="casa-album-grid">${items}</div></section>`;
-    }).join('') : '<p class="casa-empty">Nenhuma foto ainda</p>';
+    }).join('') : '<p class="casa-empty">Ninguna foto todavía</p>';
 
     body.innerHTML = `<div class="casa-room-theme theme-album">
       <div class="casa-album-art">📸</div>
-      <h4>Álbum de memórias</h4>
+      <h4>Álbum de recuerdos</h4>
       ${html}
       <form id="casa-album-form" class="casa-stack-form">
-        <input name="title" placeholder="Título (Praia, Cinema…)" maxlength="60">
-        <input name="url" type="url" placeholder="URL da foto">
-        <button type="submit" class="couple-btn couple-btn-small">Adicionar foto</button>
+        <input name="title" placeholder="Título (Playa, Cine…)" maxlength="60">
+        <input name="url" type="url" placeholder="URL de la foto">
+        <button type="submit" class="couple-btn couple-btn-small">Añadir foto</button>
       </form>
     </div>`;
 
     body.querySelector('#casa-album-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
-      await hub()?.addMemory?.(fd.get('title') || 'Memória', fd.get('url') || '');
+      await hub()?.addMemory?.(fd.get('title') || 'Recuerdo', fd.get('url') || '');
       roomAlbum(body);
     });
   }
@@ -485,7 +494,7 @@
     ).join('');
     body.innerHTML = `<div class="casa-room-theme theme-kitchen">
       <div class="casa-kitchen-art">🍳</div>
-      <h4>Receitas que queremos fazer</h4>
+      <h4>Recetas que queremos hacer</h4>
       <ul class="casa-recipe-list">${list}</ul>
     </div>`;
     body.querySelector('.casa-recipe-list')?.addEventListener('change', (e) => {
@@ -509,7 +518,7 @@
     }).join('');
     body.innerHTML = `<div class="casa-room-theme theme-cinema">
       <div class="casa-cinema-art">🎬</div>
-      <h4>Lista de filmes</h4>
+      <h4>Lista de películas</h4>
       <ul class="casa-movie-list">${list}</ul>
     </div>`;
     body.querySelector('.casa-movie-list')?.addEventListener('change', (e) => {
@@ -526,16 +535,16 @@
     const fav = letters.slice(0, 5).map((l) => `<blockquote>"${esc(l.text?.slice(0, 120))}" — ${esc(l.fromName)}</blockquote>`).join('');
     body.innerHTML = `<div class="casa-room-theme theme-library">
       <div class="casa-library-art">📚</div>
-      <h4>Frases favoritas das cartas</h4>
-      ${fav || '<p class="casa-empty">Escrevam cartas no correio…</p>'}
+      <h4>Frases favoritas de las cartas</h4>
+      ${fav || '<p class="casa-empty">Escriban cartas en el buzón…</p>'}
     </div>`;
   }
 
   function roomTeddy(body) {
     body.innerHTML = `<div class="casa-room-theme theme-teddy">
       <div class="casa-teddy-art">🧸</div>
-      <h4>Quarto do Teddy</h4>
-      <p>O ursinho mora aqui. Em breve: cama, brinquedos, roupa e chapéu com 🍫.</p>
+      <h4>Habitación de Teddy</h4>
+      <p>El osito vive aquí. Próximamente: cama, juguetes, ropa y sombrero con 🍫.</p>
       <div class="casa-teddy-items"><span>🛏</span><span>🎾</span><span>🎩</span><span>👕</span></div>
     </div>`;
   }
@@ -561,10 +570,10 @@
       return false;
     });
     const sky = stars.length ? stars.map((s) => `<span class="casa-star" title="${esc(s.label)}">${s.emoji}</span>`).join('')
-      : '<p class="casa-empty">Conquistas viram estrelas no céu ⭐</p>';
+      : '<p class="casa-empty">Los logros se convierten en estrellas en el cielo ⭐</p>';
     body.innerHTML = `<div class="casa-room-theme theme-observatory">
       <div class="casa-observatory-art">🌌</div>
-      <h4>Constelação do casal</h4>
+      <h4>Constelación del casal</h4>
       <div class="casa-night-sky">${sky}</div>
       <ul class="casa-star-legend">${STAR_DEFS.map((s) => `<li>${s.emoji} ${esc(s.label)}</li>`).join('')}</ul>
     </div>`;
@@ -576,15 +585,15 @@
     body.innerHTML = `<div class="casa-room-theme theme-travel">
       <div class="casa-travel-art">🗺</div>
       <div class="casa-travel-map">🇧🇷 Roberto <span>✈️</span> 🇺🇸 Sophie</div>
-      <p class="casa-travel-count">${until !== null && until >= 0 ? (until === 0 ? 'Hoje é o dia!' : `Faltam ${until} dias ❤️`) : 'Marquem a data do encontro'}</p>
+      <p class="casa-travel-count">${until !== null && until >= 0 ? (until === 0 ? '¡Hoy es el día!' : `Faltan ${until} días ❤️`) : 'Marquen la fecha del encuentro'}</p>
       <form id="casa-travel-form" class="casa-inline-form">
-        <input name="item" placeholder="Checklist da viagem…" maxlength="60">
+        <input name="item" placeholder="Lista del viaje…" maxlength="60">
         <button type="submit" class="couple-btn couple-btn-small">+</button>
       </form>
       <ul id="casa-travel-list" class="casa-travel-list">${checklist.map((c, i) =>
         `<li><label><input type="checkbox" data-idx="${i}" ${c.done ? 'checked' : ''}> ${esc(c.text)}</label></li>`
       ).join('')}</ul>
-      <button type="button" class="couple-btn couple-btn-small" id="casa-set-meeting">Definir data do encontro</button>
+      <button type="button" class="couple-btn couple-btn-small" id="casa-set-meeting">Definir fecha del encuentro</button>
     </div>`;
 
     body.querySelector('#casa-travel-form')?.addEventListener('submit', (e) => {
@@ -604,14 +613,14 @@
     });
 
     body.querySelector('#casa-set-meeting')?.addEventListener('click', () => {
-      const d = global.prompt('Data do próximo encontro (AAAA-MM-DD):', state().settings?.nextMeetingDate || '');
+      const d = global.prompt('Fecha del próximo encuentro (AAAA-MM-DD):', state().settings?.nextMeetingDate || '');
       if (d) hub()?.persistSettings?.({ nextMeetingDate: d });
       roomViagem(body);
     });
   }
 
   function roomSoon(body, id) {
-    body.innerHTML = `<div class="casa-room-theme"><p class="casa-empty">Cômodo em construção…</p></div>`;
+    body.innerHTML = `<div class="casa-room-theme"><p class="casa-empty">Cuarto en construcción…</p></div>`;
   }
 
   function fileToDataUrl(file) {
@@ -630,26 +639,26 @@
     const unread = countUnread();
     if (unread) {
       els.mascotEmoji.textContent = '💌';
-      els.mascotBubble.textContent = `${unread} carta(s) nova(s)!`;
+      els.mascotBubble.textContent = `${unread} carta(s) nueva(s)!`;
       return;
     }
     if (pres?.together) {
       els.mascotEmoji.textContent = '😍';
-      els.mascotBubble.textContent = 'Os dois estão online no quarto!';
+      els.mascotBubble.textContent = '¡Los dos están en línea en el dormitorio!';
       return;
     }
     if (isNight()) {
       els.mascotEmoji.textContent = '🌙';
-      els.mascotBubble.textContent = 'Boa noite… a casa está tranquila.';
+      els.mascotBubble.textContent = 'Buenas noches… el hogar está tranquilo.';
       return;
     }
     els.mascotEmoji.textContent = '🐻';
-    els.mascotBubble.textContent = 'Explore a casa — cada cômodo é especial!';
+    els.mascotBubble.textContent = 'Explora la casa — ¡cada cuarto es especial!';
   }
 
   function logActivity(kind, name) {
     const partial = {};
-    if (kind === 'letter') partial.lastMessage = `${name} enviou uma carta`;
+    if (kind === 'letter') partial.lastMessage = `${name} envió una carta`;
     SaveManager.updateSection('nossaCasa', partial);
   }
 
