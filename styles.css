@@ -306,12 +306,43 @@ html.intro-lock body {
 .intro-title {
   font-family: 'Playfair Display', serif;
   font-weight: 600;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   background: linear-gradient(135deg, var(--pink), var(--purple), var(--cherry));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   line-height: 1.3;
+}
+
+.intro-daily-greeting {
+  margin: 0 auto 1.25rem;
+  max-width: 22rem;
+  padding: 0.65rem 1rem;
+  font-family: 'Quicksand', sans-serif;
+  font-size: clamp(0.92rem, 2.6vw, 1.05rem);
+  font-weight: 600;
+  line-height: 1.45;
+  color: rgba(255, 220, 238, 0.96);
+  background: rgba(255, 79, 163, 0.1);
+  border: 1px solid rgba(255, 120, 180, 0.32);
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(255, 79, 163, 0.1);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s ease 0.35s, transform 0.6s ease 0.35s;
+}
+
+.intro-daily-greeting.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-daily-greeting {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 .char-icon {
@@ -386,6 +417,94 @@ html.intro-lock body {
 
 .btn-glow:active {
   transform: scale(0.98);
+}
+
+.intro-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.intro-actions .btn-glow {
+  width: 100%;
+}
+
+.btn-notif-pink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  max-width: 100%;
+  min-height: 0;
+  padding: 0.38rem 0.85rem;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 210, 230, 0.92);
+  background: rgba(255, 79, 163, 0.1);
+  border: 1px solid rgba(255, 120, 180, 0.38);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-notif-pink:hover:not(:disabled) {
+  background: rgba(255, 79, 163, 0.18);
+  border-color: rgba(255, 140, 190, 0.55);
+  color: #fff;
+}
+
+.btn-notif-pink:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-notif-pink:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.btn-notif-pink.is-active {
+  color: #b8e8cc;
+  background: rgba(80, 160, 110, 0.14);
+  border-color: rgba(120, 200, 150, 0.4);
+}
+
+.btn-notif-pink.is-denied {
+  color: rgba(255, 190, 190, 0.85);
+  background: rgba(80, 40, 48, 0.35);
+  border-color: rgba(200, 100, 100, 0.28);
+  font-size: 0.68rem;
+}
+
+.intro-notif-hint {
+  margin: 0;
+  max-width: 16rem;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  color: rgba(255, 200, 220, 0.55);
+  text-align: center;
+}
+
+.intro-notif-hint.is-success {
+  color: #a8e6c0;
+}
+
+.intro-notif-hint.is-error {
+  color: #ffb8b8;
+}
+
+.daily-charge-notif-btn {
+  width: auto;
+  align-self: center;
+  margin-top: 0.45rem;
+}
+
+.daily-charge-notif-btn.hidden {
+  display: none !important;
 }
 
 /* Meeting animation */
@@ -4709,26 +4828,6 @@ html.intro-lock body {
   margin-top: 0.15rem;
 }
 
-.daily-charge-notif-btn {
-  display: block;
-  width: 100%;
-  margin-top: 0.55rem;
-  padding: 0.45rem 0.65rem;
-  font-family: 'Quicksand', sans-serif;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: rgba(245, 232, 244, 0.75);
-  background: transparent;
-  border: 1px dashed rgba(255, 79, 163, 0.28);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.daily-charge-notif-btn:hover {
-  color: rgba(255, 220, 240, 0.95);
-  border-color: rgba(255, 79, 163, 0.5);
-}
-
 .daily-charge-dismiss {
   display: block;
   width: 100%;
@@ -5893,4 +5992,1128 @@ body.game-meta-panel-open .game-achievements-gallery {
   .couple-streak-badge {
     font-size: 0.7rem;
   }
+}
+
+/* —— Central do Casal —— */
+.site-hub-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: center;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: var(--space-section);
+  border-radius: var(--radius-lg);
+}
+
+.site-hub-nav-btn {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgba(255, 120, 180, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-body);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.site-hub-nav-btn:hover {
+  background: rgba(255, 120, 180, 0.15);
+  transform: translateY(-1px);
+}
+
+#section-couple-hub .hub-sync-badge {
+  font-size: 0.82rem;
+  opacity: 0.85;
+  margin: -0.5rem 0 1rem;
+  text-align: center;
+}
+
+#section-couple-hub .hub-sync-badge.is-cloud {
+  color: #ffb8da;
+}
+
+.hub-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.hub-tab {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.4rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 120, 180, 0.3);
+  background: transparent;
+  color: var(--text-body);
+  cursor: pointer;
+}
+
+.hub-tab.is-active {
+  background: linear-gradient(135deg, rgba(255, 88, 168, 0.35), rgba(255, 140, 200, 0.2));
+  border-color: rgba(255, 120, 180, 0.55);
+}
+
+.hub-panel-desc {
+  font-size: 0.88rem;
+  opacity: 0.85;
+  margin-bottom: 0.75rem;
+}
+
+.hub-empty {
+  opacity: 0.7;
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+}
+
+.hub-task-list {
+  list-style: none;
+  margin: 0 0 0.85rem;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.hub-task-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 120, 180, 0.15);
+}
+
+.hub-task-item.is-done .hub-task-text {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+.hub-task-label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1;
+  cursor: pointer;
+}
+
+.hub-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.hub-input,
+.hub-textarea {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 120, 180, 0.25);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-body);
+  flex: 1;
+  min-width: 0;
+}
+
+.hub-input-emoji {
+  flex: 0 0 3rem;
+  text-align: center;
+}
+
+.hub-textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.hub-stack-form {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.hub-field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.hub-check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+}
+
+.hub-icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  opacity: 0.75;
+  padding: 0.15rem;
+}
+
+.hub-icon-btn:hover {
+  opacity: 1;
+}
+
+.hub-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.hub-cal-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.hub-cal-nav {
+  border: none;
+  background: rgba(255, 120, 180, 0.15);
+  color: var(--text-body);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.hub-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  text-align: center;
+  margin-bottom: 0.35rem;
+}
+
+.hub-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.3rem;
+}
+
+.hub-cal-cell {
+  aspect-ratio: 1;
+  min-height: 2.4rem;
+  border: 1px solid rgba(255, 120, 180, 0.12);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-body);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  font-size: 0.78rem;
+}
+
+.hub-cal-cell.is-empty {
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+.hub-cal-cell.has-event {
+  border-color: rgba(255, 120, 180, 0.45);
+}
+
+.hub-cal-cell.is-selected {
+  background: rgba(255, 88, 168, 0.25);
+}
+
+.hub-cal-dots {
+  display: flex;
+  gap: 0.1rem;
+  font-size: 0.55rem;
+  line-height: 1;
+}
+
+.hub-day-panel {
+  margin-top: 1rem;
+  padding: 0.85rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 120, 180, 0.15);
+}
+
+.hub-day-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  text-transform: capitalize;
+}
+
+.hub-day-event {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(255, 120, 180, 0.1);
+}
+
+.hub-day-event-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.hub-letter-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.hub-letter-card {
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 120, 180, 0.08);
+  border: 1px solid rgba(255, 120, 180, 0.2);
+}
+
+.hub-letter-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  opacity: 0.85;
+  margin-bottom: 0.35rem;
+}
+
+.hub-memory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.hub-memory-card {
+  position: relative;
+  margin: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 120, 180, 0.15);
+}
+
+.hub-memory-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+}
+
+.hub-memory-placeholder {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.hub-memory-card figcaption {
+  padding: 0.35rem 0.45rem;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.hub-memory-card .hub-memory-del {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 50%;
+}
+
+.hub-file-label {
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.hub-counter-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.hub-counter-card {
+  text-align: center;
+  padding: 1rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 120, 180, 0.08);
+  border: 1px solid rgba(255, 120, 180, 0.2);
+}
+
+.hub-counter-heading {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.hub-counter-num {
+  display: block;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.45rem;
+  color: var(--pink-vivid);
+}
+
+.hub-counter-label,
+.hub-counter-hint {
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.hub-mission-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.hub-mission-item {
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 120, 180, 0.15);
+}
+
+.hub-mission-item.is-done {
+  opacity: 0.65;
+}
+
+.hub-mission-item label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.hub-mission-item small {
+  margin-left: auto;
+  opacity: 0.75;
+}
+
+.hub-toast {
+  position: fixed;
+  bottom: 5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  max-width: min(92vw, 22rem);
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  background: rgba(40, 10, 30, 0.92);
+  border: 1px solid rgba(255, 120, 180, 0.45);
+  font-size: 0.85rem;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.hub-toast.hidden {
+  display: none;
+}
+
+/* —— Nossa Casa —— */
+.nossa-casa-scene {
+  min-height: 12rem;
+}
+
+.casa-wrap {
+  display: grid;
+  gap: 1rem;
+}
+
+.casa-map-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 120, 180, 0.08);
+  border: 1px solid rgba(255, 120, 180, 0.2);
+  text-align: center;
+}
+
+.casa-map-pin {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.casa-map-line {
+  font-size: 1.1rem;
+  opacity: 0.85;
+}
+
+.casa-map-countdown {
+  width: 100%;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--pink-vivid);
+}
+
+.casa-isometric {
+  perspective: 640px;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.casa-house-roof {
+  position: relative;
+  text-align: center;
+  margin-bottom: -0.35rem;
+}
+
+.casa-roof-svg {
+  width: min(100%, 220px);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.25));
+}
+
+.casa-house-title {
+  display: block;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.15rem;
+  margin-top: 0.25rem;
+  color: var(--pink-vivid);
+}
+
+.casa-floor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  padding: 0.85rem;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(165deg, rgba(90, 55, 35, 0.35) 0%, rgba(40, 22, 18, 0.5) 100%);
+  border: 1px solid rgba(255, 180, 120, 0.2);
+  transform: rotateX(8deg);
+  transform-origin: center top;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.28);
+}
+
+.casa-floor-hint {
+  text-align: center;
+  font-size: 0.78rem;
+  opacity: 0.7;
+  margin: 0.65rem 0 0;
+}
+
+.casa-room {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 4.5rem;
+  padding: 0.55rem 0.4rem;
+  border: 1px solid rgba(255, 200, 150, 0.25);
+  border-radius: var(--radius-md);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  color: var(--text-body);
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+  font-family: 'Quicksand', sans-serif;
+}
+
+.casa-room:hover {
+  transform: translateY(-2px) scale(1.02);
+  background: rgba(255, 120, 180, 0.18);
+  box-shadow: 0 6px 16px rgba(255, 88, 168, 0.2);
+}
+
+.casa-room-emoji {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.casa-room-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.casa-room-badge {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: #ff4081;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.casa-room-soon {
+  opacity: 0.72;
+}
+
+.casa-soon-tag {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.65;
+}
+
+.casa-soon-details {
+  font-size: 0.85rem;
+}
+
+.casa-soon-details summary {
+  cursor: pointer;
+  color: var(--pink-vivid);
+  font-weight: 600;
+  padding: 0.35rem 0;
+}
+
+.casa-soon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+}
+
+.casa-mascot-widget {
+  position: fixed;
+  bottom: 5.5rem;
+  right: clamp(0.65rem, 3vw, 1.25rem);
+  z-index: 95;
+  max-width: min(16rem, 78vw);
+  cursor: pointer;
+  animation: casa-mascot-float 4s ease-in-out infinite;
+}
+
+.casa-mascot-widget.hidden {
+  display: none;
+}
+
+.casa-mascot-inner {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.45rem;
+}
+
+.casa-mascot-emoji {
+  font-size: 2.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+  flex-shrink: 0;
+}
+
+.casa-mascot-bubble {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  background: rgba(40, 10, 30, 0.92);
+  border: 1px solid rgba(255, 120, 180, 0.45);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes casa-mascot-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.casa-toast {
+  position: fixed;
+  bottom: 8.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  max-width: min(92vw, 22rem);
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  background: rgba(40, 10, 30, 0.92);
+  border: 1px solid rgba(255, 120, 180, 0.45);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.casa-toast.hidden {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .casa-mascot-widget {
+    bottom: 4.75rem;
+    max-width: min(14rem, 85vw);
+  }
+}
+
+/* —— Nossa Casa imersiva v2 —— */
+.casa-app {
+  position: relative;
+  min-height: 22rem;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.casa-app.is-inside .casa-exterior {
+  transform: scale(1.15);
+  opacity: 0;
+  pointer-events: none;
+  filter: blur(4px);
+}
+
+.casa-exterior {
+  position: relative;
+  min-height: 20rem;
+  transition: transform 0.55s ease, opacity 0.45s ease, filter 0.45s ease;
+}
+
+.casa-sky {
+  position: absolute;
+  inset: 0 0 35%;
+  background: linear-gradient(180deg, #1a1035 0%, #4a2c6a 45%, #ff9ecb 100%);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.casa-sky.is-night {
+  background: linear-gradient(180deg, #050510 0%, #1a1535 50%, #2a2048 100%);
+}
+
+.casa-hill {
+  position: absolute;
+  bottom: 0;
+  left: -5%;
+  right: -5%;
+  height: 42%;
+  background: linear-gradient(180deg, #3d7a45 0%, #2d5a34 100%);
+  border-radius: 50% 50% 0 0 / 18% 18% 0 0;
+}
+
+.casa-house-body {
+  position: relative;
+  z-index: 2;
+  min-height: 18rem;
+  margin: 2.5rem 0.5rem 1rem;
+}
+
+.casa-roof-shape {
+  width: 72%;
+  max-width: 280px;
+  height: 3.5rem;
+  margin: 0 auto -0.5rem;
+  background: linear-gradient(135deg, #8B4513, #5c2e0e);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  filter: drop-shadow(0 6px 8px rgba(0,0,0,0.3));
+}
+
+.casa-walls {
+  width: 68%;
+  max-width: 260px;
+  height: 5rem;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #c9a07a 0%, #a67c52 100%);
+  border-radius: 0 0 4px 4px;
+  box-shadow: inset 0 -8px 16px rgba(0,0,0,0.15);
+}
+
+.casa-hearth {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 3;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255, 140, 80, 0.3);
+  min-width: 7rem;
+}
+
+.casa-hearth.is-warm .casa-hearth-glow {
+  box-shadow: 0 0 28px 12px rgba(255, 120, 40, 0.45);
+}
+
+.casa-hearth.is-cold .casa-hearth-flames {
+  opacity: 0.35;
+  filter: grayscale(0.5);
+}
+
+.casa-hearth-glow {
+  position: absolute;
+  inset: 20% 25%;
+  border-radius: 50%;
+  pointer-events: none;
+  transition: box-shadow 0.5s;
+}
+
+.casa-hearth-flames {
+  font-size: 1.35rem;
+  letter-spacing: 0.1em;
+  animation: hearth-flicker 2s ease-in-out infinite;
+}
+
+.casa-hearth-label {
+  margin: 0.25rem 0 0;
+  font-size: 0.62rem;
+  opacity: 0.85;
+  max-width: 9rem;
+  line-height: 1.25;
+}
+
+@keyframes hearth-flicker {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+.casa-hotspot {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.35rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s, filter 0.2s;
+}
+
+.casa-hotspot:hover {
+  transform: translate(-50%, -52%) scale(1.08);
+  filter: drop-shadow(0 0 12px rgba(255, 180, 220, 0.6));
+}
+
+.casa-hotspot-scene {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));
+}
+
+.casa-hotspot-name {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.casa-hotspot-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 1rem;
+  height: 1rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: #ff4081;
+  color: #fff;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+
+.casa-enter-hint {
+  text-align: center;
+  font-size: 0.78rem;
+  opacity: 0.7;
+  margin: 0.5rem 0 0;
+}
+
+.casa-interior {
+  animation: casa-room-in 0.5s ease;
+}
+
+.casa-interior.hidden {
+  display: none;
+}
+
+@keyframes casa-room-in {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.casa-room-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.casa-back-btn {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 120, 180, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-body);
+  cursor: pointer;
+}
+
+.casa-room-title {
+  margin: 0;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.15rem;
+  color: var(--pink-vivid);
+}
+
+.casa-room-body {
+  min-height: 14rem;
+}
+
+.casa-room-theme {
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 120, 180, 0.15);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.theme-bedroom.is-night {
+  background: linear-gradient(180deg, #0a0818 0%, #1a1530 100%);
+}
+
+.casa-bedroom-art,
+.casa-mailbox-art,
+.casa-games-art,
+.casa-agenda-art,
+.casa-garden-art,
+.casa-radio-art,
+.casa-album-art,
+.casa-kitchen-art,
+.casa-cinema-art,
+.casa-library-art,
+.casa-teddy-art,
+.casa-observatory-art,
+.casa-travel-art {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.casa-empty {
+  opacity: 0.75;
+  font-size: 0.88rem;
+}
+
+.casa-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.casa-subnav button {
+  font-size: 0.72rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 120, 180, 0.3);
+  background: transparent;
+  color: var(--text-body);
+  cursor: pointer;
+}
+
+.casa-subnav button.is-active {
+  background: rgba(255, 88, 168, 0.25);
+}
+
+.casa-mail-card {
+  padding: 0.65rem;
+  margin-bottom: 0.5rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 120, 180, 0.15);
+}
+
+.casa-mail-card header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.casa-mail-reactions button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-left: 0.25rem;
+}
+
+.casa-mail-photo {
+  max-width: 100%;
+  max-height: 8rem;
+  border-radius: var(--radius-sm);
+  margin-top: 0.35rem;
+}
+
+.casa-garden-bed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-height: 4rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(60, 120, 60, 0.2);
+  margin: 0.75rem 0;
+}
+
+.casa-flower {
+  font-size: 1.25rem;
+  animation: flower-pop 0.4s ease;
+}
+
+@keyframes flower-pop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+.casa-night-sky {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 6rem;
+  padding: 1rem;
+  background: radial-gradient(ellipse at center, #1a1040 0%, #050510 100%);
+  border-radius: var(--radius-md);
+  margin: 0.75rem 0;
+}
+
+.casa-star {
+  font-size: 1.4rem;
+  animation: star-twinkle 3s ease-in-out infinite;
+}
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.casa-inline-form,
+.casa-stack-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.casa-inline-form input,
+.casa-stack-form input,
+.casa-stack-form textarea,
+.casa-mail-panel textarea {
+  flex: 1;
+  min-width: 8rem;
+  font-family: 'Quicksand', sans-serif;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 120, 180, 0.25);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-body);
+}
+
+.casa-task-list,
+.casa-recipe-list,
+.casa-movie-list,
+.casa-travel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.casa-task-list li,
+.casa-recipe-list li,
+.casa-movie-list li {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(255, 120, 180, 0.1);
+}
+
+.casa-task.is-done {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+.casa-album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.casa-album-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.casa-travel-map {
+  text-align: center;
+  font-size: 1rem;
+  margin: 0.5rem 0;
+}
+
+.casa-travel-count {
+  text-align: center;
+  color: var(--pink-vivid);
+  font-weight: 600;
+}
+
+.casa-together-msg {
+  color: var(--pink-vivid);
+  font-weight: 600;
+}
+
+.casa-presence p {
+  margin: 0.25rem 0;
+}
+
+.casa-last-activity {
+  font-size: 0.82rem;
+  opacity: 0.85;
+  margin-top: 1rem;
+}
+
+.casa-rank-list {
+  padding-left: 1.2rem;
+}
+
+.casa-rank-list li {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.35rem 0;
+}
+
+.casa-soon-note {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.casa-teddy-items {
+  display: flex;
+  gap: 1rem;
+  font-size: 2rem;
+  justify-content: center;
+  margin-top: 1rem;
+  opacity: 0.5;
 }

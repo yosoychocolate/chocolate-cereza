@@ -7,7 +7,7 @@
 
   const SAVE_KEY = 'ChocolateCerezaSave';
   const BACKUP_KEY = 'ChocolateCerezaSave_backup';
-  const SAVE_VERSION = 31;
+  const SAVE_VERSION = 34;
 
   const LEGACY = {
     highScore: 'chocolateCereza_highScore',
@@ -62,7 +62,68 @@
         streakBonusAt: 0,
         notifEnabled: true,
       },
+      coupleHub: {
+        settings: {
+          relationshipStart: null,
+          nextMeetingDate: null,
+          chargeReminder: {
+            enabled: true,
+            time: '20:30',
+            timezone: 'America/New_York',
+          },
+          dailyMissions: {
+            dateKey: '',
+            completed: [],
+          },
+        },
+        tasks: [],
+        events: [],
+        letters: [],
+        memories: [],
+      },
+      nossaCasa: {
+        lettersReadAt: 0,
+        lastPlayDate: null,
+        fireplaceStreak: 0,
+        lastVisitDate: null,
+        gardenLog: [],
+        recipes: [
+          { id: 'r1', text: 'Lasanha', done: false },
+          { id: 'r2', text: 'Bolo', done: false },
+          { id: 'r3', text: 'Pizza', done: false },
+        ],
+        movies: [
+          { id: 'm1', title: 'Your Name', watched: false, rating: 0 },
+          { id: 'm2', title: 'A Viagem de Chihiro', watched: true, rating: 5 },
+          { id: 'm3', title: 'Interestelar', watched: true, rating: 5 },
+        ],
+        travelChecklist: [],
+        lastMusic: null,
+        lastGame: null,
+        lastMessage: null,
+        togetherSince: null,
+      },
     };
+  }
+
+  function createDefaultCoupleHubTasks() {
+    return [
+      { id: 'seed_1', text: 'Carregar o carro', emoji: '🔋', done: false, order: 0 },
+      { id: 'seed_2', text: 'Comprar café', emoji: '☕', done: false, order: 1 },
+      { id: 'seed_3', text: 'Comprar chocolate', emoji: '🍫', done: false, order: 2 },
+      { id: 'seed_4', text: 'Ligar para mamãe', emoji: '📞', done: false, order: 3 },
+      { id: 'seed_5', text: 'Ir ao mercado', emoji: '🛒', done: false, order: 4 },
+    ];
+  }
+
+  function createDefaultCoupleHubEvents() {
+    const year = new Date().getFullYear();
+    return [
+      { id: 'ev_1', title: 'Nosso encontro', date: `${year}-08-15`, emoji: '❤️', note: '' },
+      { id: 'ev_2', title: 'Revisão do carro', date: `${year}-08-20`, emoji: '🚗', note: '' },
+      { id: 'ev_3', title: 'Aniversário', date: `${year}-09-02`, emoji: '🎂', note: '' },
+      { id: 'ev_4', title: 'Viagem', date: `${year}-10-18`, emoji: '✈️', note: '' },
+    ];
   }
 
   function readRaw(key) {
@@ -299,9 +360,38 @@
       version = 31;
     }
 
-    /* Futuras migrações — apenas adicionar campos novos:
     if (version < 32) {
+      const hubDefault = createDefaultSave().coupleHub;
+      fillMissing(save, { coupleHub: hubDefault });
+      if (!Array.isArray(save.coupleHub.tasks) || save.coupleHub.tasks.length === 0) {
+        save.coupleHub.tasks = createDefaultCoupleHubTasks();
+      }
+      if (!Array.isArray(save.coupleHub.events) || save.coupleHub.events.length === 0) {
+        save.coupleHub.events = createDefaultCoupleHubEvents();
+      }
       version = 32;
+    }
+
+    if (version < 33) {
+      fillMissing(save, { nossaCasa: createDefaultSave().nossaCasa });
+      version = 33;
+    }
+
+    if (version < 34) {
+      fillMissing(save, { nossaCasa: createDefaultSave().nossaCasa });
+      if (!Array.isArray(save.nossaCasa.gardenLog)) save.nossaCasa.gardenLog = [];
+      if (!Array.isArray(save.nossaCasa.recipes) || !save.nossaCasa.recipes.length) {
+        save.nossaCasa.recipes = createDefaultSave().nossaCasa.recipes;
+      }
+      if (!Array.isArray(save.nossaCasa.movies) || !save.nossaCasa.movies.length) {
+        save.nossaCasa.movies = createDefaultSave().nossaCasa.movies;
+      }
+      version = 34;
+    }
+
+    /* Futuras migrações — apenas adicionar campos novos:
+    if (version < 35) {
+      version = 35;
     }
     */
 

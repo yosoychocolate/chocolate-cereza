@@ -200,6 +200,9 @@
     }
     if (els.notifBtn) {
       els.notifBtn.classList.toggle('hidden', Notification.permission === 'granted');
+      if (Notification.permission !== 'granted' && els.notifBtn.querySelector('span')) {
+        els.notifBtn.querySelector('span').textContent = '🔔 Notificações';
+      }
     }
     showOverlay('main');
     persistState({ lastMainShownDate: getTodayKey() });
@@ -286,6 +289,7 @@
     if (!('Notification' in global)) return false;
     if (Notification.permission === 'granted') {
       persistState({ notifEnabled: true });
+      registerServiceWorker();
       return true;
     }
     if (Notification.permission === 'denied') return false;
@@ -298,6 +302,77 @@
     } catch (_) {
       return false;
     }
+  }
+
+  function setIntroNotifHint(text, kind = '') {
+    const hint = document.getElementById('intro-notif-hint');
+    if (!hint) return;
+    hint.textContent = text || '';
+    hint.classList.toggle('hidden', !text);
+    hint.classList.remove('is-success', 'is-error');
+    if (kind) hint.classList.add(kind);
+  }
+
+  function updateIntroNotificationButton() {
+    const btn = document.getElementById('btn-intro-notifications');
+    if (!btn) return;
+
+    if (!('Notification' in global)) {
+      btn.classList.add('hidden');
+      setIntroNotifHint('');
+      return;
+    }
+
+    btn.classList.remove('hidden', 'is-active', 'is-denied');
+
+    if (Notification.permission === 'granted') {
+      btn.innerHTML = '<span>✅ Ativas</span>';
+      btn.disabled = true;
+      btn.classList.add('is-active');
+      setIntroNotifHint('');
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      btn.innerHTML = '<span>🔕 Bloqueadas</span>';
+      btn.disabled = true;
+      btn.classList.add('is-denied');
+      setIntroNotifHint('Ative em ajustes do navegador.', 'is-error');
+      return;
+    }
+
+    btn.innerHTML = '<span>🔔 Notificações</span>';
+    btn.disabled = false;
+    setIntroNotifHint('');
+  }
+
+  function bindIntroNotificationButton() {
+    const btn = document.getElementById('btn-intro-notifications');
+    if (!btn || btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+
+    updateIntroNotificationButton();
+
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!('Notification' in global)) return;
+
+      setIntroNotifHint('', '');
+
+      const ok = await requestNotificationPermission();
+      updateIntroNotificationButton();
+
+      if (ok) {
+        setIntroNotifHint('', 'is-success');
+        if (els.notifBtn) els.notifBtn.classList.add('hidden');
+        return;
+      }
+
+      if (Notification.permission === 'denied') {
+        setIntroNotifHint('Bloqueadas nos ajustes.', 'is-error');
+      }
+    });
   }
 
   function registerServiceWorker() {
@@ -373,6 +448,7 @@
     els.notifBtn?.addEventListener('click', async () => {
       const ok = await requestNotificationPermission();
       if (ok) els.notifBtn.classList.add('hidden');
+      updateIntroNotificationButton();
     });
 
     document.addEventListener('visibilitychange', tick);
@@ -404,7 +480,10 @@
 
     if (Notification.permission === 'granted') {
       persistState({ notifEnabled: true });
+      registerServiceWorker();
     }
+
+    updateIntroNotificationButton();
 
     tick();
     tickTimer = setInterval(tick, 30000);
@@ -421,9 +500,20 @@
 
   global.DailyChargeMission = {
     init,
+    bindIntroNotificationButton,
+    requestNotificationPermission,
+    updateIntroNotificationButton,
     getTodayKey,
     getState,
     claimedToday,
     TIMEZONE,
   };
+
+  if (global.SaveManager) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bindIntroNotificationButton);
+    } else {
+      bindIntroNotificationButton();
+    }
+  }
 })(typeof window !== 'undefined' ? window : globalThis);

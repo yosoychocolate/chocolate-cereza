@@ -587,6 +587,7 @@ async function handleRoomEvent(event) {
     hideCoupleScoreHud();
     renderGiftPanel(null);
     showLobby();
+    notifyHubRoomChanged();
     setStatus('La sala ya no existe.');
     return;
   }
@@ -626,6 +627,10 @@ function bindRoomListener() {
   setChatEnabled(true);
 }
 
+function notifyHubRoomChanged() {
+  window.dispatchEvent(new CustomEvent('couple:roomChanged'));
+}
+
 async function onCreateRoom() {
   setStatus('Creando sala…');
   els.createBtn.disabled = true;
@@ -645,6 +650,7 @@ async function onCreateRoom() {
     bindRoomListener();
     lastPlayerCount = result.room?.players?.length || 1;
     await refreshRoomPanel();
+    notifyHubRoomChanged();
     showToast(`Sala ${result.room.code} creada — comparte el código`);
   } catch (err) {
     console.error('[CoupleUI] createRoom error:', err);
@@ -685,6 +691,7 @@ async function onJoinRoom() {
       const partner = result.room.players.find((p) => p.id !== localId);
       scheduleHugScene(partner?.name || 'Tu pareja');
     }
+    notifyHubRoomChanged();
     showToast(`Conectado a la sala ${code}`);
   } catch (err) {
     console.error('[CoupleUI] joinRoom error:', err);
@@ -716,6 +723,7 @@ async function onLeaveRoom() {
     hideCoupleScoreHud();
     renderGiftPanel(null);
     showLobby();
+    notifyHubRoomChanged();
     setStatus(
       result.success
         ? ''
@@ -853,6 +861,7 @@ async function init() {
     if (coupleRes.success) {
       lastBestPlayerId = coupleRes.couple?.bestPlayerId ?? null;
     }
+    notifyHubRoomChanged();
   } else {
     showLobby();
   }

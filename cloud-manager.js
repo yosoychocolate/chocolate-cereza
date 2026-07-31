@@ -59,6 +59,22 @@ import {
   MIN_GIFT_AMOUNT,
   MAX_GIFT_AMOUNT,
 } from './cloud-gifts.js?v=__APP_VERSION__';
+import {
+  ensureHubInitialized,
+  subscribeHub,
+  fetchHubSnapshot,
+  updateHubSettings,
+  addHubTask,
+  toggleHubTask,
+  deleteHubTask,
+  addHubEvent,
+  updateHubEvent,
+  deleteHubEvent,
+  addHubLetter,
+  addHubMemory,
+  deleteHubMemory,
+  completeHubDailyMission,
+} from './cloud-hub.js?v=__APP_VERSION__';
 
 /** @typedef {'ready' | 'config_invalid' | 'error' | 'disconnected'} ConnectionStatusCode */
 /** @typedef {'waiting' | 'full' | 'closed'} RoomStatus */
@@ -118,6 +134,12 @@ let currentRoom = null;
 /** @type {string | null} */
 let currentPlayerId = null;
 
+/** @type {Set<(event: object) => void>} */
+const hubCallbacks = new Set();
+
+/** @type {(() => void) | null} */
+let hubUnsubscribe = null;
+
 /** @type {CoupleStats | null} */
 let currentCoupleStats = null;
 
@@ -156,6 +178,37 @@ roomListener.subscribe((event) => {
     roomListener.stop();
   }
 });
+
+function notifyHubListeners(payload) {
+  hubCallbacks.forEach((cb) => {
+    try {
+      cb(payload);
+    } catch (err) {
+      console.warn('[CloudManager] hub callback:', err);
+    }
+  });
+}
+
+function stopHubSync() {
+  if (hubUnsubscribe) {
+    hubUnsubscribe();
+    hubUnsubscribe = null;
+  }
+}
+
+function startHubSync() {
+  stopHubSync();
+  if (!currentRoom || hubCallbacks.size === 0) return;
+
+  const db = requireDb();
+  const code = currentRoom.code;
+
+  ensureHubInitialized(db, code).catch((err) => {
+    console.warn('[CloudManager] ensureHubInitialized:', err);
+  });
+
+  hubUnsubscribe = subscribeHub(db, code, notifyHubListeners);
+}
 
 function startRoomListener() {
   if (!currentRoom) return;
@@ -350,12 +403,16 @@ function persistSession(room, player) {
 function setLocalRoom(room, playerId) {
   currentRoom = room;
   currentPlayerId = playerId;
+  if (room && hubCallbacks.size > 0) {
+    startHubSync();
+  }
 }
 
 function clearLocalRoom() {
   restoreGeneration += 1;
   stopRoomListener();
   stopPresenceLifecycle();
+  stopHubSync();
   currentRoom = null;
   currentPlayerId = null;
   currentCoupleStats = null;
@@ -819,6 +876,9 @@ export async function restoreSession() {
     setLocalRoom(room, session.playerId);
     persistSession(room, { id: session.playerId, name: session.playerName, joinedAt: session.joinedAt });
     await activateLocalPresence();
+    await ensureHubInitialized(db, session.roomCode).catch((err) => {
+      console.warn('[CloudManager] ensureHubInitialized restore:', err);
+    });
     startRoomListener();
     return { success: true, room: getCurrentRoom(), restored: true };
   } catch (err) {
@@ -874,6 +934,8 @@ export async function createRoom(player) {
       ...createDefaultCoupleStats(),
       updatedAt: serverTimestamp(),
     });
+
+    await ensureHubInitialized(db, code);
 
     await writePlayerCloud(db, code, normalized);
 
@@ -981,6 +1043,9 @@ export async function joinRoom(code, player) {
     setLocalRoom(room, normalized.id);
     persistSession(room, normalized);
     await activateLocalPresence();
+    await ensureHubInitialized(db, roomCode).catch((err) => {
+      console.warn('[CloudManager] ensureHubInitialized join:', err);
+    });
 
     return ok(getCurrentRoom());
   } catch (err) {
@@ -1198,6 +1263,157 @@ export function getCurrentRoom() {
   return currentRoom ? { ...currentRoom, players: currentRoom.players.map((p) => ({ ...p, presence: { ...p.presence } })) } : null;
 }
 
+function requireRoomCode() {
+  const room = getCurrentRoom();
+  if (!room) throw new Error('NO_ROOM');
+  return room.code;
+}
+
+export function subscribeToHub(callback) {
+  if (typeof callback !== 'function') return () => {};
+  hubCallbacks.add(callback);
+  if (currentRoom) startHubSync();
+  return () => {
+    hubCallbacks.delete(callback);
+    if (hubCallbacks.size === 0) stopHubSync();
+  };
+}
+
+export async function fetchHubData() {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    await ensureHubInitialized(db, code);
+    const snap = await fetchHubSnapshot(db, code);
+    return ok(snap);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message === 'NO_ROOM') return fail('NO_ROOM', 'Entre em uma sala para sincronizar.');
+    return fail('HUB_FETCH_FAILED', message);
+  }
+}
+
+export async function updateHubDataSettings(partial) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    await updateHubSettings(db, code, partial);
+    return ok(true);
+  } catch (err) {
+    return fail('HUB_UPDATE_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function createHubTask(task) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    const id = await addHubTask(db, code, task);
+    return ok({ id });
+  } catch (err) {
+    return fail('HUB_TASK_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function setHubTaskDone(taskId, done, doneBy) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    await toggleHubTask(db, code, taskId, done, doneBy);
+    return ok(true);
+  } catch (err) {
+    return fail('HUB_TASK_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function removeHubTask(taskId) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    await deleteHubTask(db, code, taskId);
+    return ok(true);
+  } catch (err) {
+    return fail('HUB_TASK_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function createHubEvent(event, playerName) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    const id = await addHubEvent(db, code, event, playerName);
+    return ok({ id });
+  } catch (err) {
+    return fail('HUB_EVENT_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function patchHubEvent(eventId, partial) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    await updateHubEvent(db, code, eventId, partial);
+    return ok(true);
+  } catch (err) {
+    return fail('HUB_EVENT_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function removeHubEvent(eventId) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    await deleteHubEvent(db, code, eventId);
+    return ok(true);
+  } catch (err) {
+    return fail('HUB_EVENT_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function createHubLetter(letter) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    const id = await addHubLetter(db, code, letter);
+    return ok({ id });
+  } catch (err) {
+    return fail('HUB_LETTER_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function createHubMemory(memory) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    const id = await addHubMemory(db, code, memory);
+    return ok({ id });
+  } catch (err) {
+    return fail('HUB_MEMORY_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function removeHubMemory(memoryId) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    await deleteHubMemory(db, code, memoryId);
+    return ok(true);
+  } catch (err) {
+    return fail('HUB_MEMORY_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function completeHubMission(dateKey, missionId, currentSettings) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    const completed = await completeHubDailyMission(db, code, dateKey, missionId, currentSettings);
+    return ok({ completed });
+  } catch (err) {
+    return fail('HUB_MISSION_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
 export const CloudManager = {
   isConnected,
   getConnectionStatus,
@@ -1227,6 +1443,19 @@ export const CloudManager = {
   hasSession,
   getPresenceLabel,
   formatLastSeen,
+  subscribeToHub,
+  fetchHubData,
+  updateHubDataSettings,
+  createHubTask,
+  setHubTaskDone,
+  removeHubTask,
+  createHubEvent,
+  patchHubEvent,
+  removeHubEvent,
+  createHubLetter,
+  createHubMemory,
+  removeHubMemory,
+  completeHubMission,
 };
 
 if (typeof window !== 'undefined') {

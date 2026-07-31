@@ -45,10 +45,17 @@
         El Chocolate & La Cereza
         <span class="char-icon">🍒</span>
       </h1>
+      <p id="intro-daily-greeting" class="intro-daily-greeting" aria-live="polite"></p>
       <p class="intro-quote">"Hay historias que comienzan con una mirada... la nuestra empezó con un chocolate y una cereza."</p>
-      <button id="btn-enter" class="btn-glow">
-        <span>❤️ Entrar en nuestra historia</span>
-      </button>
+      <div class="intro-actions">
+        <button id="btn-enter" class="btn-glow">
+          <span>❤️ Entrar en nuestra historia</span>
+        </button>
+        <button type="button" id="btn-intro-notifications" class="btn-notif-pink">
+          <span>🔔 Notificações</span>
+        </button>
+        <p id="intro-notif-hint" class="intro-notif-hint hidden" aria-live="polite"></p>
+      </div>
     </div>
   </section>
 
@@ -70,6 +77,12 @@
     <header class="main-header glass">
       <span class="header-title">🍫 El Chocolate & La Cereza 🍒</span>
     </header>
+
+    <nav class="site-hub-nav glass" aria-label="Menu do casal">
+      <button type="button" class="site-hub-nav-btn" data-scroll="section-couple-hub">🏡 Nossa Casa</button>
+      <button type="button" class="site-hub-nav-btn" data-scroll="section-timeline">📖 História</button>
+      <button type="button" class="site-hub-nav-btn" data-scroll="section-game">🎮 Jogos</button>
+    </nav>
 
     <!-- Nuestra canción -->
     <section class="section glass" id="section-music">
@@ -180,6 +193,113 @@
           <p>Aún seguimos escribiendo nuestra historia...</p>
         </div>
       </div>
+    </section>
+
+    <!-- Central do Casal / Nossa Casa -->
+    <section class="section glass" id="section-couple-hub">
+      <h2>🏡 Nossa Casa</h2>
+      <p id="hub-sync-badge" class="hub-sync-badge">Carregando…</p>
+
+      <div class="hub-tabs visually-hidden" aria-hidden="true">
+        <button type="button" class="hub-tab is-active" data-hub-tab="nossa-casa" role="tab" aria-selected="true">🏡 Casa</button>
+        <button type="button" class="hub-tab" data-hub-tab="agenda" role="tab" aria-selected="false">📝 Agenda</button>
+        <button type="button" class="hub-tab" data-hub-tab="calendario" role="tab" aria-selected="false">📅 Calendário</button>
+        <button type="button" class="hub-tab" data-hub-tab="cartinhas" role="tab" aria-selected="false">💌 Cartinhas</button>
+        <button type="button" class="hub-tab" data-hub-tab="memorias" role="tab" aria-selected="false">📸 Memórias</button>
+        <button type="button" class="hub-tab" data-hub-tab="contador" role="tab" aria-selected="false">❤️ Contador</button>
+        <button type="button" class="hub-tab" data-hub-tab="missoes" role="tab" aria-selected="false">🎯 Missões</button>
+        <button type="button" class="hub-tab" data-hub-tab="lembretes" role="tab" aria-selected="false">🔔 Lembretes</button>
+      </div>
+
+      <div class="hub-panel" data-hub-panel="nossa-casa">
+        <div id="nossa-casa-scene" class="nossa-casa-scene" aria-label="Nossa casa"></div>
+      </div>
+
+      <div class="hub-panel visually-hidden" aria-hidden="true" data-hub-panel="agenda">
+        <p class="hub-panel-desc">Lista simples — marque quando concluir.</p>
+        <ul id="hub-task-list" class="hub-task-list"></ul>
+        <form id="hub-task-form" class="hub-inline-form">
+          <input id="hub-task-emoji" class="hub-input hub-input-emoji" type="text" maxlength="4" placeholder="🔋" aria-label="Emoji">
+          <input id="hub-task-input" class="hub-input" type="text" maxlength="80" placeholder="Nova tarefa…" required>
+          <button type="submit" class="couple-btn couple-btn-small couple-btn-primary">Adicionar</button>
+        </form>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="calendario">
+        <div class="hub-cal-head">
+          <button type="button" id="hub-cal-prev" class="hub-cal-nav" aria-label="Mês anterior">◀</button>
+          <h3 id="hub-cal-title" class="hub-cal-title"></h3>
+          <button type="button" id="hub-cal-next" class="hub-cal-nav" aria-label="Próximo mês">▶</button>
+        </div>
+        <div class="hub-cal-weekdays" aria-hidden="true">
+          <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
+        </div>
+        <div id="hub-cal-grid" class="hub-cal-grid"></div>
+        <div id="hub-day-panel" class="hub-day-panel"></div>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="cartinhas">
+        <div id="hub-letter-list" class="hub-letter-list"></div>
+        <form id="hub-letter-form" class="hub-stack-form">
+          <textarea id="hub-letter-input" class="hub-textarea" rows="3" maxlength="500" placeholder="Escreva uma cartinha…" required></textarea>
+          <button type="submit" class="couple-btn couple-btn-primary">Enviar 💌</button>
+        </form>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="memorias">
+        <div id="hub-memory-grid" class="hub-memory-grid"></div>
+        <form id="hub-memory-form" class="hub-stack-form">
+          <input id="hub-memory-title" class="hub-input" type="text" maxlength="60" placeholder="Título (ex: Praia)">
+          <input id="hub-memory-url" class="hub-input" type="url" placeholder="URL da foto (opcional)">
+          <label class="hub-file-label">📷 Ou escolha uma foto <input id="hub-memory-file" type="file" accept="image/*"></label>
+          <button type="submit" class="couple-btn couple-btn-primary">Salvar memória</button>
+        </form>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="contador">
+        <div class="hub-counter-cards">
+          <div class="hub-counter-card">
+            <p class="hub-counter-heading">Juntos há</p>
+            <div id="hub-counter-together"></div>
+          </div>
+          <div class="hub-counter-card">
+            <p class="hub-counter-heading">Próximo encontro</p>
+            <div id="hub-counter-meeting"></div>
+          </div>
+        </div>
+        <form id="hub-counter-form" class="hub-stack-form">
+          <label class="hub-field">Início do relacionamento<input id="hub-relationship-start" class="hub-input" type="date"></label>
+          <label class="hub-field">Próximo encontro<input id="hub-next-meeting" class="hub-input" type="date"></label>
+          <button type="submit" class="couple-btn couple-btn-primary">Salvar datas</button>
+        </form>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="missoes">
+        <p class="hub-panel-desc">Todo dia missões diferentes — cada uma rende 🍫.</p>
+        <ul id="hub-mission-list" class="hub-mission-list"></ul>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="lembretes">
+        <p class="hub-panel-desc">Sophie pode escolher o horário nos EUA 🇺🇸 — você vê o mesmo evento no Brasil 🇧🇷.</p>
+        <form id="hub-reminder-form" class="hub-stack-form">
+          <label class="hub-check-row">
+            <input id="hub-reminder-enabled" type="checkbox">
+            <span>🔋 Carregar o carro — ativar lembrete</span>
+          </label>
+          <label class="hub-field">Horário<input id="hub-reminder-time" class="hub-input" type="time" value="20:30"></label>
+          <label class="hub-field">Fuso horário
+            <select id="hub-reminder-tz" class="hub-input">
+              <option value="America/New_York">EUA — Nova York (Sophie)</option>
+              <option value="America/Sao_Paulo">Brasil — São Paulo</option>
+              <option value="America/Chicago">EUA — Chicago</option>
+              <option value="America/Los_Angeles">EUA — Los Angeles</option>
+            </select>
+          </label>
+          <button type="submit" class="couple-btn couple-btn-primary">Salvar lembrete</button>
+        </form>
+      </div>
+
+      <div id="hub-toast" class="hub-toast hidden" role="status" aria-live="polite"></div>
     </section>
 
     <!-- Mini Game -->
@@ -579,7 +699,9 @@
       <div id="daily-charge-message" class="daily-charge-message"></div>
       <div id="daily-charge-rewards" class="daily-charge-rewards hidden" aria-live="polite"></div>
       <button type="button" id="daily-charge-action" class="btn-neon daily-charge-btn">🔌 Coloquei para carregar</button>
-      <button type="button" id="daily-charge-notif-btn" class="daily-charge-notif-btn">🔔 Ativar lembretes às 20:30</button>
+      <button type="button" id="daily-charge-notif-btn" class="btn-notif-pink daily-charge-notif-btn hidden">
+        <span>🔔 Notificações</span>
+      </button>
       <button type="button" id="daily-charge-dismiss" class="daily-charge-dismiss hidden">Fechar</button>
     </div>
   </div>
@@ -595,9 +717,18 @@
     </div>
   </div>
 
+  <div id="casa-mascot-widget" class="casa-mascot-widget hidden" role="complementary" aria-label="Mascote do casal">
+    <div class="casa-mascot-inner">
+      <span id="casa-mascot-emoji" class="casa-mascot-emoji" aria-hidden="true">🐻</span>
+      <p id="casa-mascot-bubble" class="casa-mascot-bubble">Olá!</p>
+    </div>
+  </div>
+  <div id="casa-toast" class="casa-toast hidden" role="status" aria-live="polite"></div>
+
   <script src="music-playlist.js?v=__APP_VERSION__"></script>
   <script src="update-check.js?v=__APP_VERSION__"></script>
   <script src="save-manager.js?v=__APP_VERSION__"></script>
+  <script src="daily-greetings.js?v=__APP_VERSION__"></script>
   <script src="game-audit.js?v=__APP_VERSION__"></script>
   <script src="love-words.js?v=__APP_VERSION__"></script>
   <script src="game-engine.js?v=__APP_VERSION__"></script>
@@ -609,6 +740,9 @@
   <script src="cannon-missions.js?v=__APP_VERSION__"></script>
   <script src="spaceship-ui.js?v=__APP_VERSION__"></script>
   <script src="script.js?v=__APP_VERSION__"></script>
+  <script src="hub-shared.js?v=__APP_VERSION__"></script>
+  <script src="couple-hub.js?v=__APP_VERSION__"></script>
+  <script src="nossa-casa.js?v=__APP_VERSION__"></script>
   <script>
     if (window.__FILE_PROTOCOL__) {
       document.documentElement.classList.add('file-protocol-active');

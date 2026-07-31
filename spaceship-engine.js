@@ -4,6 +4,10 @@
 (function (global) {
   'use strict';
 
+  function canReadCanvasPixels() {
+    return !global.__FILE_PROTOCOL__ && (!global.location || global.location.protocol !== 'file:');
+  }
+
   class ObjectPool {
     constructor(factory, resetFn, size) {
       this._factory = factory;
@@ -374,6 +378,10 @@
 
   /** Detecta região opaca real do PNG (ignora margens transparentes). */
   function measureImageOpaqueBounds(img, iw, ih) {
+    if (!canReadCanvasPixels()) {
+      return { minX: 0, minY: 0, maxX: iw - 1, maxY: ih - 1, w: iw, h: ih };
+    }
+
     const c = document.createElement('canvas');
     c.width = iw;
     c.height = ih;
@@ -396,7 +404,9 @@
         }
       }
     } catch (e) {
-      console.warn('[Cañón] opaque bounds skipped', e);
+      if (canReadCanvasPixels()) {
+        console.warn('[Cañón] opaque bounds skipped', e);
+      }
       return { minX: 0, minY: 0, maxX: iw - 1, maxY: ih - 1, w: iw, h: ih };
     }
     if (maxX < minX) {
@@ -535,6 +545,10 @@
 
   /** Remove só o fundo conectado às bordas (preserva chocolate escuro interno). */
   function stripEdgeBackground(canvas) {
+    if (!canReadCanvasPixels()) {
+      return canvas;
+    }
+
     try {
       const cx = canvas.getContext('2d', { willReadFrequently: true });
       const w = canvas.width;
@@ -566,7 +580,9 @@
 
       cx.putImageData(imgData, 0, 0);
     } catch (e) {
-      console.warn('[Cañón] edge alpha bake skipped', e);
+      if (canReadCanvasPixels()) {
+        console.warn('[Cañón] edge alpha bake skipped', e);
+      }
     }
     return canvas;
   }
@@ -588,6 +604,10 @@
 
   /** Detecta a fileira “deck” (superfície plana onde o cano encaixa). */
   function measurePlatformDeckRatio(canvas, fallback) {
+    if (!canReadCanvasPixels()) {
+      return fallback;
+    }
+
     try {
       const w = canvas.width;
       const h = canvas.height;
@@ -620,7 +640,9 @@
         return Math.max(0.04, Math.min(0.45, bestY / h));
       }
     } catch (e) {
-      console.warn('[Cañón] deck measure skipped', e);
+      if (canReadCanvasPixels()) {
+        console.warn('[Cañón] deck measure skipped', e);
+      }
     }
     return fallback;
   }

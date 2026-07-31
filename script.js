@@ -604,6 +604,10 @@ function isBackgroundPixel(r, g, b) {
 }
 
 function prepareSprite(img, label) {
+  if (window.__FILE_PROTOCOL__) {
+    return img;
+  }
+
   const { w, h } = spriteDimensions(img);
   const probe = document.createElement('canvas');
   probe.width = w;
@@ -643,7 +647,9 @@ function prepareSprite(img, label) {
     console.log(`[MiniGame] ${label}: fundo removido em canvas (${w}x${h})`);
     return probe;
   } catch (err) {
-    console.warn(`[MiniGame] ${label}: usando PNG direto.`, err);
+    if (!window.__FILE_PROTOCOL__) {
+      console.warn(`[MiniGame] ${label}: usando PNG direto.`, err);
+    }
     return img;
   }
 }
