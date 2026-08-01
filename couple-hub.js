@@ -617,7 +617,7 @@ function promptEvent(existing) {
 
 function scheduleReminderCheck() {
   if (reminderTimer) clearInterval(reminderTimer);
-  reminderTimer = setInterval(checkReminder, 30000);
+  reminderTimer = setInterval(checkReminder, 10000);
   checkReminder();
 }
 
@@ -636,11 +636,12 @@ function checkReminder() {
   fmt.formatToParts(now).forEach((p) => {
     if (p.type !== 'literal') parts[p.type] = p.value;
   });
-  const nowStr = `${parts.hour}:${parts.minute}`;
-  const target = (cr.time || '20:30').slice(0, 5);
+  const nowMins = Number(parts.hour) * 60 + Number(parts.minute);
+  const targetParts = (cr.time || '20:30').slice(0, 5).split(':');
+  const targetMins = Number(targetParts[0]) * 60 + Number(targetParts[1] || 0);
   const dateKey = todayDateKeyInTz(tz);
-  const flagKey = `hubReminder_${dateKey}_${target}`;
-  if (nowStr === target && !sessionStorage.getItem(flagKey)) {
+  const flagKey = `hubReminder_${dateKey}_${cr.time || '20:30'}`;
+  if (nowMins >= targetMins && nowMins < targetMins + 60 && !sessionStorage.getItem(flagKey)) {
     sessionStorage.setItem(flagKey, '1');
     showHubToast('❤️ Chocolate & Cereza — Hora de cargar el auto. 🔋🐻');
     if (Notification?.permission === 'granted') {

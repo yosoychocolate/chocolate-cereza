@@ -12,7 +12,8 @@
   const NUDGE_MINUTE = 30;
   const REWARD_COINS = 20;
   const STREAK_BONUS_COINS = 100;
-  const STREAK_MILESTONE = 7;
+  /** Minutos após 20:30 NY em que ainda tentamos enviar a notificação (aba aberta). */
+  const NOTIF_GRACE_MINUTES = 60;
 
   const MSGS = {
     main: [
@@ -34,6 +35,7 @@
 
   let els = {};
   let tickTimer = null;
+  let earlyWatchTimer = null;
   let inited = false;
   let celebrating = false;
 
@@ -68,6 +70,12 @@
   function getMinutesOfDay(date = new Date()) {
     const p = getTzParts(date);
     return p.hour * 60 + p.minute;
+  }
+
+  function isNotificationWindowOpen() {
+    const unlock = UNLOCK_HOUR * 60 + UNLOCK_MINUTE;
+    const mins = getMinutesOfDay();
+    return mins >= unlock && mins < unlock + NOTIF_GRACE_MINUTES;
   }
 
   function isMissionWindowOpen() {
@@ -285,11 +293,22 @@
     }, bonusCoins ? 2200 : 1400);
   }
 
+  async function syncRemotePush() {
+    if (!global.PushNotifications?.subscribe) return null;
+    try {
+      return await global.PushNotifications.subscribe();
+    } catch (_) {
+      return null;
+    }
+  }
+
   async function requestNotificationPermission() {
     if (!('Notification' in global)) return false;
     if (Notification.permission === 'granted') {
       persistState({ notifEnabled: true });
       registerServiceWorker();
+      await syncRemotePush();
+      updateIntroNotificationButton();
       return true;
     }
     if (Notification.permission === 'denied') return false;
@@ -297,7 +316,11 @@
       const result = await Notification.requestPermission();
       const ok = result === 'granted';
       persistState({ notifEnabled: ok });
-      if (ok) registerServiceWorker();
+      if (ok) {
+        registerServiceWorker();
+        await syncRemotePush();
+        updateIntroNotificationButton();
+      }
       return ok;
     } catch (_) {
       return false;
@@ -313,9 +336,24 @@
     if (kind) hint.classList.add(kind);
   }
 
+  function getClosedBrowserLabel() {
+    if (global.IosPushGuide?.isIOS?.()) {
+      return '✅ Activas · incluso con Safari cerrado';
+    }
+    return '✅ Activas · también con Chrome cerrado';
+  }
+
   function updateIntroNotificationButton() {
     const btn = document.getElementById('btn-intro-notifications');
     if (!btn) return;
+
+    if (global.IosPushGuide?.needsHomeScreenInstall?.()) {
+      btn.classList.remove('hidden', 'is-active', 'is-denied');
+      btn.innerHTML = '<span>📲 Instalar en iPhone</span>';
+      btn.disabled = false;
+      setIntroNotifHint('Paso 1: añade el sitio a la pantalla de inicio.', 'is-error');
+      return;
+    }
 
     if (!('Notification' in global)) {
       btn.classList.add('hidden');
@@ -326,10 +364,21 @@
     btn.classList.remove('hidden', 'is-active', 'is-denied');
 
     if (Notification.permission === 'granted') {
-      btn.innerHTML = '<span>✅ Activas</span>';
+      const push = global.PushNotifications?.getStatus?.();
+      const remote = push?.remote;
+      const label = remote ? getClosedBrowserLabel() : '✅ Activas';
+      btn.innerHTML = `<span>${label}</span>`;
       btn.disabled = true;
       btn.classList.add('is-active');
-      setIntroNotifHint('');
+      if (push?.reason === 'vapid_missing') {
+        setIntroNotifHint('Push remoto pendiente: falta la clave VAPID en firebase-config.js.', 'is-error');
+      } else if (push?.reason === 'ios_needs_install') {
+        setIntroNotifHint('Abre la app desde el icono 🍒 en la pantalla de inicio.', 'is-error');
+      } else if (push?.reason && !remote) {
+        setIntroNotifHint('Solo avisos con el sitio abierto por ahora.', 'is-error');
+      } else {
+        setIntroNotifHint('');
+      }
       return;
     }
 
@@ -356,6 +405,13 @@
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
+
+      if (global.IosPushGuide?.needsHomeScreenInstall?.()) {
+        global.IosPushGuide.showInstallGuide();
+        setIntroNotifHint('Sigue los pasos y abre desde el icono 🍒.', 'is-error');
+        return;
+      }
+
       if (!('Notification' in global)) return;
 
       setIntroNotifHint('', '');
@@ -370,7 +426,7 @@
       }
 
       if (Notification.permission === 'denied') {
-        setIntroNotifHint('Bloqueadas en los ajustes.', 'is-error');
+        setIntroNotifHint('Actívalas en Ajustes → Notificaciones → Chocolate.', 'is-error');
       }
     });
   }
@@ -380,11 +436,12 @@
     navigator.serviceWorker.register('sw.js?v=__APP_VERSION__').catch(() => {});
   }
 
-  function sendDailyNotification() {
+  async function sendDailyNotification() {
     const state = getState();
-    if (!state.notifEnabled) return;
-    if (state.lastNotifDate === getTodayKey()) return;
-    if (Notification.permission !== 'granted') return;
+    if (!state.notifEnabled) return false;
+    if (state.lastNotifDate === getTodayKey()) return false;
+    if (!('Notification' in global) || Notification.permission !== 'granted') return false;
+    if (!isNotificationWindowOpen()) return false;
 
     const title = '❤️ Chocolate & Cereza';
     const body = 'Hora de poner el auto a cargar. El Chocolate te está esperando. 🔋🐻';
@@ -396,37 +453,36 @@
       renotify: true,
     };
 
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then((reg) => {
-        reg.showNotification(title, opts);
-      }).catch(() => {
-        new Notification(title, opts);
-      });
-    } else {
-      try {
-        new Notification(title, opts);
-      } catch (_) { /* ignore */ }
-    }
+    const markSent = () => persistState({ lastNotifDate: getTodayKey() });
 
-    persistState({ lastNotifDate: getTodayKey() });
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(title, opts);
+        markSent();
+        return true;
+      }
+    } catch (_) { /* fallback abaixo */ }
+
+    try {
+      new Notification(title, opts);
+      markSent();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   function maybeAutoShow() {
-    if (document.body.classList.contains('intro-lock')) return;
+    void sendDailyNotification();
+
+    if (document.documentElement.classList.contains('intro-lock')) return;
     if (!els.overlay || celebrating) return;
     if (claimedToday()) return;
     if (!els.overlay.classList.contains('hidden')) return;
 
     const state = getState();
     const today = getTodayKey();
-    const mins = getMinutesOfDay();
-
-    const unlock = UNLOCK_HOUR * 60 + UNLOCK_MINUTE;
-    const notifEnd = unlock + 5;
-
-    if (mins >= unlock && mins < notifEnd) {
-      sendDailyNotification();
-    }
 
     if (!isMissionWindowOpen()) return;
 
@@ -469,6 +525,21 @@
     };
   }
 
+  function startEarlyNotificationWatch() {
+    if (earlyWatchTimer || !global.SaveManager) return;
+    registerServiceWorker();
+    try {
+      const qs = new URLSearchParams(global.location?.search || '');
+      if (qs.get('dailyCharge') === 'notif' && qs.get('force') === '1') {
+        persistState({ lastNotifDate: null });
+        setTimeout(() => { void sendDailyNotification(); }, 400);
+      }
+    } catch (_) { /* ignore */ }
+    const run = () => { void sendDailyNotification(); };
+    run();
+    earlyWatchTimer = setInterval(run, 10000);
+  }
+
   function init() {
     if (inited || !global.SaveManager) return;
     cacheElements();
@@ -486,12 +557,16 @@
     updateIntroNotificationButton();
 
     tick();
-    tickTimer = setInterval(tick, 30000);
+    tickTimer = setInterval(tick, 15000);
 
     try {
       const qs = new URLSearchParams(global.location?.search || '');
       const mode = qs.get('dailyCharge');
       const force = mode === 'preview' || qs.get('force') === '1';
+      if (mode === 'notif' && force) {
+        persistState({ lastNotifDate: null });
+        setTimeout(() => { void sendDailyNotification(); }, 400);
+      }
       if ((mode === '1' || mode === 'preview') && (force || !claimedToday())) {
         setTimeout(showMainMission, 600);
       }
@@ -500,9 +575,11 @@
 
   global.DailyChargeMission = {
     init,
+    startEarlyNotificationWatch,
     bindIntroNotificationButton,
     requestNotificationPermission,
     updateIntroNotificationButton,
+    sendDailyNotification,
     getTodayKey,
     getState,
     claimedToday,
@@ -510,6 +587,7 @@
   };
 
   if (global.SaveManager) {
+    startEarlyNotificationWatch();
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', bindIntroNotificationButton);
     } else {

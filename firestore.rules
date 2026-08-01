@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /pushTokens/{tokenId} {
+      allow read: if false;
+      allow create, update: if request.resource.data.keys().hasAll(['token', 'playerId', 'enabled'])
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 20
+        && request.resource.data.playerId is string
+        && request.resource.data.enabled is bool;
+      allow delete: if false;
+    }
+
+    // Demais coleções do jogo (salas, hub, etc.)
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

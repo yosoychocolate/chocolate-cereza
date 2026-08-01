@@ -168,6 +168,48 @@
 
     },
 
+    {
+
+      id: 'no-es-mi-culpa-1',
+
+      title: 'No Es Mi Culpa 1',
+
+      subtitle: '♪ No Es Mi Culpa 1',
+
+      src: 'assets/No%20Es%20Mi%20Culpa%201.mp3',
+
+      quote: '"Contigo no hay culpa, solo ganas de bailar." 💃❤️',
+
+    },
+
+    {
+
+      id: 'no-es-mi-culpa-2',
+
+      title: 'No Es Mi Culpa 2',
+
+      subtitle: '♪ No Es Mi Culpa 2',
+
+      src: 'assets/No%20Es%20Mi%20Culpa%202.mp3',
+
+      quote: '"Otra vez esta canción… y otra vez pienso en ti." 🎶💕',
+
+    },
+
+    {
+
+      id: 'ivonny-bonita',
+
+      title: 'Ivonny Bonita',
+
+      subtitle: '♪ Ivonny Bonita',
+
+      src: 'assets/Ivonny%20Bonita.mp3',
+
+      quote: '"Bonita como tú, mi Ivonny." 🍒✨',
+
+    },
+
   ];
 
 

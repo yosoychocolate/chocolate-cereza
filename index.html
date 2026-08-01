@@ -11,6 +11,11 @@
   <link rel="icon" type="image/png" sizes="192x192" href="assets/cherry.png?v=5">
   <link rel="shortcut icon" type="image/png" href="assets/cherry.png?v=5">
   <link rel="apple-touch-icon" href="assets/cherry.png?v=5">
+  <link rel="manifest" href="manifest.json?v=__APP_VERSION__">
+  <meta name="theme-color" content="#ff4fa3">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Chocolate">
   <link rel="preload" as="image" href="assets/cannon-bg.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,6 +63,24 @@
       </div>
     </div>
   </section>
+
+  <!-- Guía iPhone — añadir a pantalla de inicio -->
+  <div id="ios-install-overlay" class="ios-install-overlay hidden" aria-hidden="true" role="dialog" aria-labelledby="ios-install-title">
+    <div class="ios-install-card glass">
+      <button type="button" class="ios-install-close" data-ios-install-close aria-label="Cerrar">✕</button>
+      <h2 id="ios-install-title" class="ios-install-title">📲 iPhone — notificaciones</h2>
+      <p class="ios-install-lead">En iPhone, Safari <strong>no avisa</strong> si solo abres el enlace. Hay que instalar la app en la pantalla de inicio:</p>
+      <ol class="ios-install-steps">
+        <li>Abre este sitio en <strong>Safari</strong> (no en Instagram/WhatsApp).</li>
+        <li>Toca el botón <strong>Compartir</strong> <span class="ios-share-icon" aria-hidden="true">⎙</span> abajo en el centro.</li>
+        <li>Elige <strong>«Añadir a pantalla de inicio»</strong>.</li>
+        <li>Toca <strong>«Añadir»</strong> — aparecerá el icono 🍒</li>
+        <li><strong>Cierra Safari</strong> y abre la app desde ese icono.</li>
+        <li>Allí toca <strong>🔔 Notificaciones</strong> y acepta.</li>
+      </ol>
+      <p class="ios-install-note">Así te llegará el aviso de las 8:30 PM (hora de Nueva York) aunque no tengas Safari abierto. ❤️</p>
+    </div>
+  </div>
 
   <!-- ANIMAÇÃO ENCONTRO -->
   <section id="meeting" class="screen">
@@ -730,6 +753,8 @@
   </div>
   <div id="casa-toast" class="casa-toast hidden" role="status" aria-live="polite"></div>
 
+  <script src="firebase-config.js?v=__APP_VERSION__"></script>
+  <script src="ios-push-guide.js?v=__APP_VERSION__"></script>
   <script src="music-playlist.js?v=__APP_VERSION__"></script>
   <script src="update-check.js?v=__APP_VERSION__"></script>
   <script src="save-manager.js?v=__APP_VERSION__"></script>
@@ -749,6 +774,7 @@
   <script src="couple-hub.js?v=__APP_VERSION__"></script>
   <script src="nossa-casa.js?v=__APP_VERSION__"></script>
   <script type="module" src="couple-ui.js?v=__APP_VERSION__"></script>
+  <script type="module" src="push-notifications.js?v=__APP_VERSION__"></script>
   <script>
     if (window.__FILE_PROTOCOL__) {
       document.documentElement.classList.add('file-protocol-active');

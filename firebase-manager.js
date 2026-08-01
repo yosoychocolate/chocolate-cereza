@@ -53,8 +53,11 @@ let initError = null;
 /**
  * Substitua pelos valores do Firebase Console:
  * Project settings → Your apps → SDK setup and configuration
+ * (Ou defina window.FIREBASE_WEB_CONFIG em firebase-config.js antes deste módulo.)
  */
-export const firebaseConfig = {
+export const firebaseConfig = typeof globalThis !== 'undefined' && globalThis.FIREBASE_WEB_CONFIG
+  ? { ...globalThis.FIREBASE_WEB_CONFIG }
+  : {
   apiKey: 'AIzaSyAPZrpeHjrNme6P_X7oEnnnTKsj0KPHP7E',
   authDomain: 'elchocolatelacereza.firebaseapp.com',
   projectId: 'elchocolatelacereza',
