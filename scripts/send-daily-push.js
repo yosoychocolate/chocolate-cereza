@@ -65,6 +65,23 @@ async function disableBadToken(db, token) {
   await batch.commit();
 }
 
+function filterEntries(entries) {
+  const forceDevice = (process.env.FORCE_DEVICE || '').trim().toLowerCase();
+  const forceOrigin = (process.env.FORCE_ORIGIN || '').trim().toLowerCase();
+
+  let filtered = entries;
+  if (forceDevice === 'android') {
+    filtered = filtered.filter((e) => /android/i.test(e.deviceLabel));
+  }
+  if (forceOrigin === 'github') {
+    filtered = filtered.filter((e) => /github\.io/i.test(e.origin));
+  }
+  if (filtered.length !== entries.length) {
+    console.log(`[push] Filtro: ${filtered.length}/${entries.length} tokens (device=${forceDevice || '*'}, origin=${forceOrigin || '*'})`);
+  }
+  return filtered;
+}
+
 async function sendDailyChargePush(kind) {
   const db = admin.firestore();
   const snap = await db.collection('pushTokens').where('enabled', '==', true).get();
@@ -74,11 +91,35 @@ async function sendDailyChargePush(kind) {
     return { sent: 0, total: 0, failed: 0, kind };
   }
 
-  const tokens = [];
+  const entries = [];
   snap.forEach((docSnap) => {
-    const t = docSnap.data().token;
-    if (typeof t === 'string' && t.length > 20) tokens.push(t);
+    const d = docSnap.data();
+    const t = d.token;
+    if (typeof t === 'string' && t.length > 20) {
+      entries.push({
+        token: t,
+        deviceLabel: d.deviceLabel || '?',
+        origin: d.origin || '?',
+      });
+    }
   });
+
+  if (!entries.length) {
+    console.log('[push] Nenhum token válido na coleção.');
+    return { sent: 0, total: 0, failed: 0, kind };
+  }
+
+  const active = filterEntries(entries);
+  if (!active.length) {
+    console.log('[push] Nenhum token após filtro.');
+    return { sent: 0, total: 0, failed: 0, kind };
+  }
+
+  active.forEach((e, idx) => {
+    console.log(`[push] token ${idx}: ${e.deviceLabel} @ ${e.origin} (${e.token.slice(0, 10)}…)`);
+  });
+
+  const tokens = active.map((e) => e.token);
 
   const msg = MESSAGES[kind] || MESSAGES.main;
   let sent = 0;
@@ -86,20 +127,20 @@ async function sendDailyChargePush(kind) {
 
   for (let i = 0; i < tokens.length; i += 500) {
     const chunk = tokens.slice(i, i + 500);
+    // Só data — o service worker exibe a notificação (mais confiável com Chrome fechado no Android).
     const res = await admin.messaging().sendEachForMulticast({
       tokens: chunk,
-      notification: { title: msg.title, body: msg.body },
       data: {
         type: kind === 'nudge' ? 'daily-charge-nudge' : 'daily-charge',
         title: msg.title,
         body: msg.body,
+        icon: `${SITE_URL}assets/app-icon-192.png`,
+        url: SITE_URL,
       },
+      android: { priority: 'high' },
       webpush: {
+        headers: { Urgency: 'high' },
         fcmOptions: { link: SITE_URL },
-        notification: {
-          icon: `${SITE_URL}assets/app-icon-192.png`,
-          badge: `${SITE_URL}assets/cherry.png`,
-        },
       },
     });
 
@@ -107,8 +148,11 @@ async function sendDailyChargePush(kind) {
     failed += res.failureCount;
 
     res.responses.forEach((r, idx) => {
-      if (!r.success) {
-        console.log(`[push] falha token ${i + idx}:`, r.error?.code || r.error?.message || 'unknown');
+      const meta = active[i + idx];
+      if (r.success) {
+        console.log(`[push] OK → ${meta?.deviceLabel || '?'} (${meta?.origin || '?'})`);
+      } else {
+        console.log(`[push] falha token ${i + idx} (${meta?.deviceLabel}):`, r.error?.code || r.error?.message || 'unknown');
       }
     });
 

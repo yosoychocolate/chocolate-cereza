@@ -369,7 +369,7 @@
       const remote = push?.remote;
       const label = remote ? getClosedBrowserLabel() : '✅ Activas';
       btn.innerHTML = `<span>${label}</span>`;
-      btn.disabled = true;
+      btn.disabled = false;
       btn.classList.add('is-active');
       if (push?.reason === 'vapid_missing') {
         setIntroNotifHint('Push remoto pendiente: falta la clave VAPID en firebase-config.js.', 'is-error');
@@ -382,7 +382,7 @@
       } else if (remote && push?.origin && !/github\.io/i.test(push.origin)) {
         setIntroNotifHint('Registrado en localhost. Abre github.io en el celular y activa 🔔 allí.', 'is-error');
       } else if (remote) {
-        setIntroNotifHint(`Listo en ${push.device || 'este dispositivo'}. Cierra Chrome y prueba el push.`, 'is-success');
+        setIntroNotifHint('Toca 🔔 otra vez para registrar de nuevo. Luego cierra Chrome y prueba el push.', 'is-success');
       } else {
         setIntroNotifHint('');
       }
@@ -420,6 +420,14 @@
       }
 
       if (!('Notification' in global)) return;
+
+      if (Notification.permission === 'granted') {
+        setIntroNotifHint('Registrando de nuevo…', '');
+        registerServiceWorker();
+        await syncRemotePush();
+        updateIntroNotificationButton();
+        return;
+      }
 
       setIntroNotifHint('', '');
 

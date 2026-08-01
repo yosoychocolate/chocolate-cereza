@@ -26,14 +26,16 @@ if (self.FIREBASE_WEB_CONFIG) {
     const title = n.title || d.title || '❤️ Chocolate & Cereza';
     const body = n.body || d.body || 'Hora de poner el auto a cargar. 🔋🐻';
     const origin = self.SITE_ORIGIN || self.location.origin;
+    const targetUrl = d.url || origin + '/';
 
     return self.registration.showNotification(title, {
       body,
       icon: n.icon || d.icon || `${origin}/assets/app-icon-192.png`,
       badge: `${origin}/assets/cherry.png`,
-      tag: d.type || payload.data?.type || 'daily-charge-push',
+      tag: d.type || 'daily-charge-push',
       renotify: true,
-      data: { url: origin + '/', ...(payload.data || {}) },
+      requireInteraction: false,
+      data: { url: targetUrl, ...(payload.data || {}) },
     });
   });
 }

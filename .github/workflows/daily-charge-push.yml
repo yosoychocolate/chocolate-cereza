@@ -20,6 +20,14 @@ on:
         description: 'Teste forçado — main ou nudge'
         required: false
         default: ''
+      android_only:
+        description: 'Só enviar para tokens Android (recomendado para teste no celular)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 permissions:
   contents: read
@@ -45,4 +53,6 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FORCE_KIND: ${{ github.event.inputs.kind }}
+          FORCE_DEVICE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.android_only == 'true' && 'android' || '' }}
+          FORCE_ORIGIN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.android_only == 'true' && 'github' || '' }}
         run: node send-daily-push.js

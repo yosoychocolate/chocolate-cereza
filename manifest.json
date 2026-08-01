@@ -1,6 +1,7 @@
 {
   "name": "El Chocolate & La Cereza",
   "short_name": "🍫🍒",
+  "gcm_sender_id": "103953800507",
   "description": "Nuestra historia 🍫🍒",
   "start_url": "./",
   "scope": "./",

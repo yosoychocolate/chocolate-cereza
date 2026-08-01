@@ -8,6 +8,10 @@ import {
   getFirestoreDb,
   initFirebase,
   isFirebaseConfigValid,
+  collection,
+  query,
+  where,
+  getDocs,
 } from './firebase-manager.js?v=__APP_VERSION__';
 import { getOrCreatePlayerId, getPlayerName } from './player-identity.js?v=__APP_VERSION__';
 
@@ -20,9 +24,51 @@ async function tokenDocId(token) {
     .slice(0, 40);
 }
 
+/** Desativa tokens antigos do mesmo jogador/dispositivo para evitar envio ao PC. */
+async function disableStaleTokens(db, token, meta = {}) {
+  const playerId = getOrCreatePlayerId();
+  const q = query(collection(db, 'pushTokens'), where('enabled', '==', true));
+  const snap = await getDocs(q);
+  const tasks = [];
+
+  snap.forEach((docSnap) => {
+    const d = docSnap.data();
+    if (d.token === token) return;
+
+    const samePlayer = d.playerId && d.playerId === playerId;
+    const sameDevice =
+      meta.deviceLabel &&
+      d.deviceLabel === meta.deviceLabel &&
+      meta.origin &&
+      d.origin === meta.origin;
+    const isLocalhost = /localhost|127\.0\.0\.1/i.test(String(d.origin || ''));
+
+    const isMobileProd =
+      /android|iphone|ipad|ipod/i.test(String(meta.deviceLabel || '')) &&
+      /github\.io/i.test(String(meta.origin || ''));
+
+    if (
+      samePlayer ||
+      sameDevice ||
+      isLocalhost ||
+      (isMobileProd && d.deviceLabel === 'desktop') ||
+      (isLocalhost && /github\.io/i.test(String(meta.origin || '')))
+    ) {
+      tasks.push(
+        setDoc(docSnap.ref, { enabled: false, updatedAt: serverTimestamp() }, { merge: true })
+      );
+    }
+  });
+
+  if (tasks.length) {
+    await Promise.all(tasks);
+    console.log(`[CloudPush] ${tasks.length} token(s) antigo(s) desativado(s).`);
+  }
+}
+
 /**
  * @param {string} token
- * @param {{ timezone?: string, reminderTime?: string }} [meta]
+ * @param {{ timezone?: string, reminderTime?: string, deviceLabel?: string, origin?: string }} [meta]
  */
 export async function registerPushToken(token, meta = {}) {
   if (!token || typeof token !== 'string') {
@@ -38,6 +84,7 @@ export async function registerPushToken(token, meta = {}) {
 
   try {
     const id = await tokenDocId(token);
+    await disableStaleTokens(db, token, meta);
     await setDoc(
       doc(db, 'pushTokens', id),
       {

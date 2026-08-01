@@ -122,6 +122,11 @@ export async function subscribePush() {
   if (!msg) return status;
 
   try {
+    const oldToken = localStorage.getItem('ChocolateCerezaPushToken');
+    if (oldToken && oldToken !== currentToken) {
+      await disablePushToken(oldToken);
+    }
+
     const reg = await navigator.serviceWorker.register(SW_URL);
     await navigator.serviceWorker.ready;
 
