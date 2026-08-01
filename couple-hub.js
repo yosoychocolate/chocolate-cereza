@@ -198,10 +198,13 @@ function renderLetters() {
     const photo = photoSrc
       ? `<img src="${escapeHtml(photoSrc)}" alt="" class="hub-letter-photo" loading="lazy">`
       : '';
-    return `<article class="hub-letter-card">
+    return `<article class="hub-letter-card" data-letter-id="${escapeHtml(letter.id)}">
       <header class="hub-letter-head">
         <strong>${escapeHtml(letter.fromName || 'Alguien')}</strong>
-        <time>${escapeHtml(when)}</time>
+        <div class="hub-letter-head-actions">
+          <time>${escapeHtml(when)}</time>
+          <button type="button" class="hub-icon-btn hub-letter-del" data-letter-id="${escapeHtml(letter.id)}" aria-label="Eliminar cartita" title="Eliminar">🗑</button>
+        </div>
       </header>
       <p>${escapeHtml(letter.text)}</p>
       ${photo}
@@ -483,6 +486,32 @@ async function addLetterExtended(opts) {
   renderLetters();
   logGardenAction('letter');
   global.NossaCasa?.logActivity?.('letter', getPlayerName());
+  global.NossaCasa?.refresh?.();
+  return true;
+}
+
+async function removeLetter(letterId) {
+  if (!letterId) return false;
+  if (!global.confirm('¿Eliminar esta cartita?')) return false;
+
+  if (mode === 'cloud' && CloudManager) {
+    try {
+      const res = await CloudManager.removeHubLetter(letterId);
+      if (res?.success) {
+        hubState.letters = hubState.letters.filter((l) => l.id !== letterId);
+        writeLocalHub(hubState);
+        renderLetters();
+        global.NossaCasa?.refresh?.();
+        return true;
+      }
+    } catch (err) {
+      console.warn('[CoupleHub] removeHubLetter failed:', err);
+    }
+  }
+
+  hubState.letters = hubState.letters.filter((l) => l.id !== letterId);
+  writeLocalHub(hubState);
+  renderLetters();
   global.NossaCasa?.refresh?.();
   return true;
 }
@@ -867,6 +896,13 @@ function bindEvents() {
     await removeMemory(btn.dataset.memoryId);
   });
 
+  els.letterList?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.hub-letter-del');
+    if (!btn) return;
+    const ok = await removeLetter(btn.dataset.letterId);
+    if (ok) showHubToast('Cartita eliminada');
+  });
+
   els.counterForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     await persistSettings({
@@ -991,6 +1027,7 @@ function cacheElements() {
     addLetter,
     addLetterExtended,
     reactToLetter,
+    removeLetter,
     addMemory,
     removeMemory,
     addEvent,

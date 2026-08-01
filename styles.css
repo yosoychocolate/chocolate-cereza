@@ -6398,6 +6398,10 @@ body.game-meta-panel-open .game-achievements-gallery {
   margin-bottom: 0.5rem;
   max-height: 16rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.15rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 79, 163, 0.5) rgba(18, 10, 28, 0.45);
 }
 
 .hub-letter-card {
@@ -6410,10 +6414,34 @@ body.game-meta-panel-open .game-achievements-gallery {
 .hub-letter-head {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 0.5rem;
   font-size: 0.78rem;
   opacity: 0.85;
   margin-bottom: 0.35rem;
+}
+
+.hub-letter-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.hub-letter-head-actions time {
+  font-size: 0.68rem;
+  opacity: 0.8;
+}
+
+.hub-letter-del {
+  font-size: 0.85rem;
+  opacity: 0.65;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.hub-letter-del:hover {
+  opacity: 1;
+  transform: scale(1.08);
 }
 
 .hub-letter-photo,
@@ -7161,6 +7189,37 @@ body.casa-inside .casa-mascot-widget {
   margin-bottom: 0.35rem;
 }
 
+.casa-mail-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.casa-mail-card-head time {
+  display: block;
+  font-size: 0.68rem;
+  opacity: 0.75;
+  margin-top: 0.15rem;
+}
+
+.casa-mail-del {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  opacity: 0.55;
+  padding: 0.15rem 0.25rem;
+  line-height: 1;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.casa-mail-del:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
 .casa-mail-reactions button {
   border: none;
   background: transparent;
@@ -7190,7 +7249,49 @@ body.casa-inside .casa-mascot-widget {
   gap: 0.65rem;
   max-height: 14rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding-right: 0.15rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 79, 163, 0.5) rgba(18, 10, 28, 0.45);
+}
+
+.casa-mail-list::-webkit-scrollbar,
+.hub-letter-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.casa-mail-list::-webkit-scrollbar-track,
+.hub-letter-list::-webkit-scrollbar-track {
+  margin: 0.2rem 0;
+  background: rgba(18, 10, 28, 0.45);
+  border-radius: 999px;
+}
+
+.casa-mail-list::-webkit-scrollbar-thumb,
+.hub-letter-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 79, 163, 0.65) 0%,
+    rgba(160, 90, 220, 0.55) 100%
+  );
+  border-radius: 999px;
+  box-shadow: 0 0 6px rgba(255, 79, 163, 0.25);
+}
+
+.casa-mail-list::-webkit-scrollbar-thumb:hover,
+.hub-letter-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 79, 163, 0.85) 0%,
+    rgba(160, 90, 220, 0.75) 100%
+  );
+}
+
+.casa-mail-list::-webkit-scrollbar-button,
+.hub-letter-list::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .casa-mail-compose {

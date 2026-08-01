@@ -73,6 +73,7 @@ import {
   addHubLetter,
   addHubMemory,
   deleteHubMemory,
+  deleteHubLetter,
   completeHubDailyMission,
 } from './cloud-hub.js?v=__APP_VERSION__';
 
@@ -1522,6 +1523,17 @@ export async function removeHubMemory(memoryId) {
   }
 }
 
+export async function removeHubLetter(letterId) {
+  try {
+    const code = requireRoomCode();
+    const db = requireDb();
+    await deleteHubLetter(db, code, letterId);
+    return ok(true);
+  } catch (err) {
+    return fail('HUB_LETTER_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
 export async function completeHubMission(dateKey, missionId, currentSettings) {
   try {
     const code = requireRoomCode();
@@ -1578,6 +1590,7 @@ export const CloudManager = {
   createHubLetter,
   createHubMemory,
   removeHubMemory,
+  removeHubLetter,
   completeHubMission,
 };
 

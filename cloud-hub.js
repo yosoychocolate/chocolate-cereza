@@ -329,6 +329,10 @@ export async function deleteHubMemory(db, roomCode, memoryId) {
   await deleteDoc(doc(db, ROOMS, roomCode, MEMORIES, memoryId));
 }
 
+export async function deleteHubLetter(db, roomCode, letterId) {
+  await deleteDoc(doc(db, ROOMS, roomCode, LETTERS, letterId));
+}
+
 export async function completeHubDailyMission(db, roomCode, dateKey, missionId, currentSettings) {
   const dm = currentSettings.dailyMissions || { dateKey: '', completed: [] };
   let completed = dm.dateKey === dateKey ? [...(dm.completed || [])] : [];

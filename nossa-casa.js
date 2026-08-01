@@ -229,7 +229,10 @@
       const photo = photoSrc ? `<img src="${esc(photoSrc)}" alt="" class="casa-mail-photo">` : '';
       const audio = l.audioUrl ? `<p class="casa-mail-audio">🎙️ Audio adjunto</p>` : '';
       return `<article class="casa-mail-card" data-letter-id="${esc(l.id)}">
-        <header><strong>${esc(l.fromName)}</strong><time>${new Date(l.createdAt).toLocaleString('es')}</time></header>
+        <header class="casa-mail-card-head">
+          <div><strong>${esc(l.fromName)}</strong><time>${new Date(l.createdAt).toLocaleString('es')}</time></div>
+          <button type="button" class="casa-mail-del" data-letter-del="${esc(l.id)}" aria-label="Eliminar cartita" title="Eliminar">🗑</button>
+        </header>
         <p>${esc(l.text)}</p>${photo}${audio}
         <div class="casa-mail-reactions">${reacts ? `<span>${reacts}</span>` : ''}
           <button type="button" data-react="❤️">❤️</button>
@@ -319,7 +322,14 @@
       renderRoom('correio');
     });
 
-    body.querySelector('.casa-mail-list')?.addEventListener('click', (e) => {
+    body.querySelector('.casa-mail-list')?.addEventListener('click', async (e) => {
+      const delBtn = e.target.closest('[data-letter-del]');
+      if (delBtn) {
+        const ok = await hub()?.removeLetter?.(delBtn.dataset.letterDel);
+        if (ok) hub()?.showToast?.('Cartita eliminada');
+        renderRoom('correio');
+        return;
+      }
       const btn = e.target.closest('[data-react]');
       if (!btn) return;
       const card = btn.closest('[data-letter-id]');
