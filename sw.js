@@ -21,33 +21,21 @@ if (self.FIREBASE_WEB_CONFIG) {
 
 
   messaging.onBackgroundMessage((payload) => {
-
     const n = payload.notification || {};
-
-    const title = n.title || '❤️ Chocolate & Cereza';
-
-    const body = n.body || 'Hora de poner el auto a cargar. 🔋🐻';
-
+    const d = payload.data || {};
+    const title = n.title || d.title || '❤️ Chocolate & Cereza';
+    const body = n.body || d.body || 'Hora de poner el auto a cargar. 🔋🐻';
     const origin = self.SITE_ORIGIN || self.location.origin;
 
     return self.registration.showNotification(title, {
-
       body,
-
-      icon: n.icon || `${origin}/assets/chocolate.png`,
-
+      icon: n.icon || d.icon || `${origin}/assets/app-icon-192.png`,
       badge: `${origin}/assets/cherry.png`,
-
-      tag: payload.data?.type || 'daily-charge-push',
-
+      tag: d.type || payload.data?.type || 'daily-charge-push',
       renotify: true,
-
       data: { url: origin + '/', ...(payload.data || {}) },
-
     });
-
   });
-
 }
 
 

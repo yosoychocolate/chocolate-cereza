@@ -89,18 +89,28 @@ async function sendDailyChargePush(kind) {
     const res = await admin.messaging().sendEachForMulticast({
       tokens: chunk,
       notification: { title: msg.title, body: msg.body },
+      data: {
+        type: kind === 'nudge' ? 'daily-charge-nudge' : 'daily-charge',
+        title: msg.title,
+        body: msg.body,
+      },
       webpush: {
         fcmOptions: { link: SITE_URL },
         notification: {
-          icon: `${SITE_URL}assets/chocolate.png`,
+          icon: `${SITE_URL}assets/app-icon-192.png`,
           badge: `${SITE_URL}assets/cherry.png`,
         },
       },
-      data: { type: kind === 'nudge' ? 'daily-charge-nudge' : 'daily-charge' },
     });
 
     sent += res.successCount;
     failed += res.failureCount;
+
+    res.responses.forEach((r, idx) => {
+      if (!r.success) {
+        console.log(`[push] falha token ${i + idx}:`, r.error?.code || r.error?.message || 'unknown');
+      }
+    });
 
     await Promise.all(
       res.responses.map(async (r, idx) => {

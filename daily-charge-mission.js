@@ -377,6 +377,12 @@
         setIntroNotifHint('Abre la app desde el icono 🍒 en la pantalla de inicio.', 'is-error');
       } else if (push?.reason && !remote) {
         setIntroNotifHint('Solo avisos con el sitio abierto por ahora.', 'is-error');
+      } else if (remote && push?.device === 'desktop') {
+        setIntroNotifHint('Registrado en PC. Para recibir en el móvil, abre el sitio en el celular y pulsa 🔔 otra vez.', 'is-error');
+      } else if (remote && push?.origin && !/github\.io/i.test(push.origin)) {
+        setIntroNotifHint('Registrado en localhost. Abre github.io en el celular y activa 🔔 allí.', 'is-error');
+      } else if (remote) {
+        setIntroNotifHint(`Listo en ${push.device || 'este dispositivo'}. Cierra Chrome y prueba el push.`, 'is-success');
       } else {
         setIntroNotifHint('');
       }

@@ -20,12 +20,38 @@ function getVapidKey() {
   return key;
 }
 
+function getDeviceMeta() {
+  const ua = navigator.userAgent || '';
+  let deviceLabel = 'desktop';
+  if (/Android/i.test(ua)) deviceLabel = 'Android';
+  else if (/iPhone|iPad|iPod/i.test(ua)) deviceLabel = 'iPhone';
+  return {
+    deviceLabel,
+    origin: location.origin,
+  };
+}
+
+function showLocalTestNotification() {
+  if (Notification.permission !== 'granted') return;
+  try {
+    new Notification('✅ Chocolate & Cereza', {
+      body: 'Si ves esto en tu celular, las notificaciones funcionan. 🔋🐻',
+      icon: 'assets/app-icon-192.png',
+      tag: 'push-local-test',
+    });
+  } catch (_) { /* ignore */ }
+}
+
 function getReminderMeta() {
   const hub = globalThis.CoupleHub?.getChargeReminderSettings?.();
   return {
     timezone: hub?.timezone || 'America/New_York',
     reminderTime: hub?.time || '20:30',
   };
+}
+
+function isProductionSite() {
+  return /github\.io/i.test(location.hostname);
 }
 
 export function getPushStatus() {
@@ -106,10 +132,17 @@ export async function subscribePush() {
     }
 
     currentToken = token;
-    const saved = await registerPushToken(token, getReminderMeta());
+    const saved = await registerPushToken(token, {
+      ...getReminderMeta(),
+      ...getDeviceMeta(),
+    });
     status.subscribed = true;
     status.remote = saved.ok === true;
     status.reason = saved.ok ? null : saved.reason || 'save_failed';
+    status.device = getDeviceMeta().deviceLabel;
+    status.origin = getDeviceMeta().origin;
+
+    if (saved.ok) showLocalTestNotification();
 
     try {
       localStorage.setItem('ChocolateCerezaPushToken', token);

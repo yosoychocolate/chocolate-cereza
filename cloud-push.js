@@ -47,6 +47,8 @@ export async function registerPushToken(token, meta = {}) {
         enabled: true,
         timezone: meta.timezone || 'America/New_York',
         reminderTime: meta.reminderTime || '20:30',
+        deviceLabel: meta.deviceLabel || '',
+        origin: meta.origin || '',
         updatedAt: serverTimestamp(),
       },
       { merge: true }
