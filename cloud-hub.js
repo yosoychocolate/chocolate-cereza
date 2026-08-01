@@ -153,6 +153,12 @@ function mapLetterDoc(id, data) {
     fromPlayerId: typeof data.fromPlayerId === 'string' ? data.fromPlayerId : '',
     fromName: typeof data.fromName === 'string' ? data.fromName : '',
     text: typeof data.text === 'string' ? data.text : '',
+    type: typeof data.type === 'string' ? data.type : 'inbox',
+    deliverDate: typeof data.deliverDate === 'string' ? data.deliverDate : null,
+    openAfter: typeof data.openAfter === 'string' ? data.openAfter : null,
+    photoUrl: typeof data.photoUrl === 'string' ? data.photoUrl : '',
+    audioUrl: typeof data.audioUrl === 'string' ? data.audioUrl : '',
+    reactions: data.reactions && typeof data.reactions === 'object' ? data.reactions : {},
     createdAt: data.createdAt?.toMillis?.() ?? Date.now(),
   };
 }
@@ -299,6 +305,12 @@ export async function addHubLetter(db, roomCode, letter) {
     fromPlayerId: letter.fromPlayerId || '',
     fromName: letter.fromName || '',
     text: letter.text || '',
+    type: letter.type || 'inbox',
+    deliverDate: letter.deliverDate || null,
+    openAfter: letter.openAfter || null,
+    photoUrl: letter.photoUrl || '',
+    audioUrl: letter.audioUrl || '',
+    reactions: letter.reactions || {},
     createdAt: serverTimestamp(),
   });
   return ref.id;

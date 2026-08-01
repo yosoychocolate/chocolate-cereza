@@ -225,7 +225,8 @@
 
     const inbox = visible.map((l) => {
       const reacts = Object.values(l.reactions || {}).join(' ');
-      const photo = l.photoUrl ? `<img src="${esc(l.photoUrl)}" alt="" class="casa-mail-photo">` : '';
+      const photoSrc = global.ImageUpload?.safeSrc?.(l.photoUrl) || '';
+      const photo = photoSrc ? `<img src="${esc(photoSrc)}" alt="" class="casa-mail-photo">` : '';
       const audio = l.audioUrl ? `<p class="casa-mail-audio">🎙️ Audio adjunto</p>` : '';
       return `<article class="casa-mail-card" data-letter-id="${esc(l.id)}">
         <header><strong>${esc(l.fromName)}</strong><time>${new Date(l.createdAt).toLocaleString('es')}</time></header>
@@ -286,10 +287,15 @@
       e.preventDefault();
       const fd = new FormData(e.target);
       let photoUrl = '';
-      const file = fd.get('photo');
-      if (file && file.size) {
-        if (file.size > 400000) { hub()?.showToast?.('Foto demasiado grande (máx. 400 KB)'); return; }
-        photoUrl = await fileToDataUrl(file);
+      const raw = fd.get('photo');
+      const file = raw instanceof File && raw.size ? raw : null;
+      if (file) {
+        const prepared = await global.ImageUpload?.prepareImageFromFile?.(file);
+        if (!prepared?.ok) {
+          hub()?.showToast?.(global.ImageUpload?.reasonMessage?.(prepared?.reason) || 'Error con la foto');
+          return;
+        }
+        photoUrl = prepared.dataUrl;
       }
       await hub()?.addLetterExtended?.({ text: fd.get('text'), type: 'inbox', photoUrl });
       hub()?.showToast?.('Carta enviada 💌');
@@ -462,7 +468,7 @@
     const years = Object.keys(byYear).sort((a, b) => b - a);
     const html = years.length ? years.map((y) => {
       const items = byYear[y].map((m) =>
-        `<figure class="casa-album-item">${m.imageUrl ? `<img src="${esc(m.imageUrl)}" alt="">` : '<div class="casa-album-ph">📷</div>'}
+        `<figure class="casa-album-item">${global.ImageUpload?.safeSrc?.(m.imageUrl) ? `<img src="${esc(global.ImageUpload.safeSrc(m.imageUrl))}" alt="">` : '<div class="casa-album-ph">📷</div>'}
         <figcaption>${esc(m.title)}</figcaption></figure>`
       ).join('');
       return `<section class="casa-album-year"><h5>${y}</h5><div class="casa-album-grid">${items}</div></section>`;
@@ -623,13 +629,6 @@
     body.innerHTML = `<div class="casa-room-theme"><p class="casa-empty">Cuarto en construcción…</p></div>`;
   }
 
-  function fileToDataUrl(file) {
-    return new Promise((resolve) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result || ''));
-      r.readAsDataURL(file);
-    });
-  }
 
   /* —— Mascote flutuante —— */
 

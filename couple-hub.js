@@ -194,12 +194,17 @@ function renderLetters() {
   }
   els.letterList.innerHTML = letters.map((letter) => {
     const when = letter.createdAt ? new Date(letter.createdAt).toLocaleString('es') : '';
+    const photoSrc = global.ImageUpload?.safeSrc?.(letter.photoUrl) || '';
+    const photo = photoSrc
+      ? `<img src="${escapeHtml(photoSrc)}" alt="" class="hub-letter-photo" loading="lazy">`
+      : '';
     return `<article class="hub-letter-card">
       <header class="hub-letter-head">
         <strong>${escapeHtml(letter.fromName || 'Alguien')}</strong>
         <time>${escapeHtml(when)}</time>
       </header>
       <p>${escapeHtml(letter.text)}</p>
+      ${photo}
     </article>`;
   }).join('');
 }
@@ -212,8 +217,9 @@ function renderMemories() {
     return;
   }
   els.memoryGrid.innerHTML = memories.map((mem) => {
-    const img = mem.imageUrl
-      ? `<img src="${escapeHtml(mem.imageUrl)}" alt="" loading="lazy">`
+    const imgSrc = global.ImageUpload?.safeSrc?.(mem.imageUrl) || '';
+    const img = imgSrc
+      ? `<img src="${escapeHtml(imgSrc)}" alt="" loading="lazy">`
       : '<div class="hub-memory-placeholder">📷</div>';
     return `<figure class="hub-memory-card" data-memory-id="${escapeHtml(mem.id)}">
       ${img}
@@ -739,29 +745,77 @@ function bindEvents() {
     e.preventDefault();
     const text = els.letterInput?.value?.trim();
     if (!text) return;
-    await addLetter(text);
+    let photoUrl = '';
+    const file = els.letterFile?.files?.[0];
+    if (file || els.letterPhotoUrl?.value?.trim()) {
+      const prepared = await global.ImageUpload?.resolveImageInput?.({
+        file,
+        url: els.letterPhotoUrl?.value,
+      });
+      if (!prepared?.ok) {
+        showHubToast(global.ImageUpload?.reasonMessage?.(prepared?.reason) || 'Error con la foto');
+        return;
+      }
+      photoUrl = prepared.dataUrl;
+    }
+    await addLetterExtended({ text, type: 'inbox', photoUrl });
     if (els.letterInput) els.letterInput.value = '';
+    if (els.letterPhotoUrl) els.letterPhotoUrl.value = '';
+    if (els.letterFile) els.letterFile.value = '';
+    if (els.letterPhotoPreview) {
+      els.letterPhotoPreview.src = '';
+      els.letterPhotoPreview.classList.add('hidden');
+    }
+  });
+
+  els.letterFile?.addEventListener('change', async () => {
+    const file = els.letterFile?.files?.[0];
+    if (!file || !els.letterPhotoPreview) return;
+    const prepared = await global.ImageUpload?.prepareImageFromFile?.(file);
+    if (!prepared?.ok) {
+      showHubToast(global.ImageUpload?.reasonMessage?.(prepared?.reason) || 'Error con la foto');
+      els.letterFile.value = '';
+      return;
+    }
+    els.letterPhotoPreview.src = prepared.dataUrl;
+    els.letterPhotoPreview.classList.remove('hidden');
   });
 
   els.memoryForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = els.memoryTitle?.value?.trim();
-    let imageUrl = els.memoryUrl?.value?.trim() || '';
     const file = els.memoryFile?.files?.[0];
-    if (file) {
-      if (file.size > 400000) {
-        showHubToast('Imagen muy grande — usa URL o foto menor de 400 KB');
+    const prepared = await global.ImageUpload?.resolveImageInput?.({
+      file,
+      url: els.memoryUrl?.value,
+    });
+    if (!prepared?.ok) {
+      if (prepared?.reason !== 'no_image') {
+        showHubToast(global.ImageUpload?.reasonMessage?.(prepared?.reason) || 'Error con la foto');
         return;
       }
-      imageUrl = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ''));
-        reader.readAsDataURL(file);
-      });
     }
+    const imageUrl = prepared?.ok ? prepared.dataUrl : '';
     if (!title && !imageUrl) return;
     await addMemory(title || 'Recuerdo', imageUrl);
     els.memoryForm?.reset();
+    if (els.memoryPreview) {
+      els.memoryPreview.src = '';
+      els.memoryPreview.classList.add('hidden');
+    }
+  });
+
+  els.memoryFile?.addEventListener('change', async () => {
+    const file = els.memoryFile?.files?.[0];
+    if (!file || !els.memoryPreview) return;
+    const prepared = await global.ImageUpload?.prepareImageFromFile?.(file);
+    if (!prepared?.ok) {
+      showHubToast(global.ImageUpload?.reasonMessage?.(prepared?.reason) || 'Error con la foto');
+      els.memoryFile.value = '';
+      return;
+    }
+    els.memoryPreview.src = prepared.dataUrl;
+    els.memoryPreview.classList.remove('hidden');
   });
 
   els.memoryGrid?.addEventListener('click', async (e) => {
@@ -833,11 +887,15 @@ function cacheElements() {
   els.letterList = $('hub-letter-list');
   els.letterForm = $('hub-letter-form');
   els.letterInput = $('hub-letter-input');
+  els.letterFile = $('hub-letter-file');
+  els.letterPhotoUrl = $('hub-letter-photo-url');
+  els.letterPhotoPreview = $('hub-letter-photo-preview');
   els.memoryGrid = $('hub-memory-grid');
   els.memoryForm = $('hub-memory-form');
   els.memoryTitle = $('hub-memory-title');
   els.memoryUrl = $('hub-memory-url');
   els.memoryFile = $('hub-memory-file');
+  els.memoryPreview = $('hub-memory-preview');
   els.counterTogether = $('hub-counter-together');
   els.counterMeeting = $('hub-counter-meeting');
   els.counterForm = $('hub-counter-form');

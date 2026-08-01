@@ -6416,6 +6416,21 @@ body.game-meta-panel-open .game-achievements-gallery {
   margin-bottom: 0.35rem;
 }
 
+.hub-letter-photo,
+.hub-photo-preview {
+  display: block;
+  max-width: 100%;
+  width: auto;
+  max-height: 10rem;
+  margin-top: 0.5rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.hub-photo-preview.hidden {
+  display: none;
+}
+
 .hub-memory-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));

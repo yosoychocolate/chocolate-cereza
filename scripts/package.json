@@ -1,0 +1,8 @@
+{
+  "name": "chocolate-cereza-push-scripts",
+  "private": true,
+  "description": "Envia push FCM via GitHub Actions (sem plano Blaze)",
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

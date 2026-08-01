@@ -1,0 +1,48 @@
+# Push diário via GitHub Actions — GRÁTIS, sem plano Blaze no Firebase.
+# Horário: 20:30 e 21:30 America/New_York (detectado no script).
+#
+# Configuração (uma vez):
+# 1. Firebase Console → Configurações → Contas de serviço → Gerar nova chave privada (JSON)
+# 2. GitHub → repositório chocolate-cereza → Settings → Secrets → Actions
+# 3. New secret: FIREBASE_SERVICE_ACCOUNT = cole o JSON inteiro
+# 4. Commit + push deste workflow
+#
+# Teste manual: Actions → Daily charge push → Run workflow → kind: main
+
+name: Daily charge push
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: 'Teste forçado — main ou nudge'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm install
+
+      - name: Send push if due
+        working-directory: scripts
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FORCE_KIND: ${{ github.event.inputs.kind }}
+        run: node send-daily-push.js
