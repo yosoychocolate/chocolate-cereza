@@ -263,22 +263,30 @@
 
       <div class="hub-panel hidden" data-hub-panel="cartinhas">
         <div id="hub-letter-list" class="hub-letter-list"></div>
-        <form id="hub-letter-form" class="hub-stack-form">
-          <textarea id="hub-letter-input" class="hub-textarea" rows="3" maxlength="500" placeholder="Escribe una cartita…" required></textarea>
-          <label class="hub-file-label">📷 Foto (opcional) <input id="hub-letter-file" type="file" accept="image/*"></label>
-          <img id="hub-letter-photo-preview" class="hub-photo-preview hidden" alt="" width="120" height="120">
-          <button type="submit" class="couple-btn couple-btn-primary">Enviar 💌</button>
+        <form id="hub-letter-form" class="hub-stack-form hub-compose-form">
+          <textarea id="hub-letter-input" class="hub-textarea" rows="4" maxlength="500" placeholder="Escribe una cartita…"></textarea>
+          <div class="hub-compose-photo">
+            <input id="hub-letter-file" type="file" class="casa-file-hidden" accept="image/*">
+            <button type="button" class="casa-photo-pick-btn" data-hub-pick-photo>📷 Elegir foto</button>
+            <span class="casa-photo-name" id="hub-letter-file-name">Sin foto</span>
+          </div>
+          <img id="hub-letter-photo-preview" class="hub-photo-preview hidden" alt="Vista previa">
+          <button type="submit" class="couple-btn couple-btn-primary hub-compose-send">Enviar 💌</button>
         </form>
       </div>
 
       <div class="hub-panel hidden" data-hub-panel="memorias">
         <div id="hub-memory-grid" class="hub-memory-grid"></div>
-        <form id="hub-memory-form" class="hub-stack-form">
+        <form id="hub-memory-form" class="hub-stack-form hub-compose-form">
           <input id="hub-memory-title" class="hub-input" type="text" maxlength="60" placeholder="Título (ej: Playa)">
-          <input id="hub-memory-url" class="hub-input" type="url" placeholder="URL de la foto en internet (opcional)">
-          <label class="hub-file-label">📷 O elige una foto del celular/PC <input id="hub-memory-file" type="file" accept="image/*"></label>
-          <img id="hub-memory-preview" class="hub-photo-preview hidden" alt="" width="120" height="120">
-          <button type="submit" class="couple-btn couple-btn-primary">Guardar recuerdo</button>
+          <input id="hub-memory-url" class="hub-input" type="url" placeholder="URL en internet (opcional)">
+          <div class="hub-compose-photo">
+            <input id="hub-memory-file" type="file" class="casa-file-hidden" accept="image/*">
+            <button type="button" class="casa-photo-pick-btn" data-hub-pick-memory>📷 Elegir foto</button>
+            <span class="casa-photo-name" id="hub-memory-file-name">Sin foto</span>
+          </div>
+          <img id="hub-memory-preview" class="hub-photo-preview hidden" alt="Vista previa">
+          <button type="submit" class="couple-btn couple-btn-primary">Guardar recuerdo 📸</button>
         </form>
       </div>
 

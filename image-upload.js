@@ -4,7 +4,7 @@
 (function (global) {
   'use strict';
 
-  const MAX_BYTES = 480000;
+  const MAX_BYTES = 280000;
   const MAX_DIM = 1400;
 
   function isBlockedSrc(url) {

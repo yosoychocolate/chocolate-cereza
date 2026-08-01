@@ -256,11 +256,24 @@
         <div class="casa-mail-list">${inbox}</div>
         ${pending.length ? `<ul class="casa-mail-pending"><li><strong>En espera:</strong></li>${scheduled}</ul>` : ''}
       </div>
-      <form class="casa-mail-panel hidden" data-mail-panel="write">
-        <textarea name="text" rows="4" maxlength="500" placeholder="Tu cartita…" required></textarea>
-        <label class="casa-file">📷 Foto <input type="file" name="photo" accept="image/*"></label>
-        <p class="casa-soon-note">🎙️ Audios — mantén pulsado para grabar (próximamente)</p>
-        <button type="submit" class="couple-btn couple-btn-primary">Enviar 💌</button>
+      <form class="casa-mail-panel casa-mail-compose hidden" data-mail-panel="write">
+        <div class="casa-compose-card glass">
+          <label class="casa-compose-label" for="casa-mail-text">Tu cartita</label>
+          <textarea id="casa-mail-text" name="text" class="casa-compose-text" rows="5" maxlength="500" placeholder="Escribe con el corazón…"></textarea>
+          <div class="casa-compose-photo">
+            <input type="file" name="photo" id="casa-mail-photo-input" class="casa-file-hidden" accept="image/*">
+            <button type="button" class="casa-photo-pick-btn" data-casa-pick-photo>📷 Elegir foto</button>
+            <span class="casa-photo-name" data-casa-photo-name>Sin foto adjunta</span>
+          </div>
+          <div class="casa-photo-preview-wrap hidden" data-casa-photo-preview-wrap>
+            <img class="casa-photo-preview" data-casa-photo-preview alt="Vista previa">
+            <button type="button" class="casa-photo-clear" data-casa-photo-clear aria-label="Quitar foto">✕</button>
+          </div>
+          <p class="casa-compose-hint">Toca «Elegir foto» — no pegues la ruta del PC.</p>
+          <button type="submit" class="couple-btn couple-btn-primary casa-compose-send" data-casa-send-btn>
+            Enviar cartita 💌
+          </button>
+        </div>
       </form>
       <form class="casa-mail-panel hidden" data-mail-panel="schedule">
         <textarea name="text" rows="3" maxlength="500" placeholder="Carta para el futuro…" required></textarea>
@@ -283,23 +296,11 @@
       });
     });
 
+    bindMailCompose(body);
+
     body.querySelector('[data-mail-panel="write"]')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const fd = new FormData(e.target);
-      let photoUrl = '';
-      const raw = fd.get('photo');
-      const file = raw instanceof File && raw.size ? raw : null;
-      if (file) {
-        const prepared = await global.ImageUpload?.prepareImageFromFile?.(file);
-        if (!prepared?.ok) {
-          hub()?.showToast?.(global.ImageUpload?.reasonMessage?.(prepared?.reason) || 'Error con la foto');
-          return;
-        }
-        photoUrl = prepared.dataUrl;
-      }
-      await hub()?.addLetterExtended?.({ text: fd.get('text'), type: 'inbox', photoUrl });
-      hub()?.showToast?.('Carta enviada 💌');
-      renderRoom('correio');
+      await submitMailLetter(e.target);
     });
 
     body.querySelector('[data-mail-panel="schedule"]')?.addEventListener('submit', async (e) => {
@@ -623,6 +624,104 @@
       if (d) hub()?.persistSettings?.({ nextMeetingDate: d });
       roomViagem(body);
     });
+  }
+
+  function bindMailCompose(body) {
+    const form = body.querySelector('[data-mail-panel="write"]');
+    if (!form || form.dataset.bound === '1') return;
+    form.dataset.bound = '1';
+
+    const fileInput = form.querySelector('#casa-mail-photo-input');
+    const pickBtn = form.querySelector('[data-casa-pick-photo]');
+    const nameEl = form.querySelector('[data-casa-photo-name]');
+    const previewWrap = form.querySelector('[data-casa-photo-preview-wrap]');
+    const previewImg = form.querySelector('[data-casa-photo-preview]');
+    const clearBtn = form.querySelector('[data-casa-photo-clear]');
+    let preparedDataUrl = '';
+
+    function clearPhoto() {
+      preparedDataUrl = '';
+      if (fileInput) fileInput.value = '';
+      if (nameEl) nameEl.textContent = 'Sin foto adjunta';
+      if (previewImg) previewImg.removeAttribute('src');
+      previewWrap?.classList.add('hidden');
+    }
+
+    pickBtn?.addEventListener('click', () => fileInput?.click());
+
+    clearBtn?.addEventListener('click', clearPhoto);
+
+    fileInput?.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file) {
+        clearPhoto();
+        return;
+      }
+      if (!global.ImageUpload?.prepareImageFromFile) {
+        hub()?.showToast?.('Recarga la página (Ctrl+F5) e intenta otra vez.');
+        return;
+      }
+      if (nameEl) nameEl.textContent = 'Procesando…';
+      const prepared = await global.ImageUpload.prepareImageFromFile(file);
+      if (!prepared.ok) {
+        hub()?.showToast?.(global.ImageUpload.reasonMessage(prepared.reason));
+        clearPhoto();
+        return;
+      }
+      preparedDataUrl = prepared.dataUrl;
+      if (nameEl) nameEl.textContent = file.name;
+      if (previewImg) previewImg.src = prepared.dataUrl;
+      previewWrap?.classList.remove('hidden');
+    });
+  }
+
+  async function submitMailLetter(form) {
+    const sendBtn = form.querySelector('[data-casa-send-btn]');
+    const text = form.querySelector('[name="text"]')?.value?.trim() || '';
+    const fileInput = form.querySelector('#casa-mail-photo-input');
+    let photoUrl = '';
+
+    const file = fileInput?.files?.[0];
+    if (file) {
+      if (!global.ImageUpload?.prepareImageFromFile) {
+        hub()?.showToast?.('Recarga la página (Ctrl+F5) e intenta otra vez.');
+        return;
+      }
+      const prepared = await global.ImageUpload.prepareImageFromFile(file);
+      if (!prepared.ok) {
+        hub()?.showToast?.(global.ImageUpload.reasonMessage(prepared.reason));
+        return;
+      }
+      photoUrl = prepared.dataUrl;
+    }
+
+    if (!text && !photoUrl) {
+      hub()?.showToast?.('Escribe algo o elige una foto 💌');
+      return;
+    }
+
+    if (sendBtn) {
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Enviando…';
+    }
+
+    try {
+      const ok = await hub()?.addLetterExtended?.({ text, type: 'inbox', photoUrl });
+      if (ok === false) {
+        hub()?.showToast?.('No se pudo enviar — intenta otra vez.');
+        return;
+      }
+      hub()?.showToast?.('Carta enviada 💌');
+      renderRoom('correio');
+    } catch (err) {
+      console.warn('[NossaCasa] send letter', err);
+      hub()?.showToast?.('Error al enviar la carta.');
+    } finally {
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Enviar cartita 💌';
+      }
+    }
   }
 
   function roomSoon(body, id) {

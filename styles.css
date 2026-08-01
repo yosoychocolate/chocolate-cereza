@@ -6431,6 +6431,23 @@ body.game-meta-panel-open .game-achievements-gallery {
   display: none;
 }
 
+.hub-compose-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.hub-compose-photo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hub-compose-send {
+  width: 100%;
+}
+
 .hub-memory-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
@@ -7153,10 +7170,161 @@ body.casa-inside .casa-mascot-widget {
 }
 
 .casa-mail-photo {
+  display: block;
+  width: 100%;
+  max-width: 14rem;
+  max-height: 10rem;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-top: 0.5rem;
+  border: 1px solid rgba(255, 120, 180, 0.25);
+}
+
+.theme-mail {
+  max-width: 22rem;
+  margin: 0 auto;
+}
+
+.casa-mail-list {
+  display: grid;
+  gap: 0.65rem;
+  max-height: 14rem;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+.casa-mail-compose {
+  margin-top: 0.25rem;
+}
+
+.casa-compose-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 120, 180, 0.22);
+  background: rgba(20, 8, 24, 0.55);
+}
+
+.casa-compose-label {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255, 210, 230, 0.9);
+}
+
+.casa-compose-text {
+  width: 100%;
+  min-height: 6.5rem;
+  resize: vertical;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 120, 180, 0.28);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text-body);
+  box-sizing: border-box;
+}
+
+.casa-compose-text:focus {
+  outline: none;
+  border-color: rgba(255, 140, 200, 0.55);
+  box-shadow: 0 0 0 2px rgba(255, 88, 168, 0.15);
+}
+
+.casa-compose-photo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.casa-file-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.casa-photo-pick-btn {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 140, 200, 0.45);
+  background: rgba(255, 88, 168, 0.15);
+  color: #ffd6ea;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.casa-photo-pick-btn:hover {
+  background: rgba(255, 88, 168, 0.28);
+}
+
+.casa-photo-name {
+  font-size: 0.72rem;
+  color: rgba(255, 200, 220, 0.65);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.casa-photo-preview-wrap {
+  position: relative;
+  display: inline-block;
   max-width: 100%;
-  max-height: 8rem;
-  border-radius: var(--radius-sm);
-  margin-top: 0.35rem;
+}
+
+.casa-photo-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 11rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 2px solid rgba(255, 120, 180, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.casa-photo-clear {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 50%;
+  background: rgba(20, 8, 16, 0.75);
+  color: #ffb8d0;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.casa-compose-hint {
+  margin: 0;
+  font-size: 0.68rem;
+  color: rgba(255, 180, 210, 0.55);
+  line-height: 1.35;
+}
+
+.casa-compose-send {
+  width: 100%;
+  margin-top: 0.15rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.92rem;
+}
+
+.casa-compose-send:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 .casa-garden-bed {

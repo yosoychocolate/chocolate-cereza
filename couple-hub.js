@@ -449,7 +449,7 @@ async function addLetterExtended(opts) {
   const letter = {
     fromPlayerId: getPlayerId(),
     fromName: getPlayerName(),
-    text: opts.text || '',
+    text: (opts.text || '').trim(),
     type: opts.type || 'inbox',
     deliverDate: opts.deliverDate || null,
     openAfter: opts.openAfter || null,
@@ -457,15 +457,34 @@ async function addLetterExtended(opts) {
     audioUrl: opts.audioUrl || '',
     reactions: opts.reactions || {},
   };
-  if (mode === 'cloud' && CloudManager) {
-    await CloudManager.createHubLetter(letter);
-  } else {
-    hubState.letters.unshift({ id: localId('letter'), createdAt: Date.now(), ...letter });
-    writeLocalHub(hubState);
-    renderLetters();
+
+  if (!letter.text && !letter.photoUrl) {
+    showHubToast('Escribe algo o adjunta una foto 💌');
+    return false;
   }
+
+  if (mode === 'cloud' && CloudManager) {
+    try {
+      const res = await CloudManager.createHubLetter(letter);
+      if (res?.success) {
+        logGardenAction('letter');
+        global.NossaCasa?.logActivity?.('letter', getPlayerName());
+        global.NossaCasa?.refresh?.();
+        return true;
+      }
+      console.warn('[CoupleHub] createHubLetter:', res?.error, res?.message);
+    } catch (err) {
+      console.warn('[CoupleHub] createHubLetter failed:', err);
+    }
+  }
+
+  hubState.letters.unshift({ id: localId('letter'), createdAt: Date.now(), ...letter });
+  writeLocalHub(hubState);
+  renderLetters();
   logGardenAction('letter');
   global.NossaCasa?.logActivity?.('letter', getPlayerName());
+  global.NossaCasa?.refresh?.();
+  return true;
 }
 
 async function reactToLetter(letterId, emoji) {
@@ -556,12 +575,22 @@ function getFireplaceLevel() {
 
 async function addMemory(title, imageUrl) {
   if (mode === 'cloud' && CloudManager) {
-    await CloudManager.createHubMemory({ title, imageUrl });
-    return;
+    try {
+      const res = await CloudManager.createHubMemory({ title, imageUrl });
+      if (res?.success) {
+        global.NossaCasa?.refresh?.();
+        return true;
+      }
+      console.warn('[CoupleHub] createHubMemory:', res?.error);
+    } catch (err) {
+      console.warn('[CoupleHub] createHubMemory failed:', err);
+    }
   }
   hubState.memories.unshift({ id: localId('mem'), title, imageUrl, createdAt: Date.now() });
   writeLocalHub(hubState);
   renderMemories();
+  global.NossaCasa?.refresh?.();
+  return true;
 }
 
 async function removeMemory(memoryId) {
@@ -744,42 +773,51 @@ function bindEvents() {
   els.letterForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const text = els.letterInput?.value?.trim();
-    if (!text) return;
     let photoUrl = '';
     const file = els.letterFile?.files?.[0];
-    if (file || els.letterPhotoUrl?.value?.trim()) {
-      const prepared = await global.ImageUpload?.resolveImageInput?.({
-        file,
-        url: els.letterPhotoUrl?.value,
-      });
+    if (file) {
+      const prepared = await global.ImageUpload?.prepareImageFromFile?.(file);
       if (!prepared?.ok) {
         showHubToast(global.ImageUpload?.reasonMessage?.(prepared?.reason) || 'Error con la foto');
         return;
       }
       photoUrl = prepared.dataUrl;
     }
-    await addLetterExtended({ text, type: 'inbox', photoUrl });
+    if (!text && !photoUrl) {
+      showHubToast('Escribe algo o elige una foto 💌');
+      return;
+    }
+    const ok = await addLetterExtended({ text, type: 'inbox', photoUrl });
+    if (ok === false) return;
     if (els.letterInput) els.letterInput.value = '';
-    if (els.letterPhotoUrl) els.letterPhotoUrl.value = '';
     if (els.letterFile) els.letterFile.value = '';
+    if (els.letterFileName) els.letterFileName.textContent = 'Sin foto';
     if (els.letterPhotoPreview) {
       els.letterPhotoPreview.src = '';
       els.letterPhotoPreview.classList.add('hidden');
     }
+    showHubToast('Carta enviada 💌');
   });
+
+  els.letterPickBtn?.addEventListener('click', () => els.letterFile?.click());
 
   els.letterFile?.addEventListener('change', async () => {
     const file = els.letterFile?.files?.[0];
-    if (!file || !els.letterPhotoPreview) return;
+    if (!file) return;
     const prepared = await global.ImageUpload?.prepareImageFromFile?.(file);
     if (!prepared?.ok) {
       showHubToast(global.ImageUpload?.reasonMessage?.(prepared?.reason) || 'Error con la foto');
       els.letterFile.value = '';
       return;
     }
-    els.letterPhotoPreview.src = prepared.dataUrl;
-    els.letterPhotoPreview.classList.remove('hidden');
+    if (els.letterFileName) els.letterFileName.textContent = file.name;
+    if (els.letterPhotoPreview) {
+      els.letterPhotoPreview.src = prepared.dataUrl;
+      els.letterPhotoPreview.classList.remove('hidden');
+    }
   });
+
+  els.memoryPickBtn?.addEventListener('click', () => els.memoryFile?.click());
 
   els.memoryForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -799,21 +837,26 @@ function bindEvents() {
     if (!title && !imageUrl) return;
     await addMemory(title || 'Recuerdo', imageUrl);
     els.memoryForm?.reset();
+    if (els.memoryFileName) els.memoryFileName.textContent = 'Sin foto';
     if (els.memoryPreview) {
       els.memoryPreview.src = '';
       els.memoryPreview.classList.add('hidden');
     }
+    showHubToast('Recuerdo guardado 📸');
   });
 
   els.memoryFile?.addEventListener('change', async () => {
     const file = els.memoryFile?.files?.[0];
     if (!file || !els.memoryPreview) return;
+    if (els.memoryFileName) els.memoryFileName.textContent = 'Procesando…';
     const prepared = await global.ImageUpload?.prepareImageFromFile?.(file);
     if (!prepared?.ok) {
       showHubToast(global.ImageUpload?.reasonMessage?.(prepared?.reason) || 'Error con la foto');
       els.memoryFile.value = '';
+      if (els.memoryFileName) els.memoryFileName.textContent = 'Sin foto';
       return;
     }
+    if (els.memoryFileName) els.memoryFileName.textContent = file.name;
     els.memoryPreview.src = prepared.dataUrl;
     els.memoryPreview.classList.remove('hidden');
   });
@@ -888,14 +931,17 @@ function cacheElements() {
   els.letterForm = $('hub-letter-form');
   els.letterInput = $('hub-letter-input');
   els.letterFile = $('hub-letter-file');
-  els.letterPhotoUrl = $('hub-letter-photo-url');
+  els.letterFileName = $('hub-letter-file-name');
   els.letterPhotoPreview = $('hub-letter-photo-preview');
+  els.letterPickBtn = document.querySelector('[data-hub-pick-photo]');
   els.memoryGrid = $('hub-memory-grid');
   els.memoryForm = $('hub-memory-form');
   els.memoryTitle = $('hub-memory-title');
   els.memoryUrl = $('hub-memory-url');
   els.memoryFile = $('hub-memory-file');
+  els.memoryFileName = $('hub-memory-file-name');
   els.memoryPreview = $('hub-memory-preview');
+  els.memoryPickBtn = document.querySelector('[data-hub-pick-memory]');
   els.counterTogether = $('hub-counter-together');
   els.counterMeeting = $('hub-counter-meeting');
   els.counterForm = $('hub-counter-form');
