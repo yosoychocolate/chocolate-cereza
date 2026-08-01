@@ -1,15 +1,53 @@
 /**
  * CloudHub — agenda, calendário, cartinhas e memórias sincronizados na sala.
  * rooms/{code}/hub/data + subcoleções hubTasks, hubEvents, hubLetters, hubMemories
+ *
+ * hub-shared.js é script clássico (window.HubShared) — não usar import ES module.
  */
-import {
-  DEFAULT_TASKS,
-  DAILY_MISSION_DEFS,
-  createDefaultHubData,
-  todayDateKeyInTz,
-  daysBetween,
-  daysUntil,
-} from './hub-shared.js?v=__APP_VERSION__';
+const HS = globalThis.HubShared || {};
+
+const DEFAULT_TASKS = HS.DEFAULT_TASKS || [
+  { text: 'Cargar el auto', emoji: '🔋' },
+  { text: 'Comprar café', emoji: '☕' },
+  { text: 'Comprar chocolate', emoji: '🍫' },
+];
+
+const DAILY_MISSION_DEFS = HS.DAILY_MISSION_DEFS || [
+  { id: 'charge_car', text: 'Cargar el auto', emoji: '🔋', reward: 5 },
+  { id: 'play_game', text: 'Jugar una partida', emoji: '🎮', reward: 3 },
+  { id: 'send_photo', text: 'Enviar una foto', emoji: '📸', reward: 4 },
+  { id: 'listen_music', text: 'Escuchar nuestra canción', emoji: '🎵', reward: 2 },
+];
+
+const createDefaultHubData = HS.createDefaultHubData || function createDefaultHubDataFallback() {
+  return {
+    relationshipStart: null,
+    nextMeetingDate: null,
+    chargeReminder: { enabled: true, time: '20:30', timezone: 'America/New_York' },
+    dailyMissions: { dateKey: '', completed: [] },
+    updatedAt: null,
+  };
+};
+
+const todayDateKeyInTz = HS.todayDateKeyInTz || function todayDateKeyInTzFallback(timezone) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone || 'America/New_York' }).format(new Date());
+};
+
+const daysBetween = HS.daysBetween || function daysBetweenFallback(fromIso, toDate) {
+  if (!fromIso) return null;
+  const start = new Date(fromIso + 'T12:00:00');
+  if (Number.isNaN(start.getTime())) return null;
+  const diff = (toDate || new Date()).getTime() - start.getTime();
+  return Math.max(0, Math.floor(diff / 86400000));
+};
+
+const daysUntil = HS.daysUntil || function daysUntilFallback(isoDate, fromDate) {
+  if (!isoDate) return null;
+  const target = new Date(isoDate + 'T12:00:00');
+  if (Number.isNaN(target.getTime())) return null;
+  const diff = target.getTime() - (fromDate || new Date()).getTime();
+  return Math.ceil(diff / 86400000);
+};
 
 export {
   DEFAULT_TASKS,
