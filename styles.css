@@ -3701,6 +3701,56 @@ html.is-ios-browser-tab .btn-notif-pink {
   cursor: pointer;
 }
 
+.game-setting-volume {
+  flex-direction: column;
+  align-items: stretch;
+  cursor: default;
+}
+
+.game-audio-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.game-audio-heading {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-soft, rgba(255, 255, 255, 0.85));
+}
+
+.game-sfx-volume-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.game-sfx-volume-controls input[type="range"] {
+  flex: 1;
+  accent-color: var(--pink-vivid);
+}
+
+.game-sfx-vol-label {
+  min-width: 2.5rem;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.game-setting-volume.is-muted {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.game-setting-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.68rem;
+  opacity: 0.6;
+  line-height: 1.35;
+}
+
 .game-achievement-toast.ach-toast-glow {
   box-shadow: 0 0 24px rgba(255, 200, 80, 0.45), 0 0 40px rgba(255, 79, 163, 0.15);
   animation: ach-toast-bounce 500ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -4996,6 +5046,8 @@ body.daily-charge-open {
 .music-player {
   width: min(100%, 520px);
   margin-inline: auto;
+  position: relative;
+  z-index: 2;
 }
 
 .music-track-nav {
@@ -5047,15 +5099,18 @@ body.daily-charge-open {
 
 .music-playlist {
   list-style: none;
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.35rem;
   padding: 0.15rem 0.35rem 0.15rem 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.4rem;
-  max-height: 6.5rem;
+  max-height: 8.5rem;
   overflow-y: auto;
   overscroll-behavior: contain;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 79, 163, 0.5) rgba(18, 10, 28, 0.45);
 }
@@ -5094,6 +5149,12 @@ body.daily-charge-open {
   height: 0;
 }
 
+.music-playlist-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  color: rgba(245, 232, 244, 0.55);
+}
+
 .music-playlist-item {
   display: inline-flex;
   align-items: center;
@@ -5107,6 +5168,9 @@ body.daily-charge-open {
   border: 1px solid rgba(255, 79, 163, 0.22);
   border-radius: 999px;
   cursor: pointer;
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -5209,10 +5273,20 @@ body.daily-charge-open {
 
 .music-volume {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
   margin-top: 0.85rem;
+}
+
+.music-vol-heading {
+  width: 100%;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.75;
+  margin-bottom: -0.25rem;
 }
 
 .music-vol-btn {
@@ -7587,3 +7661,1152 @@ body.casa-inside .casa-mascot-widget {
   margin-top: 1rem;
   opacity: 0.5;
 }
+
+/* —— Habitación de Teddy (vivo) —— */
+
+.teddy-live-room {
+  position: relative;
+  overflow: hidden;
+}
+
+.teddy-room-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.teddy-room-header h4 {
+  margin: 0 0 0.15rem;
+}
+
+.teddy-phase-line {
+  margin: 0;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.teddy-mood {
+  text-align: right;
+  font-size: 0.72rem;
+}
+
+.teddy-mood-label {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.teddy-mood-bar {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.05em;
+  color: var(--pink-vivid, #ff58a8);
+}
+
+.teddy-wallet {
+  margin: 0;
+  font-size: 0.78rem;
+  width: 100%;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.teddy-room-scene {
+  position: relative;
+  min-height: 240px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #fce8f0 0%, #f5d4e4 55%, #e8c4a8 55%, #d4a574 100%);
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+  isolation: isolate;
+}
+
+.teddy-room-scene.is-night-room {
+  background: linear-gradient(180deg, #1a1530 0%, #2a2040 50%, #3d2e28 50%, #2a1f18 100%);
+}
+
+.teddy-room-wall {
+  position: absolute;
+  inset: 0 0 45%;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 200, 220, 0.15) 0,
+    rgba(255, 200, 220, 0.15) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  pointer-events: none;
+}
+
+.teddy-room-window {
+  position: absolute;
+  top: 12%;
+  right: 8%;
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 3px solid rgba(120, 80, 60, 0.5);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #a8d8ff 0%, #ffe8a0 100%);
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.4);
+}
+
+.teddy-room-scene.is-night-room .teddy-room-window {
+  background: linear-gradient(180deg, #0a0820 0%, #1a2840 100%);
+}
+
+.teddy-moon {
+  position: absolute;
+  top: 15%;
+  left: 20%;
+  font-size: 1.1rem;
+}
+
+.teddy-season-deco {
+  position: absolute;
+  bottom: -0.5rem;
+  right: -0.75rem;
+  font-size: 1.2rem;
+}
+
+.teddy-room-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.teddy-decor-item {
+  position: absolute;
+  font-size: 1.4rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.teddy-decor-item[data-decor-id="bed"] { left: 5%; bottom: 38%; font-size: 2rem; }
+.teddy-decor-item[data-decor-id="plant"] { left: 12%; bottom: 52%; }
+.teddy-decor-item[data-decor-id="frame"] { left: 55%; top: 18%; }
+.teddy-decor-item[data-decor-id="rug"] { left: 25%; bottom: 42%; font-size: 1.8rem; opacity: 0.85; }
+.teddy-decor-item[data-decor-id="lamp"] { right: 22%; bottom: 48%; }
+
+.teddy-blanket {
+  position: absolute;
+  left: 28%;
+  bottom: 44%;
+  width: 4rem;
+  height: 1.2rem;
+  background: linear-gradient(90deg, #ffb8d0, #ff88b8);
+  border-radius: 8px 8px 4px 4px;
+  z-index: 2;
+}
+
+.teddy-char-wrap {
+  position: absolute;
+  left: 50%;
+  bottom: 38%;
+  transform: translateX(-50%);
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  z-index: 4;
+  width: 5rem;
+  height: 6.5rem;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.teddy-char-wrap:focus,
+.teddy-char-wrap:focus-visible {
+  outline: 2px solid rgba(255, 120, 180, 0.35);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.teddy-char {
+  --look-x: 0;
+  --look-y: 0;
+  position: relative;
+  width: 4.5rem;
+  height: 5.5rem;
+  margin: 0 auto;
+  animation: teddy-breathe 3.2s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes teddy-breathe {
+  0%, 100% { transform: scaleY(1) translateY(0); }
+  50% { transform: scaleY(1.03) translateY(-2px); }
+}
+
+.teddy-outfit-hat {
+  position: absolute;
+  top: -0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.4rem;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.teddy-head {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2.8rem;
+  height: 2.4rem;
+  background: #c68642;
+  border-radius: 50% 50% 45% 45%;
+  z-index: 2;
+}
+
+.teddy-ear {
+  position: absolute;
+  top: -0.35rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  background: #b87838;
+  border-radius: 50%;
+}
+
+.teddy-ear-l { left: 0.15rem; }
+.teddy-ear-r { right: 0.15rem; }
+
+.teddy-face {
+  position: absolute;
+  inset: 0.35rem 0.3rem 0.2rem;
+}
+
+.teddy-eyes {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.teddy-eye {
+  width: 0.55rem;
+  height: 0.55rem;
+  background: #2a1810;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: transform 0.08s ease;
+}
+
+.teddy-char.is-blink .teddy-eye,
+.teddy-char.is-hugging .teddy-eye,
+.teddy-char.is-sleeping .teddy-eye {
+  transform: scaleY(0.12);
+}
+
+.teddy-pupil {
+  width: 0.22rem;
+  height: 0.22rem;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(calc(var(--look-x) * 3px), calc(var(--look-y) * 3px));
+  transition: transform 0.12s ease-out;
+}
+
+.teddy-snout {
+  position: absolute;
+  left: 50%;
+  bottom: 0.15rem;
+  transform: translateX(-50%);
+  width: 0.9rem;
+  height: 0.65rem;
+  background: #f0c090;
+  border-radius: 50%;
+}
+
+.teddy-torso {
+  position: absolute;
+  top: 2.1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2.4rem;
+  height: 2.2rem;
+  background: #c68642;
+  border-radius: 45% 45% 40% 40%;
+  z-index: 1;
+}
+
+.teddy-arm {
+  position: absolute;
+  top: 2.4rem;
+  width: 0.75rem;
+  height: 1.4rem;
+  background: #b87838;
+  border-radius: 40%;
+  z-index: 0;
+  transform-origin: top center;
+}
+
+.teddy-arm-l { left: 0.55rem; transform: rotate(18deg); }
+.teddy-arm-r { right: 0.55rem; transform: rotate(-18deg); }
+
+.teddy-char.is-enter-wave .teddy-arm-r {
+  animation: teddy-wave 0.6s ease-in-out 3;
+}
+
+.teddy-char.is-hugging .teddy-arm-l { animation: teddy-hug-l 0.8s ease forwards; }
+.teddy-char.is-hugging .teddy-arm-r { animation: teddy-hug-r 0.8s ease forwards; }
+
+@keyframes teddy-wave {
+  0%, 100% { transform: rotate(-18deg); }
+  50% { transform: rotate(-55deg); }
+}
+
+@keyframes teddy-hug-l {
+  to { transform: rotate(55deg) translateX(4px); }
+}
+
+@keyframes teddy-hug-r {
+  to { transform: rotate(-55deg) translateX(-4px); }
+}
+
+.teddy-leg {
+  position: absolute;
+  bottom: 0;
+  width: 0.85rem;
+  height: 1rem;
+  background: #b87838;
+  border-radius: 40% 40% 50% 50%;
+}
+
+.teddy-leg-l { left: 1.15rem; }
+.teddy-leg-r { right: 1.15rem; }
+
+.teddy-char.is-playing {
+  animation: teddy-run 0.35s ease-in-out infinite alternate;
+}
+
+@keyframes teddy-run {
+  from { transform: translateX(-8px) scaleY(1.02); }
+  to { transform: translateX(8px) scaleY(0.98); }
+}
+
+.teddy-char.is-dancing {
+  animation: teddy-dance 0.45s ease-in-out infinite alternate;
+}
+
+@keyframes teddy-dance {
+  from { transform: rotate(-4deg) translateY(-3px); }
+  to { transform: rotate(4deg) translateY(0); }
+}
+
+.teddy-char.is-sleeping {
+  animation: teddy-sleep 4s ease-in-out infinite;
+}
+
+@keyframes teddy-sleep {
+  0%, 100% { transform: rotate(-8deg) translateY(2px); }
+  50% { transform: rotate(-6deg) translateY(4px); }
+}
+
+.teddy-char.is-eating .teddy-head {
+  animation: teddy-nod 0.3s ease 2;
+}
+
+@keyframes teddy-nod {
+  50% { transform: translateX(-50%) rotate(8deg); }
+}
+
+.teddy-zzz {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.25rem;
+  font-size: 0.9rem;
+  animation: teddy-zzz 2s ease-in-out infinite;
+}
+
+@keyframes teddy-zzz {
+  0%, 100% { opacity: 0.4; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-4px); }
+}
+
+.teddy-idle-prop {
+  position: absolute;
+  top: 1.5rem;
+  right: -0.75rem;
+  font-size: 1rem;
+  z-index: 4;
+}
+
+.teddy-ball {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 70%;
+  font-size: 1.1rem;
+  transition: left 0.4s ease, bottom 0.35s ease;
+}
+
+.teddy-ball.is-thrown {
+  left: 15%;
+  bottom: 1.5rem;
+}
+
+.teddy-ball.is-returned {
+  left: 50%;
+  bottom: 0.5rem;
+}
+
+.teddy-paw-trail {
+  position: absolute;
+  bottom: 44%;
+  left: 0;
+  right: 0;
+  height: 1.5rem;
+  pointer-events: none;
+}
+
+.teddy-paw {
+  position: absolute;
+  bottom: 0;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  animation: teddy-paw-in 0.4s ease;
+}
+
+.teddy-paw.is-fade { opacity: 0; transition: opacity 0.8s ease; }
+
+@keyframes teddy-paw-in {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 0.7; }
+}
+
+.teddy-gifts-floor {
+  position: absolute;
+  bottom: 44%;
+  left: 10%;
+  display: flex;
+  gap: 0.35rem;
+  z-index: 2;
+}
+
+.teddy-gift-floor {
+  border: none;
+  background: transparent;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0;
+  animation: teddy-gift-bob 2s ease-in-out infinite;
+}
+
+@keyframes teddy-gift-bob {
+  50% { transform: translateY(-3px); }
+}
+
+.teddy-hearts-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.teddy-heart {
+  position: absolute;
+  bottom: 50%;
+  font-size: 1rem;
+  animation: teddy-heart-float 1.1s ease-out forwards;
+}
+
+@keyframes teddy-heart-float {
+  from { opacity: 1; transform: translateY(0) scale(0.6); }
+  to { opacity: 0; transform: translateY(-40px) scale(1.1); }
+}
+
+.teddy-narrator {
+  font-size: 0.82rem;
+  font-style: italic;
+  opacity: 0.9;
+  margin: 0 0 0.65rem;
+  min-height: 1.2em;
+  color: var(--pink-vivid, #ff58a8);
+}
+
+.teddy-actions-panel {
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 120, 180, 0.25);
+}
+
+.teddy-actions-panel.hidden { display: none; }
+
+.teddy-panel-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.teddy-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+}
+
+.teddy-action-grid button,
+.teddy-shop-btn {
+  font-size: 0.75rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 120, 180, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-body);
+  cursor: pointer;
+  text-align: left;
+}
+
+.teddy-action-grid button:hover,
+.teddy-shop-btn:hover {
+  background: rgba(255, 88, 168, 0.2);
+}
+
+.teddy-sub-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.teddy-sub-panel.hidden { display: none; }
+
+.teddy-panel-close {
+  margin-top: 0.65rem;
+  width: 100%;
+  font-size: 0.72rem;
+  padding: 0.4rem;
+  border: none;
+  background: transparent;
+  color: var(--text-body);
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.teddy-bubble {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  max-width: 100%;
+  margin: 0.5rem auto 0.65rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.92);
+  color: #4a2040;
+  font-size: 0.8rem;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  display: block;
+}
+
+.teddy-bubble.is-visible {
+  opacity: 1;
+}
+
+.teddy-room-scene.is-birthday .teddy-confetti {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.2rem;
+  animation: teddy-confetti 2.5s ease-in-out infinite;
+  z-index: 5;
+  pointer-events: none;
+}
+
+@keyframes teddy-confetti {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.85; }
+  50% { transform: translateX(-50%) scale(1.08) rotate(3deg); opacity: 1; }
+}
+
+/* Crecimiento */
+.teddy-char-wrap[data-stage="baby"] .teddy-char {
+  transform: scale(0.72);
+}
+
+.teddy-char-wrap[data-stage="young"] .teddy-char {
+  transform: scale(0.88);
+}
+
+.teddy-char-wrap[data-stage="adult"] .teddy-char {
+  transform: scale(1);
+}
+
+.teddy-char-wrap[data-stage="baby"] .teddy-head { width: 2.4rem; height: 2rem; }
+.teddy-char-wrap[data-stage="baby"] .teddy-torso { width: 2rem; height: 1.8rem; }
+
+.teddy-char-wrap[data-stage="baby"] .teddy-char.is-mood-ecstatic {
+  animation: teddy-bounce-baby 0.55s ease-in-out infinite alternate;
+}
+
+@keyframes teddy-bounce-baby {
+  from { transform: scale(0.72) translateY(0); }
+  to { transform: scale(0.76) translateY(-5px); }
+}
+
+/* Humor visual */
+.teddy-mouth {
+  position: absolute;
+  left: 50%;
+  bottom: 0.05rem;
+  transform: translateX(-50%);
+  width: 0.5rem;
+  height: 0.2rem;
+  border-bottom: 2px solid #5a3018;
+  border-radius: 0 0 50% 50%;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.teddy-char.is-mood-happy .teddy-mouth,
+.teddy-char.is-mood-ecstatic .teddy-mouth {
+  opacity: 1;
+  border-bottom-width: 2px;
+  width: 0.65rem;
+  height: 0.25rem;
+}
+
+.teddy-char.is-mood-sad .teddy-head {
+  transform: translateX(-50%) rotate(-6deg);
+}
+
+.teddy-char.is-mood-sad .teddy-face {
+  transform: translateY(3px);
+}
+
+.teddy-char.is-mood-ecstatic {
+  animation: teddy-bounce 0.55s ease-in-out infinite alternate;
+}
+
+@keyframes teddy-bounce {
+  from { transform: scale(1) translateY(0); }
+  to { transform: scale(1.04) translateY(-6px); }
+}
+
+.teddy-char.is-mood-tired.is-idle-sit,
+.teddy-char.is-mood-tired:not(.is-playing):not(.is-hugging) {
+  animation: teddy-breathe 4s ease-in-out infinite;
+}
+
+.teddy-char.is-mood-tired .teddy-head {
+  transform: translateX(-50%) rotate(4deg);
+}
+
+/* Emociones de interacción */
+.teddy-char.is-talking .teddy-head {
+  animation: teddy-tilt 0.5s ease-in-out 2;
+}
+
+@keyframes teddy-tilt {
+  0%, 100% { transform: translateX(-50%) rotate(0); }
+  50% { transform: translateX(-50%) rotate(8deg); }
+}
+
+.teddy-char.is-licking .teddy-snout::after {
+  content: '👅';
+  position: absolute;
+  left: 50%;
+  bottom: -0.35rem;
+  transform: translateX(-50%);
+  font-size: 0.55rem;
+  animation: teddy-lick 0.5s ease 2;
+}
+
+@keyframes teddy-lick {
+  50% { bottom: -0.15rem; }
+}
+
+.teddy-char.is-hidden-seek {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.teddy-char-wrap.is-seeking {
+  pointer-events: none;
+}
+
+/* Mesa y props persistentes */
+.teddy-side-table {
+  position: absolute;
+  left: 8%;
+  bottom: 44%;
+  width: 2.5rem;
+  height: 1.4rem;
+  background: linear-gradient(180deg, #c49a6c 0%, #a67c52 100%);
+  border-radius: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 1;
+}
+
+.teddy-side-table::before {
+  content: '';
+  position: absolute;
+  left: 0.3rem;
+  bottom: -0.6rem;
+  width: 0.35rem;
+  height: 0.6rem;
+  background: #a67c52;
+  border-radius: 2px;
+}
+
+.teddy-side-table::after {
+  content: '';
+  position: absolute;
+  right: 0.3rem;
+  bottom: -0.6rem;
+  width: 0.35rem;
+  height: 0.6rem;
+  background: #a67c52;
+  border-radius: 2px;
+}
+
+.teddy-room-props {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.teddy-prop {
+  position: absolute;
+  font-size: 1.35rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  pointer-events: auto;
+}
+
+.teddy-prop-rose { left: 18%; bottom: 46%; font-size: 1.5rem; }
+.teddy-prop-table { left: 10%; bottom: 52%; font-size: 1.1rem; }
+.teddy-prop-balloon {
+  top: 6%;
+  left: 35%;
+  font-size: 1.6rem;
+  animation: teddy-balloon 3s ease-in-out infinite;
+}
+
+@keyframes teddy-balloon {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-4px) rotate(2deg); }
+}
+
+.teddy-prop-box {
+  left: 42%;
+  bottom: 44%;
+  cursor: pointer;
+  animation: teddy-gift-bob 2s ease-in-out infinite;
+}
+
+.teddy-prop-box:hover { transform: scale(1.1); }
+
+/* Escondite */
+.teddy-hide-spots {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+}
+
+.teddy-hide-spot {
+  position: absolute;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 120, 180, 0.6);
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-body);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.teddy-hide-spot[data-hide-spot="bed"] { left: 6%; bottom: 40%; }
+.teddy-hide-spot[data-hide-spot="plant"] { left: 14%; bottom: 55%; }
+.teddy-hide-spot[data-hide-spot="window"] { right: 10%; top: 22%; }
+
+.teddy-hide-spot:hover { background: rgba(255, 88, 168, 0.25); transform: scale(1.05); }
+.teddy-hide-spot.is-right { background: rgba(100, 220, 120, 0.4); border-color: #6c6; }
+.teddy-hide-spot.is-wrong { background: rgba(255, 80, 80, 0.25); animation: teddy-shake 0.3s ease; }
+
+@keyframes teddy-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* Mochila */
+.teddy-backpack-panel {
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 120, 180, 0.25);
+  margin-top: 0.5rem;
+}
+
+.teddy-backpack-panel.hidden { display: none; }
+
+.teddy-backpack-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+}
+
+.teddy-backpack-list li {
+  padding: 0.35rem 0;
+  font-size: 0.82rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 480px) {
+  .teddy-room-scene { min-height: 200px; }
+  .teddy-action-grid { grid-template-columns: 1fr; }
+  .teddy-char-wrap { width: 4.5rem; }
+  .teddy-char { width: 4rem; height: 5rem; }
+}
+
+/* —— Casa completa (os dois juntos) —— */
+
+.casa-complete-banner {
+  text-align: center;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.65rem;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(255, 120, 80, 0.25), rgba(255, 88, 168, 0.3));
+  border: 1px solid rgba(255, 180, 120, 0.45);
+  box-shadow: 0 0 24px rgba(255, 120, 80, 0.2);
+  animation: casa-complete-pulse 3s ease-in-out infinite;
+}
+
+.casa-complete-icon {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.casa-complete-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--pink-vivid);
+}
+
+.casa-complete-sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  opacity: 0.95;
+}
+
+@keyframes casa-complete-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 120, 80, 0.15); }
+  50% { box-shadow: 0 0 32px rgba(255, 88, 168, 0.35); }
+}
+
+.casa-exterior.is-complete .casa-sky.is-warm {
+  background: linear-gradient(180deg, #ffd4a8 0%, #ffb8c8 45%, #ffc8e0 100%) !important;
+}
+
+.casa-exterior.is-complete .casa-house-body.is-glowing {
+  box-shadow: 0 0 40px rgba(255, 160, 100, 0.45), 0 0 80px rgba(255, 88, 168, 0.2);
+}
+
+.casa-exterior.is-complete .casa-hearth.is-warm .casa-hearth-glow {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.casa-complete-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.casa-exterior.is-complete .casa-complete-particles::before,
+.casa-exterior.is-complete .casa-complete-particles::after {
+  content: '✨';
+  position: absolute;
+  font-size: 0.75rem;
+  animation: casa-sparkle 4s ease-in-out infinite;
+}
+
+.casa-exterior.is-complete .casa-complete-particles::before {
+  top: 18%;
+  left: 22%;
+}
+
+.casa-exterior.is-complete .casa-complete-particles::after {
+  top: 28%;
+  right: 18%;
+  animation-delay: 1.5s;
+}
+
+@keyframes casa-sparkle {
+  0%, 100% { opacity: 0.2; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-8px); }
+}
+
+body.casa-together-complete .nossa-casa-scene {
+  --casa-warm-tint: rgba(255, 200, 150, 0.08);
+}
+
+/* —— Teddy experiências —— */
+
+.teddy-room-scene.is-together-warm {
+  box-shadow: inset 0 0 40px rgba(255, 180, 120, 0.25);
+  border-color: rgba(255, 160, 100, 0.35);
+}
+
+.teddy-room-scene.is-weather-rain .teddy-room-window {
+  background: linear-gradient(180deg, #8899aa 0%, #667788 100%);
+}
+
+.teddy-room-scene.is-weather-snow .teddy-room-window {
+  background: linear-gradient(180deg, #ddeeff 0%, #aabbcc 100%);
+}
+
+.teddy-window-fx {
+  position: absolute;
+  top: 12%;
+  right: 8%;
+  width: 3.5rem;
+  height: 3.5rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.teddy-weather-icon {
+  position: absolute;
+  top: 8%;
+  right: 12%;
+  font-size: 0.95rem;
+  z-index: 2;
+}
+
+.teddy-window-bird {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  font-size: 0.9rem;
+  animation: teddy-bird-hop 3s ease-in-out infinite;
+}
+
+@keyframes teddy-bird-hop {
+  50% { transform: translateX(4px) translateY(-2px); }
+}
+
+.teddy-plant {
+  position: absolute;
+  left: 6%;
+  bottom: 52%;
+  font-size: 1.4rem;
+  z-index: 2;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.teddy-plant[data-plant="wilt"] {
+  opacity: 0.75;
+  filter: grayscale(0.4);
+}
+
+.teddy-delivery {
+  position: absolute;
+  right: 8%;
+  bottom: 44%;
+  font-size: 1.6rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 4;
+  animation: teddy-gift-bob 2s ease-in-out infinite;
+}
+
+.teddy-watching,
+.teddy-together-glow {
+  position: absolute;
+  bottom: 0.35rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  margin: 0;
+  font-size: 0.68rem;
+  text-align: center;
+  opacity: 0.85;
+  z-index: 3;
+}
+
+.teddy-together-glow {
+  color: var(--pink-vivid);
+  font-weight: 600;
+}
+
+.teddy-thought {
+  position: absolute;
+  top: 0.35rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  max-width: 85%;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #5a4060;
+  font-size: 0.68rem;
+  font-style: italic;
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.teddy-thought.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.teddy-diary {
+  margin-top: 0;
+  padding: 0.65rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 248, 240, 0.08);
+  border: 1px solid rgba(255, 200, 150, 0.2);
+}
+
+.teddy-below-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.teddy-wake-btn {
+  display: block;
+  width: 100%;
+  margin: 0.35rem 0 0.25rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 120, 180, 0.45);
+  background: rgba(255, 88, 168, 0.18);
+  color: var(--text-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.teddy-wake-btn:hover {
+  background: rgba(255, 88, 168, 0.28);
+}
+
+.teddy-wake-btn.hidden,
+.teddy-sleep-hint.hidden {
+  display: none;
+}
+
+.teddy-sleep-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.68rem;
+  opacity: 0.65;
+  text-align: center;
+}
+
+.teddy-diary h5,
+.teddy-secrets h5 {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+}
+
+.teddy-diary-scroll {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.teddy-diary-page {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px dashed rgba(255, 200, 150, 0.15);
+}
+
+.teddy-diary-page time {
+  display: block;
+  font-size: 0.68rem;
+  opacity: 0.75;
+  margin-bottom: 0.15rem;
+}
+
+.teddy-diary-page p {
+  margin: 0;
+  font-size: 0.75rem;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.teddy-diary-empty {
+  text-align: center;
+  opacity: 0.8;
+  font-size: 0.78rem;
+}
+
+.teddy-diary-icon {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.teddy-secrets {
+  margin-top: 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.teddy-secret-lock {
+  opacity: 0.7;
+}
+
+.teddy-secrets ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.teddy-secrets li {
+  font-size: 0.72rem;
+  padding: 0.25rem 0;
+}
+
+.teddy-secrets li.is-secret {
+  opacity: 0.55;
+  letter-spacing: 0.05em;
+}
+
+.teddy-sfx-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.teddy-sfx-row input {
+  accent-color: var(--pink-vivid);
+}
+
+.casa-album-teddy {
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 4rem;
+  background: linear-gradient(135deg, rgba(255, 200, 180, 0.2), rgba(255, 120, 180, 0.15));
+  border-radius: var(--radius-md);
+}
+
+

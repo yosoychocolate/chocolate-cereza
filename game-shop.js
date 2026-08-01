@@ -214,6 +214,7 @@
       this.render();
       this.applyCosmetics();
       this._emitWalletChanged();
+      global.GameMeta?.sounds?.playShop?.();
       return true;
     },
 

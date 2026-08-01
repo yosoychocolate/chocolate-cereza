@@ -13,7 +13,7 @@
   };
 
   /** Substitua pela chave pública Web Push do Firebase Console (começa com B...) */
-  g.FIREBASE_VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
+  g.FIREBASE_VAPID_KEY = 'BD1KnpmHFzsPhOa4AxmVnJAlGQMIl83K1YndXG7exBMNiykZSGAM7bXI0BOX0aqk2U6eDOFMIAtBtYXLWaOsIRQ';
 
   g.SITE_ORIGIN = 'https://yosoychocolate.github.io/chocolate-cereza';
 })(typeof self !== 'undefined' ? self : globalThis);

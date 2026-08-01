@@ -7,7 +7,7 @@
 
   const SAVE_KEY = 'ChocolateCerezaSave';
   const BACKUP_KEY = 'ChocolateCerezaSave_backup';
-  const SAVE_VERSION = 34;
+  const SAVE_VERSION = 39;
 
   const LEGACY = {
     highScore: 'chocolateCereza_highScore',
@@ -26,7 +26,18 @@
   function createDefaultSave() {
     return {
       version: SAVE_VERSION,
-      settings: { sfx: true },
+      settings: {
+        sfx: true,
+        bgmVolume: 0.75,
+        musicVolume: 0.75,
+        sfxVolume: 0.80,
+        gameSfxVolume: 0.80,
+        teddyVolume: 0.65,
+        teddySfxVolume: 0.65,
+        teddySfx: true,
+        uiVolume: 0.40,
+        ambientVolume: 0.35,
+      },
       stats: {
         totalChocolates: 0,
         playTimeMs: 0,
@@ -102,6 +113,47 @@
         lastGame: null,
         lastMessage: null,
         togetherSince: null,
+        weather: null,
+        weatherLat: 40.71,
+        weatherLon: -74.01,
+        gamesWatchMinutes: 0,
+        lastGamesSessionAt: null,
+        lastGamesSessionMins: 0,
+        teddy: {
+          mood: 70,
+          lastVisitAt: null,
+          lastFedAt: null,
+          outfit: null,
+          outfitsOwned: [],
+          decor: [],
+          gifts: [],
+          roomProps: [],
+          totalHugs: 0,
+          welcomedSession: false,
+          bornAt: null,
+          carePoints: 0,
+          birthday: '08-15',
+          memory: [],
+          dayHistory: [],
+          daily: null,
+          lastGamesTotal: 0,
+          lastHugAt: null,
+          lastHugBy: null,
+          lastPlayAt: null,
+          lastFedBy: null,
+          lastFedFood: null,
+          backpack: { chocolate: 0, rose: 0, photo: 0, gift: 0 },
+          hideSeekWins: 0,
+          diary: [],
+          plantStage: 'ok',
+          plantWateredAt: null,
+          visitStreak: 0,
+          lastVisitDay: null,
+          secrets: [],
+          pendingDelivery: null,
+          lastDeliveryAt: null,
+          selfiesTaken: [],
+        },
       },
     };
   }
@@ -389,11 +441,63 @@
       version = 34;
     }
 
-    /* Futuras migrações — apenas adicionar campos novos:
     if (version < 35) {
+      fillMissing(save, { nossaCasa: createDefaultSave().nossaCasa });
+      fillMissing(save.nossaCasa, { teddy: createDefaultSave().nossaCasa.teddy });
       version = 35;
     }
-    */
+
+    if (version < 36) {
+      fillMissing(save.nossaCasa, { teddy: createDefaultSave().nossaCasa.teddy });
+      const td = save.nossaCasa.teddy;
+      if (!Array.isArray(td.memory)) td.memory = [];
+      if (!Array.isArray(td.roomProps)) td.roomProps = [];
+      if (!Array.isArray(td.dayHistory)) td.dayHistory = [];
+      if (!td.backpack || typeof td.backpack !== 'object') {
+        td.backpack = { chocolate: 0, rose: 0, photo: 0, gift: 0 };
+      }
+      if (!td.birthday) td.birthday = '08-15';
+      version = 36;
+    }
+
+    if (version < 37) {
+      fillMissing(save, { nossaCasa: createDefaultSave().nossaCasa });
+      if (!save.nossaCasa.teddy) save.nossaCasa.teddy = createDefaultSave().nossaCasa.teddy;
+      fillMissing(save.nossaCasa.teddy, createDefaultSave().nossaCasa.teddy);
+      if (!Array.isArray(save.nossaCasa.teddy.diary)) save.nossaCasa.teddy.diary = [];
+      if (!Array.isArray(save.nossaCasa.teddy.secrets)) save.nossaCasa.teddy.secrets = [];
+      if (!Array.isArray(save.nossaCasa.teddy.selfiesTaken)) save.nossaCasa.teddy.selfiesTaken = [];
+      if (!save.nossaCasa.teddy.plantStage) save.nossaCasa.teddy.plantStage = 'ok';
+      version = 37;
+    }
+
+    if (version < 38) {
+      fillMissing(save.settings, {
+        gameSfxVolume: 0.75,
+        teddySfx: true,
+        teddySfxVolume: 0.65,
+      });
+      if (typeof save.settings.gameSfxVolume !== 'number') save.settings.gameSfxVolume = 0.75;
+      if (save.settings.teddySfx == null) save.settings.teddySfx = true;
+      if (typeof save.settings.teddySfxVolume !== 'number') save.settings.teddySfxVolume = 0.65;
+      version = 38;
+    }
+
+    if (version < 39) {
+      fillMissing(save.settings, createDefaultSave().settings);
+      if (save.settings.musicVolume != null && save.settings.bgmVolume == null) {
+        save.settings.bgmVolume = save.settings.musicVolume;
+      }
+      if (save.settings.gameSfxVolume != null && save.settings.sfxVolume == null) {
+        save.settings.sfxVolume = save.settings.gameSfxVolume;
+      }
+      if (save.settings.teddySfxVolume != null && save.settings.teddyVolume == null) {
+        save.settings.teddyVolume = save.settings.teddySfxVolume;
+      }
+      if (typeof save.settings.uiVolume !== 'number') save.settings.uiVolume = 0.4;
+      if (typeof save.settings.ambientVolume !== 'number') save.settings.ambientVolume = 0.35;
+      version = 39;
+    }
 
     save.version = SAVE_VERSION;
     return save;

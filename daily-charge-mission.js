@@ -153,6 +153,7 @@
     els.overlay.classList.remove('hidden');
     els.overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('daily-charge-open');
+    global.AudioManager?.playUi?.(mode === 'nudge' ? 'reminder' : 'notify');
   }
 
   function hideOverlay() {

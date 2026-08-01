@@ -97,6 +97,9 @@
   function buildExterior() {
     const level = hub()?.getFireplaceLevel?.() || 0;
     const unread = countUnread();
+    const together = global.CasaExperiences?.isTogether?.() === true;
+    const completeBanner = global.CasaExperiences?.completeBannerHtml?.() || '';
+    const hearthLevel = together ? Math.max(level, 5) : level;
     const roomCards = HOTSPOTS.map((h) => {
       const badge = h.id === 'correio' && unread > 0
         ? `<span class="casa-room-badge">${unread > 9 ? '9+' : unread}</span>` : '';
@@ -107,14 +110,15 @@
       </button>`;
     }).join('');
 
-    return `<div class="casa-exterior" id="casa-exterior">
+    return `<div class="casa-exterior ${together ? 'is-complete' : ''}" id="casa-exterior">
+      ${completeBanner}
       <div class="casa-hero">
-        <div class="casa-sky ${isNight() ? 'is-night' : ''}"></div>
+        <div class="casa-sky ${isNight() ? 'is-night' : ''} ${together ? 'is-warm' : ''}"></div>
         <div class="casa-hill"></div>
-        <div class="casa-house-body">
+        <div class="casa-house-body ${together ? 'is-glowing' : ''}">
           <div class="casa-roof-shape"></div>
           <div class="casa-walls"></div>
-          ${fireplaceHtml(level)}
+          ${fireplaceHtml(hearthLevel)}
         </div>
       </div>
       <div class="casa-rooms-wrap">
@@ -143,6 +147,7 @@
   }
 
   function enterRoom(id) {
+    global.CasaExperiences?.onEnterRoom?.(id);
     currentRoom = id;
     els.app?.classList.add('is-inside');
     global.document.body.classList.add('casa-inside');
@@ -156,6 +161,8 @@
   }
 
   function exitRoom() {
+    if (currentRoom) global.CasaExperiences?.onExitRoom?.(currentRoom);
+    if (currentRoom === 'teddy') global.TeddyRoom?.destroy?.();
     currentRoom = null;
     els.app?.classList.remove('is-inside');
     global.document.body.classList.remove('casa-inside');
@@ -487,7 +494,7 @@
     const years = Object.keys(byYear).sort((a, b) => b - a);
     const html = years.length ? years.map((y) => {
       const items = byYear[y].map((m) =>
-        `<figure class="casa-album-item">${global.ImageUpload?.safeSrc?.(m.imageUrl) ? `<img src="${esc(global.ImageUpload.safeSrc(m.imageUrl))}" alt="">` : '<div class="casa-album-ph">📷</div>'}
+        `<figure class="casa-album-item">${global.ImageUpload?.safeSrc?.(m.imageUrl) ? `<img src="${esc(global.ImageUpload.safeSrc(m.imageUrl))}" alt="">` : (String(m.imageUrl || '').startsWith('teddy:') ? '<div class="casa-album-ph casa-album-teddy">🧸📸</div>' : '<div class="casa-album-ph">📷</div>')}
         <figcaption>${esc(m.title)}</figcaption></figure>`
       ).join('');
       return `<section class="casa-album-year"><h5>${y}</h5><div class="casa-album-grid">${items}</div></section>`;
@@ -566,6 +573,18 @@
   }
 
   function roomTeddy(body) {
+    if (global.TeddyRoom?.render) {
+      global.TeddyRoom.render(body, {
+        state,
+        meta,
+        esc,
+        isNight,
+        daysUntil,
+        daysBetween,
+        hub,
+      });
+      return;
+    }
     body.innerHTML = `<div class="casa-room-theme theme-teddy">
       <div class="casa-teddy-art">🧸</div>
       <h4>Habitación de Teddy</h4>
@@ -759,8 +778,8 @@
       return;
     }
     if (pres?.together) {
-      els.mascotEmoji.textContent = '😍';
-      els.mascotBubble.textContent = '¡Los dos están en línea en el dormitorio!';
+      els.mascotEmoji.textContent = '🏡';
+      els.mascotBubble.textContent = '¡La casa está completa! Los dos juntos.';
       return;
     }
     if (isNight()) {
@@ -776,6 +795,7 @@
     const partial = {};
     if (kind === 'letter') partial.lastMessage = `${name} envió una carta`;
     SaveManager.updateSection('nossaCasa', partial);
+    if (kind === 'game') global.TeddyRoom?.onActivity?.('game');
   }
 
   function init() {
@@ -797,6 +817,11 @@
       refreshMascot();
     });
     global.addEventListener('couple:roomChanged', refreshMascot);
+    global.addEventListener('casa:together-changed', () => {
+      if (!currentRoom) refreshExterior();
+      if (currentRoom === 'teddy') renderRoom('teddy');
+      refreshMascot();
+    });
     global.addEventListener('cherrygame:activate', () => {
       hub()?.logGardenAction?.('game');
       SaveManager.updateSection('nossaCasa', { lastGame: 'Cereza 🍒' });
@@ -820,6 +845,8 @@
     if (main && !main.classList.contains('hidden')) els.mascotWidget?.classList.remove('hidden');
 
     refreshMascot();
+
+    global.CasaExperiences?.init?.({ presence });
   }
 
   global.NossaCasa = { refresh: refreshExterior, logActivity, enterRoom, exitRoom };

@@ -108,7 +108,9 @@
     }
 
     const fired = engine.tryShoot(answer);
-    if (!fired && (force || inputBuffer.length >= 2)) {
+    if (fired) {
+      global.GameMeta?.sounds?.playCannonLaser?.();
+    } else if (force || inputBuffer.length >= 2) {
       els.answerPanel?.classList.add('is-wrong');
       clearTimeout(els._wrongTimer);
       els._wrongTimer = setTimeout(() => els.answerPanel?.classList.remove('is-wrong'), 320);

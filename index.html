@@ -26,10 +26,13 @@
     document.documentElement.classList.add('intro-lock');
     window.scrollTo(0, 0);
     window.__FILE_PROTOCOL__ = location.protocol === 'file:';
+    if (window.__FILE_PROTOCOL__) {
+      document.documentElement.classList.add('file-protocol-active');
+    }
   </script>
 </head>
 <body>
-  <div id="file-protocol-warning" class="file-protocol-warning" hidden>
+  <div id="file-protocol-warning" class="file-protocol-warning">
     <div class="file-protocol-warning-inner">
       <button type="button" id="file-protocol-dismiss" class="file-protocol-dismiss" aria-label="Cerrar aviso">✕</button>
       <strong>⚠️ Este enlace no funciona directo desde la carpeta</strong>
@@ -119,6 +122,7 @@
           <button type="button" id="music-next" class="music-nav-btn" aria-label="Siguiente canción">⏭</button>
           <button type="button" id="music-repeat-btn" class="music-nav-btn music-repeat-btn" aria-label="Repetir canción" aria-pressed="false" title="Repetir canción">🔁</button>
         </div>
+        <p class="music-playlist-hint">Elige una canción de la lista 👇</p>
         <ul id="music-playlist" class="music-playlist" aria-label="Lista de canciones"></ul>
         <div class="music-player-top">
           <button type="button" id="music-play-btn" class="music-play-btn">▶︎ Reproducir</button>
@@ -134,10 +138,11 @@
             <span id="music-duration">00:00</span>
           </div>
         </div>
-        <div class="music-volume" aria-label="Volumen">
-          <button type="button" class="music-vol-btn" data-music-vol-down aria-label="Bajar volumen">🔉</button>
-          <span class="music-vol-label" aria-live="polite">35%</span>
-          <button type="button" class="music-vol-btn" data-music-vol-up aria-label="Subir volumen">🔊</button>
+        <div class="music-volume" aria-label="Volumen de la música del sitio">
+          <span class="music-vol-heading">Volumen música</span>
+          <button type="button" class="music-vol-btn" data-music-vol-down aria-label="Bajar volumen de música">🔉</button>
+          <span class="music-vol-label" aria-live="polite">75%</span>
+          <button type="button" class="music-vol-btn" data-music-vol-up aria-label="Subir volumen de música">🔊</button>
         </div>
       </div>
       <p id="music-quote" class="music-quote">"Cada vez que esta canción suena, me recuerda a ti." 🍫🍒❤️</p>
@@ -491,10 +496,42 @@
         </div>
         <div id="game-settings-panel" class="game-meta-panel hidden" role="region" aria-label="Ajustes del juego">
           <h3 class="game-meta-panel-title">⚙️ Ajustes</h3>
-          <label class="game-setting-row">
-            <span class="game-setting-label">Efectos de sonido</span>
-            <input id="game-sfx-toggle" class="game-setting-toggle" type="checkbox" checked>
-          </label>
+          <div class="game-audio-settings" aria-label="Volumen de audio">
+            <h4 class="game-audio-heading">🔊 Audio</h4>
+            <div class="game-setting-row game-setting-volume">
+              <span class="game-setting-label">🎵 Música del sitio</span>
+              <div class="game-sfx-volume-controls">
+                <input id="audio-bgm-volume" type="range" min="0" max="100" value="75" aria-label="Volumen música del sitio">
+                <span id="audio-bgm-label" class="game-sfx-vol-label" aria-live="polite">75%</span>
+              </div>
+            </div>
+            <label class="game-setting-row">
+              <span class="game-setting-label">Efectos de sonido (juegos)</span>
+              <input id="game-sfx-toggle" class="game-setting-toggle" type="checkbox" checked>
+            </label>
+            <div id="game-sfx-volume-wrap" class="game-setting-row game-setting-volume">
+              <span class="game-setting-label">🎮 Efectos de los juegos</span>
+              <div class="game-sfx-volume-controls">
+                <input id="audio-sfx-volume" type="range" min="0" max="100" value="80" aria-label="Volumen efectos de juego">
+                <span id="audio-sfx-label" class="game-sfx-vol-label" aria-live="polite">80%</span>
+              </div>
+            </div>
+            <div class="game-setting-row game-setting-volume">
+              <span class="game-setting-label">🐻 Teddy</span>
+              <div class="game-sfx-volume-controls">
+                <input id="audio-teddy-volume" type="range" min="0" max="100" value="65" aria-label="Volumen sonidos de Teddy">
+                <span id="audio-teddy-label" class="game-sfx-vol-label" aria-live="polite">65%</span>
+              </div>
+            </div>
+            <div class="game-setting-row game-setting-volume">
+              <span class="game-setting-label">🔔 Notificaciones</span>
+              <div class="game-sfx-volume-controls">
+                <input id="audio-ui-volume" type="range" min="0" max="100" value="40" aria-label="Volumen notificaciones">
+                <span id="audio-ui-label" class="game-sfx-vol-label" aria-live="polite">40%</span>
+              </div>
+            </div>
+          </div>
+          <p class="game-setting-hint">También puedes ajustar la música con 🔉/🔊 en la sección ♪ Música.</p>
         </div>
         <div id="game-shop-panel" class="game-meta-panel game-shop-panel hidden" role="region" aria-label="Tienda del chocolate">
           <div class="game-shop-head">
@@ -771,6 +808,7 @@
   <script src="music-playlist.js?v=__APP_VERSION__"></script>
   <script src="update-check.js?v=__APP_VERSION__"></script>
   <script src="save-manager.js?v=__APP_VERSION__"></script>
+  <script src="audio-manager.js?v=__APP_VERSION__"></script>
   <script src="daily-greetings.js?v=__APP_VERSION__"></script>
   <script src="game-audit.js?v=__APP_VERSION__"></script>
   <script src="love-words.js?v=__APP_VERSION__"></script>
@@ -785,6 +823,9 @@
   <script src="script.js?v=__APP_VERSION__"></script>
   <script src="hub-shared.js?v=__APP_VERSION__"></script>
   <script src="couple-hub.js?v=__APP_VERSION__"></script>
+  <script src="casa-experiences.js?v=__APP_VERSION__"></script>
+  <script src="teddy-experiences.js?v=__APP_VERSION__"></script>
+  <script src="teddy-room.js?v=__APP_VERSION__"></script>
   <script src="nossa-casa.js?v=__APP_VERSION__"></script>
   <script type="module" src="couple-ui.js?v=__APP_VERSION__"></script>
   <script type="module" src="push-notifications.js?v=__APP_VERSION__"></script>
@@ -793,14 +834,18 @@
       document.documentElement.classList.add('file-protocol-active');
       const warn = document.getElementById('file-protocol-warning');
       const dismiss = document.getElementById('file-protocol-dismiss');
-      if (warn && !sessionStorage.getItem('fileProtocolWarnDismissed')) {
-        warn.hidden = false;
+      if (sessionStorage.getItem('fileProtocolWarnDismissed')) {
+        if (warn) warn.hidden = true;
+        document.documentElement.classList.remove('file-protocol-active');
       }
       dismiss?.addEventListener('click', () => {
         sessionStorage.setItem('fileProtocolWarnDismissed', '1');
         if (warn) warn.hidden = true;
         document.documentElement.classList.remove('file-protocol-active');
       });
+    } else {
+      const warn = document.getElementById('file-protocol-warning');
+      if (warn) warn.hidden = true;
     }
   </script>
 </body>

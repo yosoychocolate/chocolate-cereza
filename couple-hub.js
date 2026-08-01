@@ -213,6 +213,7 @@ function switchTab(tab) {
   els.panels?.forEach((panel) => {
     panel.classList.toggle('hidden', panel.dataset.hubPanel !== tab);
   });
+  global.dispatchEvent(new CustomEvent('hub:tab-changed', { detail: { tab } }));
 }
 
 function openHubTab(tab) {
@@ -534,6 +535,7 @@ async function addLetterExtended(opts) {
       const res = await CloudManager.createHubLetter(letter);
       if (res?.success) {
         logGardenAction('letter');
+        global.AudioManager?.playUi?.('letter');
         global.NossaCasa?.logActivity?.('letter', getPlayerName());
         global.NossaCasa?.refresh?.();
         return true;
@@ -548,6 +550,7 @@ async function addLetterExtended(opts) {
   writeLocalHub(hubState);
   renderLetters();
   logGardenAction('letter');
+  global.AudioManager?.playUi?.('letter');
   global.NossaCasa?.logActivity?.('letter', getPlayerName());
   global.NossaCasa?.refresh?.();
   return true;
