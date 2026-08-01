@@ -230,7 +230,7 @@
       const audio = l.audioUrl ? `<p class="casa-mail-audio">🎙️ Audio adjunto</p>` : '';
       return `<article class="casa-mail-card" data-letter-id="${esc(l.id)}">
         <header class="casa-mail-card-head">
-          <div><strong>${esc(l.fromName)}</strong><time>${new Date(l.createdAt).toLocaleString('es')}</time></div>
+          <div><strong>${esc(hub()?.formatLetterHeading?.(l) || l.fromName || 'Alguien')}</strong><time>${new Date(l.createdAt).toLocaleString('es')}</time></div>
           <button type="button" class="casa-mail-del" data-letter-del="${esc(l.id)}" aria-label="Eliminar cartita" title="Eliminar">🗑</button>
         </header>
         <p>${esc(l.text)}</p>${photo}${audio}
@@ -262,6 +262,7 @@
       <form class="casa-mail-panel casa-mail-compose hidden" data-mail-panel="write">
         <div class="casa-compose-card glass">
           <label class="casa-compose-label" for="casa-mail-text">Tu cartita</label>
+          <p class="casa-compose-route" data-casa-compose-route aria-live="polite"></p>
           <textarea id="casa-mail-text" name="text" class="casa-compose-text" rows="5" maxlength="500" placeholder="Escribe con el corazón…"></textarea>
           <div class="casa-compose-photo">
             <input type="file" name="photo" id="casa-mail-photo-input" class="casa-file-hidden" accept="image/*">
@@ -300,6 +301,13 @@
     });
 
     bindMailCompose(body);
+
+    const routeHint = body.querySelector('[data-casa-compose-route]');
+    if (routeHint) {
+      const from = hub()?.getPlayerName?.() || 'Tú';
+      const to = hub()?.getPartnerName?.() || 'Mi amor';
+      routeHint.textContent = `${from} para ${to}`;
+    }
 
     body.querySelector('[data-mail-panel="write"]')?.addEventListener('submit', async (e) => {
       e.preventDefault();

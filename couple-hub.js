@@ -54,20 +54,75 @@ function localId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function getPlayerName() {
+function readIdentity() {
   try {
-    return localStorage.getItem('ChocolateCerezaPlayerName') || 'Chocolate';
-  } catch (_) {
-    return 'Chocolate';
-  }
+    const raw = localStorage.getItem('ChocolateCerezaPlayerIdentity');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        id: typeof parsed.id === 'string' ? parsed.id : '',
+        name: typeof parsed.name === 'string' ? parsed.name.trim() : '',
+      };
+    }
+  } catch (_) { /* ignore */ }
+  try {
+    return {
+      id: localStorage.getItem('ChocolateCerezaPlayerId') || '',
+      name: (localStorage.getItem('ChocolateCerezaPlayerName') || '').trim(),
+    };
+  } catch (_) { /* ignore */ }
+  return { id: '', name: '' };
+}
+
+function getPlayerName() {
+  const fromInput = document.getElementById('couple-player-name')?.value?.trim();
+  if (fromInput) return fromInput;
+
+  const identity = readIdentity();
+  if (identity.name) return identity.name;
+
+  try {
+    const local = global.CloudManager?.getLocalPlayer?.();
+    if (local?.name) return local.name;
+  } catch (_) { /* ignore */ }
+
+  return 'Jugador';
 }
 
 function getPlayerId() {
+  const identity = readIdentity();
+  if (identity.id) return identity.id;
+
   try {
-    const raw = localStorage.getItem('ChocolateCerezaPlayerId');
-    if (raw) return raw;
+    const local = global.CloudManager?.getLocalPlayer?.();
+    if (local?.id) return local.id;
   } catch (_) { /* ignore */ }
+
   return 'local_player';
+}
+
+function getPartnerName() {
+  try {
+    const partner = global.CloudManager?.getPartnerPlayer?.();
+    if (partner?.name) return partner.name;
+
+    const room = global.CloudManager?.getCurrentRoom?.();
+    const localId = getPlayerId();
+    const other = room?.players?.find((p) => p.id !== localId);
+    if (other?.name) return other.name;
+  } catch (_) { /* ignore */ }
+
+  const nick = hubState.settings?.partnerNickname;
+  if (typeof nick === 'string' && nick.trim()) return nick.trim();
+
+  return 'Mi amor';
+}
+
+function formatLetterHeading(letter) {
+  const from = (letter?.fromName || '').trim() || 'Alguien';
+  const to = (letter?.toName || '').trim();
+  if (to) return `${from} para ${to}`;
+  return from;
 }
 
 function readLocalHub() {
@@ -185,6 +240,12 @@ function renderTasks() {
   }).join('');
 }
 
+function updateLetterRouteHint() {
+  const el = document.getElementById('hub-letter-route');
+  if (!el) return;
+  el.textContent = `${getPlayerName()} para ${getPartnerName()}`;
+}
+
 function renderLetters() {
   if (!els.letterList) return;
   const letters = [...hubState.letters].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -200,7 +261,7 @@ function renderLetters() {
       : '';
     return `<article class="hub-letter-card" data-letter-id="${escapeHtml(letter.id)}">
       <header class="hub-letter-head">
-        <strong>${escapeHtml(letter.fromName || 'Alguien')}</strong>
+        <strong>${escapeHtml(formatLetterHeading(letter))}</strong>
         <div class="hub-letter-head-actions">
           <time>${escapeHtml(when)}</time>
           <button type="button" class="hub-icon-btn hub-letter-del" data-letter-id="${escapeHtml(letter.id)}" aria-label="Eliminar cartita" title="Eliminar">🗑</button>
@@ -353,6 +414,7 @@ function renderAll() {
   renderCounter();
   renderMissions();
   renderReminder();
+  updateLetterRouteHint();
   global.dispatchEvent(new CustomEvent('hub:updated', { detail: { state: hubState, mode } }));
   global.NossaCasa?.refresh?.();
 }
@@ -452,6 +514,7 @@ async function addLetterExtended(opts) {
   const letter = {
     fromPlayerId: getPlayerId(),
     fromName: getPlayerName(),
+    toName: (opts.toName || getPartnerName()).trim(),
     text: (opts.text || '').trim(),
     type: opts.type || 'inbox',
     deliverDate: opts.deliverDate || null,
@@ -1018,6 +1081,9 @@ function cacheElements() {
     getState: getHubState,
     getMeta: getNossaCasaMeta,
     getVisibleLetters,
+    formatLetterHeading,
+    getPlayerName,
+    getPartnerName,
     recordVisit,
     logGardenAction,
     getFireplaceLevel,

@@ -7308,6 +7308,16 @@ body.casa-inside .casa-mascot-widget {
   background: rgba(20, 8, 24, 0.55);
 }
 
+.casa-compose-route,
+.hub-letter-route {
+  margin: 0;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 180, 220, 0.85);
+  letter-spacing: 0.02em;
+}
+
 .casa-compose-label {
   font-family: 'Quicksand', sans-serif;
   font-size: 0.78rem;

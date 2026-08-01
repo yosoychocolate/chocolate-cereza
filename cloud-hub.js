@@ -152,6 +152,7 @@ function mapLetterDoc(id, data) {
     id,
     fromPlayerId: typeof data.fromPlayerId === 'string' ? data.fromPlayerId : '',
     fromName: typeof data.fromName === 'string' ? data.fromName : '',
+    toName: typeof data.toName === 'string' ? data.toName : '',
     text: typeof data.text === 'string' ? data.text : '',
     type: typeof data.type === 'string' ? data.type : 'inbox',
     deliverDate: typeof data.deliverDate === 'string' ? data.deliverDate : null,
@@ -304,6 +305,7 @@ export async function addHubLetter(db, roomCode, letter) {
   const ref = await addDoc(hubLettersRef(db, roomCode), {
     fromPlayerId: letter.fromPlayerId || '',
     fromName: letter.fromName || '',
+    toName: letter.toName || '',
     text: letter.text || '',
     type: letter.type || 'inbox',
     deliverDate: letter.deliverDate || null,
