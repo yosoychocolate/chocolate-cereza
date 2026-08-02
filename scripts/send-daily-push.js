@@ -127,9 +127,10 @@ async function sendDailyChargePush(kind) {
 
   for (let i = 0; i < tokens.length; i += 500) {
     const chunk = tokens.slice(i, i + 500);
-    // Só data — o service worker exibe a notificação (mais confiável com Chrome fechado no Android).
+    // notification + data: o Chrome Android pode exibir sozinho; o SW também trata como backup.
     const res = await admin.messaging().sendEachForMulticast({
       tokens: chunk,
+      notification: { title: msg.title, body: msg.body },
       data: {
         type: kind === 'nudge' ? 'daily-charge-nudge' : 'daily-charge',
         title: msg.title,
@@ -137,10 +138,14 @@ async function sendDailyChargePush(kind) {
         icon: `${SITE_URL}assets/app-icon-192.png`,
         url: SITE_URL,
       },
-      android: { priority: 'high' },
+      android: { priority: 'high', notification: { channelId: 'daily_charge', priority: 'high' } },
       webpush: {
         headers: { Urgency: 'high' },
         fcmOptions: { link: SITE_URL },
+        notification: {
+          icon: `${SITE_URL}assets/app-icon-192.png`,
+          badge: `${SITE_URL}assets/cherry.png`,
+        },
       },
     });
 

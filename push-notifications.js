@@ -31,14 +31,26 @@ function getDeviceMeta() {
   };
 }
 
-function showLocalTestNotification() {
+async function showLocalTestNotification() {
   if (Notification.permission !== 'granted') return;
+  const title = '✅ Chocolate & Cereza';
+  const body = 'Si ves esto, el service worker puede avisarte con Chrome cerrado. 🔋🐻';
+  const opts = {
+    body,
+    icon: 'assets/app-icon-192.png',
+    badge: 'assets/cherry.png',
+    tag: 'push-local-test',
+    renotify: true,
+  };
   try {
-    new Notification('✅ Chocolate & Cereza', {
-      body: 'Si ves esto en tu celular, las notificaciones funcionan. 🔋🐻',
-      icon: 'assets/app-icon-192.png',
-      tag: 'push-local-test',
-    });
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, opts);
+      return;
+    }
+  } catch (_) { /* fallback */ }
+  try {
+    new Notification(title, opts);
   } catch (_) { /* ignore */ }
 }
 
@@ -128,7 +140,14 @@ export async function subscribePush() {
     }
 
     const reg = await navigator.serviceWorker.register(SW_URL);
+    await reg.update();
     await navigator.serviceWorker.ready;
+
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      status.reason = 'no_push_subscription';
+      return status;
+    }
 
     const token = await getToken(msg, { vapidKey, serviceWorkerRegistration: reg });
     if (!token) {
@@ -147,7 +166,7 @@ export async function subscribePush() {
     status.device = getDeviceMeta().deviceLabel;
     status.origin = getDeviceMeta().origin;
 
-    if (saved.ok) showLocalTestNotification();
+    if (saved.ok) await showLocalTestNotification();
 
     try {
       localStorage.setItem('ChocolateCerezaPushToken', token);

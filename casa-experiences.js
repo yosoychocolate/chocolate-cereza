@@ -5,7 +5,7 @@
   'use strict';
 
   const DEFAULT_WEATHER = { lat: 40.71, lon: -74.01, label: 'Nueva York' };
-  const POLL_MS = 12000;
+  const POLL_MS = 8000;
   const WEATHER_TTL = 3600000;
 
   let pollTimer = null;

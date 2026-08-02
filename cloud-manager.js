@@ -32,6 +32,8 @@ import {
   stopPresenceLifecycle,
   getPresenceLabel,
   formatLastSeen,
+  isPresenceOnline,
+  normalizePresence,
 } from './cloud-presence.js?v=__APP_VERSION__';
 import { createRoomListener } from './cloud-listener.js?v=__APP_VERSION__';
 import {
@@ -166,7 +168,7 @@ roomListener.subscribe((event) => {
   } else if (event.type === 'presence_updated' && event.playerId && currentRoom) {
     const player = currentRoom.players.find((p) => p.id === event.playerId);
     if (player && event.presence) {
-      player.presence = { ...event.presence };
+      player.presence = normalizePresence(event.presence);
     }
   } else if (event.type === 'couple_updated' && event.couple) {
     currentCoupleStats = /** @type {CoupleStats} */ (event.couple);
@@ -760,7 +762,7 @@ export async function getRoomPresence() {
       players: players.map((p) => ({
         ...p,
         presenceLabel: getPresenceLabel(p),
-        lastSeenLabel: p.presence.online ? 'online' : formatLastSeen(p.presence.lastSeen),
+        lastSeenLabel: isPresenceOnline(p.presence) ? 'online' : formatLastSeen(p.presence.lastSeen),
       })),
     };
   } catch (err) {
@@ -863,7 +865,7 @@ export async function getCoupleRanking() {
         bestScore: stats.bestScore,
         lastScore: stats.lastScore,
         gamesPlayed: stats.gamesPlayed,
-        online: player.presence?.online === true,
+        online: isPresenceOnline(player.presence),
         isCoupleBest: currentCoupleStats?.bestPlayerId === player.id,
       });
     }
@@ -1578,6 +1580,7 @@ export const CloudManager = {
   hasSession,
   getPresenceLabel,
   formatLastSeen,
+  isPresenceOnline,
   subscribeToHub,
   fetchHubData,
   updateHubDataSettings,

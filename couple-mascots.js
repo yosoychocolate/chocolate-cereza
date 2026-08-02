@@ -1,6 +1,7 @@
 /**
  * CoupleMascots — ursinhos Chocolate & Cereza (kawaii, tema romântico).
  */
+import { isPresenceOnline } from './cloud-presence.js?v=__APP_VERSION__';
 
 /** @typedef {'chocolate' | 'cereza'} MascotType */
 
@@ -281,9 +282,9 @@ export function detectSceneMode(room, localPlayerId) {
   const partner = players.find((p) => p.id !== localPlayerId);
   if (!partner) return 'waiting';
 
-  const partnerOnline = partner.presence?.online === true;
+  const partnerOnline = isPresenceOnline(partner.presence);
   const local = players.find((p) => p.id === localPlayerId);
-  const localOnline = local?.presence?.online !== false;
+  const localOnline = isPresenceOnline(local?.presence);
 
   if (partnerOnline && localOnline) return 'together';
   return 'alone';

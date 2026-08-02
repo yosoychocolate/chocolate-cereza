@@ -182,7 +182,7 @@ function renderPlayers(players) {
 
   players.forEach((player) => {
     const li = document.createElement('li');
-    const online = player.presence?.online === true;
+    const online = CloudManager.isPresenceOnline?.(player.presence) === true;
     const icon = online ? '🟢' : '🔴';
     const status = online ? 'online' : CloudManager.formatLastSeen(player.presence?.lastSeen || 0);
     li.className = 'couple-player-item';
@@ -394,8 +394,8 @@ function renderMascotScene(room, couple, overrideMode) {
     partnerType,
     localName,
     partnerName,
-    localOnline: localPlayer?.presence?.online !== false,
-    partnerOnline: partner?.presence?.online === true,
+    localOnline: CloudManager.isPresenceOnline?.(localPlayer?.presence) === true,
+    partnerOnline: CloudManager.isPresenceOnline?.(partner?.presence) === true,
   });
 
   els.mascotStage.innerHTML = scene.html;

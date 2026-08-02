@@ -217,8 +217,8 @@ export async function fetchCloudPlayer(db, roomCode, playerId) {
   let lastSeen = 0;
   if (presenceSnap.exists()) {
     const presence = presenceSnap.data();
-    online = presence.online === true;
     lastSeen = typeof presence.lastSeen === 'number' ? presence.lastSeen : 0;
+    online = isPresenceOnline({ online: presence.online === true, lastSeen });
   }
 
   return {
@@ -265,12 +265,37 @@ export function formatLastSeen(lastSeen) {
  * @returns {string}
  */
 export function getPresenceLabel(player) {
-  if (player.presence.online) return 'online';
+  if (isPresenceOnline(player.presence)) return 'online';
   if (player.presence.lastSeen) return formatLastSeen(player.presence.lastSeen);
   return 'offline';
 }
 
 const HEARTBEAT_MS = 25000;
+/** Sem heartbeat dentro deste intervalo = considerado offline (mesmo se online:true no Firestore). */
+export const PRESENCE_STALE_MS = 60000;
+
+/**
+ * @param {{ online?: boolean, lastSeen?: number } | null | undefined} presence
+ * @returns {boolean}
+ */
+export function isPresenceOnline(presence) {
+  if (!presence || presence.online !== true) return false;
+  const lastSeen = typeof presence.lastSeen === 'number' ? presence.lastSeen : 0;
+  if (!lastSeen) return false;
+  return Date.now() - lastSeen < PRESENCE_STALE_MS;
+}
+
+/**
+ * @param {{ online?: boolean, lastSeen?: number } | null | undefined} presence
+ * @returns {{ online: boolean, lastSeen: number }}
+ */
+export function normalizePresence(presence) {
+  const lastSeen = typeof presence?.lastSeen === 'number' ? presence.lastSeen : 0;
+  return {
+    online: isPresenceOnline({ online: presence?.online === true, lastSeen }),
+    lastSeen,
+  };
+}
 
 /** @type {ReturnType<typeof setInterval> | null} */
 let heartbeatTimer = null;

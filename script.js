@@ -960,8 +960,9 @@ function initGame() {
 
   function isCoupleOnline() {
     const room = window.CloudManager?.getCurrentRoom?.();
-    if (!room?.players?.length || room.players.length < 2) return false;
-    const online = room.players.filter((p) => p.presence?.online === true).length;
+    const isOnline = window.CloudManager?.isPresenceOnline;
+    if (!room?.players?.length || room.players.length < 2 || !isOnline) return false;
+    const online = room.players.filter((p) => isOnline(p.presence)).length;
     return online >= 2;
   }
 

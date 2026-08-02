@@ -143,13 +143,16 @@
     const localId = cm.getLocalPlayer?.()?.id;
     const partner = room.players?.find((p) => p.id !== localId);
     const local = room.players?.find((p) => p.id === localId);
+    const isOnline = (p) => cm.isPresenceOnline?.(p?.presence) === true;
+    const partnerOnline = isOnline(partner);
+    const localOnline = isOnline(local);
     return {
       inRoom: true,
       partnerName: partner?.name || 'Sophie',
       localName: local?.name || getLocalName(),
-      partnerOnline: partner?.presence?.online === true,
-      localOnline: local?.presence?.online !== false,
-      together: partner?.presence?.online && local?.presence?.online && room.players?.length >= 2,
+      partnerOnline,
+      localOnline,
+      together: partnerOnline && localOnline && room.players?.length >= 2,
     };
   }
 
