@@ -211,7 +211,11 @@
     return src;
   }
 
-  function duckBgm(opts) {
+  function resetHtmlDuck() {
+    clearTimeout(htmlDuckTimer);
+    htmlDuckMul = 1;
+    syncMediaVolume();
+  }
     clearTimeout(htmlDuckTimer);
     clearTimeout(duckTimer);
     const to = opts?.to ?? 0.4;
@@ -487,6 +491,7 @@
     attachMediaElement,
     getMediaElement,
     syncMediaVolume,
+    resetHtmlDuck,
     getBgmBus,
     playTone,
     playNoise,

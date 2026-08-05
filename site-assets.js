@@ -14,4 +14,19 @@
     const path = String(relativePath).replace(/^\/+/, '');
     return root + path;
   };
+
+  /** Codifica só o nome do ficheiro (espaços/acentos) mantendo pastas. */
+  global.encodeAssetFile = function encodeAssetFile(relativePath) {
+    if (!relativePath) return relativePath;
+    const parts = String(relativePath).replace(/^\/+/, '').split('/');
+    if (!parts.length) return relativePath;
+    const file = parts.pop();
+    let encoded = file;
+    try {
+      encoded = encodeURIComponent(decodeURIComponent(file));
+    } catch (_) {
+      encoded = encodeURIComponent(file);
+    }
+    return [...parts, encoded].join('/');
+  };
 })(typeof window !== 'undefined' ? window : globalThis);

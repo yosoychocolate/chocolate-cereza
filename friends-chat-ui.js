@@ -668,6 +668,155 @@ function renderInvites(invites) {
   `;
 }
 
+function ensureSocialReady() {
+  globalThis.skipIntroToMain?.();
+  if (!els.dock) cacheElements();
+  startSocial();
+}
+
+function handleSocialPushAction(data) {
+  if (!data?.type) return;
+  ensureSocialReady();
+
+  if (data.type === 'friend-request' || data.type === 'social:open-friend-requests') {
+    openFriendsPanel();
+    return;
+  }
+  if (data.type === 'dm' || data.type === 'social:open-dm') {
+    if (data.friendId) openFloatingChat(data.friendId, data.friendName || 'Amigo');
+    return;
+  }
+  if (data.type === 'room-invite' || data.type === 'social:open-invites') {
+    openFriendsPanel();
+    if (data.roomCode) goToJugarRoom(data.roomCode);
+  }
+}
+
+function handleDeepLinkHash() {
+  const hash = (location.hash || '').replace(/^#/, '').toLowerCase();
+  if (!hash) return;
+  if (hash === 'amigos' || hash === 'social-friend-requests' || hash === 'friend-requests') {
+    ensureSocialReady();
+    openFriendsPanel();
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+}
+
+globalThis.handleSocialPushAction = handleSocialPushAction;
+
+const SOCIAL_DOCK_POS_KEY = 'ChocolateCerezaSocialDockPos';
+let suppressSocialToggleClick = false;
+
+function restoreSocialDockPosition() {
+  const dock = els.dock;
+  if (!dock) return;
+  try {
+    const raw = localStorage.getItem(SOCIAL_DOCK_POS_KEY);
+    if (!raw) return;
+    const pos = JSON.parse(raw);
+    if (typeof pos?.x !== 'number' || typeof pos?.y !== 'number') return;
+    dock.style.left = `${pos.x}px`;
+    dock.style.top = `${pos.y}px`;
+    dock.style.bottom = 'auto';
+    dock.style.right = 'auto';
+    dock.classList.add('is-custom-position');
+  } catch (_) { /* ignore */ }
+}
+
+function clampSocialDockPosition(x, y) {
+  const dock = els.dock;
+  if (!dock) return { x, y };
+  const rect = dock.getBoundingClientRect();
+  const pad = 8;
+  const maxX = Math.max(pad, window.innerWidth - rect.width - pad);
+  const maxY = Math.max(pad, window.innerHeight - rect.height - pad);
+  return {
+    x: Math.min(maxX, Math.max(pad, x)),
+    y: Math.min(maxY, Math.max(pad, y)),
+  };
+}
+
+function applySocialDockPosition(x, y) {
+  const dock = els.dock;
+  if (!dock) return;
+  const pos = clampSocialDockPosition(x, y);
+  dock.style.left = `${pos.x}px`;
+  dock.style.top = `${pos.y}px`;
+  dock.style.bottom = 'auto';
+  dock.style.right = 'auto';
+  dock.classList.add('is-custom-position');
+}
+
+function saveSocialDockPosition() {
+  const dock = els.dock;
+  if (!dock) return;
+  const rect = dock.getBoundingClientRect();
+  try {
+    localStorage.setItem(SOCIAL_DOCK_POS_KEY, JSON.stringify({
+      x: Math.round(rect.left),
+      y: Math.round(rect.top),
+    }));
+  } catch (_) { /* ignore */ }
+}
+
+function bindSocialDockDrag() {
+  const dock = els.dock;
+  const handle = els.friendsToggle;
+  if (!dock || !handle || handle.dataset.dragBound === '1') return;
+  handle.dataset.dragBound = '1';
+
+  restoreSocialDockPosition();
+
+  let pointerId = null;
+  let startX = 0;
+  let startY = 0;
+  let originX = 0;
+  let originY = 0;
+  let dragging = false;
+  const DRAG_THRESHOLD = 10;
+
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    pointerId = e.pointerId;
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = dock.getBoundingClientRect();
+    originX = rect.left;
+    originY = rect.top;
+    dragging = false;
+    handle.setPointerCapture?.(e.pointerId);
+  });
+
+  handle.addEventListener('pointermove', (e) => {
+    if (pointerId !== e.pointerId) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (!dragging && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    if (!dragging) {
+      dragging = true;
+      suppressSocialToggleClick = true;
+      dock.classList.add('is-dragging');
+    }
+    e.preventDefault();
+    applySocialDockPosition(originX + dx, originY + dy);
+  });
+
+  const finishDrag = (e) => {
+    if (pointerId !== e.pointerId) return;
+    handle.releasePointerCapture?.(e.pointerId);
+    dock.classList.remove('is-dragging');
+    if (dragging) {
+      saveSocialDockPosition();
+      setTimeout(() => { suppressSocialToggleClick = false; }, 50);
+    }
+    pointerId = null;
+    dragging = false;
+  };
+
+  handle.addEventListener('pointerup', finishDrag);
+  handle.addEventListener('pointercancel', finishDrag);
+}
+
 function openFriendsPanel() {
   panelOpen = true;
   els.friendsPanel?.classList.remove('hidden');
@@ -918,6 +1067,7 @@ async function onAcceptInvite(inviteId, roomCode) {
 function revealDock() {
   if (globalThis.__FILE_PROTOCOL__) return;
   els.dock?.classList.remove('hidden');
+  bindSocialDockDrag();
 }
 
 function initSocialListeners() {
@@ -1001,21 +1151,18 @@ function cacheElements() {
 function bindEvents() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (event) => {
-      if (event.data?.type === 'social:open-dm' && event.data.friendId) {
-        openFloatingChat(event.data.friendId, event.data.friendName || 'Amigo');
-        return;
-      }
-      if (event.data?.type === 'social:open-invites') {
-        openFriendsPanel();
-        return;
-      }
-      if (event.data?.type === 'social:open-friend-requests') {
-        openFriendsPanel();
-      }
+      handleSocialPushAction(event.data || {});
     });
   }
 
-  els.friendsToggle?.addEventListener('click', toggleFriendsPanel);
+  els.friendsToggle?.addEventListener('click', (e) => {
+    if (suppressSocialToggleClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    toggleFriendsPanel();
+  });
   els.usernameForm?.addEventListener('submit', onClaimUsername);
   els.addFriendForm?.addEventListener('submit', onAddFriend);
 
@@ -1123,6 +1270,8 @@ export function initFriendsChatUi() {
   cacheElements();
   if (!els.dock) return;
   bindEvents();
+  bindSocialDockDrag();
+  handleDeepLinkHash();
 
   document.getElementById('btn-enter')?.addEventListener('click', () => {
     setTimeout(startSocial, 700);

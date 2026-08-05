@@ -31,6 +31,31 @@ function showPushNotification(payload) {
   return self.registration.showNotification(title, options);
 }
 
+function buildSocialMessage(data) {
+  if (data.type === 'dm' && data.friendId) {
+    return {
+      type: 'social:open-dm',
+      friendId: data.friendId,
+      friendName: data.friendName || 'Amigo',
+    };
+  }
+  if (data.type === 'friend-request') {
+    return { type: 'social:open-friend-requests', fromPlayerId: data.fromPlayerId || '' };
+  }
+  if (data.type === 'room-invite') {
+    return { type: 'social:open-invites', roomCode: data.roomCode || '' };
+  }
+  return null;
+}
+
+function normalizeUrl(url) {
+  try {
+    return new URL(url, SW_ORIGIN).href.replace(/\/$/, '');
+  } catch (_) {
+    return String(url || SW_ORIGIN);
+  }
+}
+
 if (self.FIREBASE_WEB_CONFIG) {
   firebase.initializeApp(self.FIREBASE_WEB_CONFIG);
   const messaging = firebase.messaging();
@@ -50,26 +75,28 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
   const targetUrl = data.url || SW_ORIGIN + '/';
+  const socialMessage = buildSocialMessage(data);
+  const targetNorm = normalizeUrl(targetUrl);
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clients) => {
       for (let i = 0; i < clients.length; i++) {
         const client = clients[i];
-        if ('focus' in client) {
-          if (data.type === 'dm' && data.friendId) {
-            client.postMessage({
-              type: 'social:open-dm',
-              friendId: data.friendId,
-              friendName: data.friendName || 'Amigo',
-            });
-          } else if (data.type === 'friend-request') {
-            client.postMessage({ type: 'social:open-friend-requests' });
-          } else if (data.type === 'room-invite') {
-            client.postMessage({ type: 'social:open-invites' });
-          }
-          return client.focus();
+        if (!('focus' in client)) continue;
+
+        const clientNorm = normalizeUrl(client.url);
+        if (clientNorm !== targetNorm && 'navigate' in client) {
+          try {
+            await client.navigate(targetUrl);
+          } catch (_) { /* ignore */ }
         }
+
+        if (socialMessage) {
+          client.postMessage(socialMessage);
+        }
+        return client.focus();
       }
+
       if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
       return undefined;
     })

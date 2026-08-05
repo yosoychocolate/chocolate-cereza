@@ -49,12 +49,12 @@ async function main() {
     const result = await sendPushToPlayer(db, req.targetPlayerId, {
       title: `👥 ${fromName}`,
       body: 'Te envió una solicitud de amistad',
-      url: `${SITE_URL}jugar/`,
+      url: `${SITE_URL}jugar/#amigos`,
       data: {
         type: 'friend-request',
         fromPlayerId: req.fromPlayerId,
         fromName,
-        url: `${SITE_URL}jugar/`,
+        url: `${SITE_URL}jugar/#amigos`,
       },
     });
 

@@ -286,6 +286,7 @@ html.intro-lock body {
   border-radius: 50%;
   animation: pulse-glow 3s ease-in-out infinite;
   will-change: transform, opacity;
+  pointer-events: none;
 }
 
 @keyframes pulse-glow {
@@ -441,10 +442,10 @@ html.intro-lock body {
   justify-content: center;
   width: auto;
   max-width: 100%;
-  min-height: 0;
-  padding: 0.38rem 0.85rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
   font-family: 'Quicksand', sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: rgba(255, 210, 230, 0.92);
   background: rgba(255, 79, 163, 0.1);
@@ -452,6 +453,10 @@ html.intro-lock body {
   border-radius: 999px;
   cursor: pointer;
   box-shadow: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  z-index: 2;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
@@ -2703,6 +2708,15 @@ html.is-ios-browser-tab .btn-notif-pink {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.couple-players-head {
+  margin: 0 0 0.35rem;
+  padding: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 200, 230, 0.82);
+  letter-spacing: 0.02em;
 }
 
 .couple-rank-item {
@@ -8983,6 +8997,16 @@ body.casa-together-complete .nossa-casa-scene {
   align-items: flex-start;
   gap: 0.55rem;
   max-width: min(22rem, calc(100vw - 1.5rem));
+  touch-action: none;
+}
+
+.social-dock.is-custom-position {
+  bottom: auto;
+  right: auto;
+}
+
+.social-dock.is-dragging {
+  z-index: 1700;
 }
 
 .social-friends-toggle {
@@ -8997,8 +9021,23 @@ body.casa-together-complete .nossa-casa-scene {
   font-family: 'Quicksand', sans-serif;
   font-weight: 700;
   font-size: 0.88rem;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.social-dock.is-dragging .social-friends-toggle {
+  cursor: grabbing;
+  box-shadow: 0 8px 28px rgba(255, 79, 163, 0.45);
+}
+
+.social-friends-toggle-grip {
+  font-size: 0.72rem;
+  opacity: 0.55;
+  letter-spacing: -0.12em;
+  margin-right: -0.15rem;
 }
 
 .social-friends-badge {

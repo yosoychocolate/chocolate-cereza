@@ -243,12 +243,12 @@ exports.onFriendRequestPush = onDocumentCreated(
     await sendPushToPlayer(targetPlayerId, {
       title: `👥 ${fromName}`,
       body: 'Te envió una solicitud de amistad',
-      url: `${SITE_URL}jugar/`,
+      url: `${SITE_URL}jugar/#amigos`,
       data: {
         type: 'friend-request',
         fromPlayerId: data?.fromPlayerId || fromPlayerId,
         fromName,
-        url: `${SITE_URL}jugar/`,
+        url: `${SITE_URL}jugar/#amigos`,
       },
     });
   }

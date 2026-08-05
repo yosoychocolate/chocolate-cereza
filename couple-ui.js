@@ -75,7 +75,7 @@ async function refreshRoomPanelLight() {
     showLobby();
     return;
   }
-  renderPlayers(room.players);
+  renderPlayers(room.players, room);
   renderGiftPanel(room);
 }
 
@@ -175,11 +175,34 @@ function formatChatTimestamp(ts) {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function renderPlayers(players) {
+function isPartyRoom(room) {
+  if (!room) return false;
+  return room.roomKind === 'party' || (room.maxPlayers ?? 2) > 2;
+}
+
+function renderPlayers(players, room) {
   if (!els.playersList) return;
   els.playersList.innerHTML = '';
 
-  if (!players || !players.length) return;
+  const maxPlayers = room?.maxPlayers ?? 2;
+  const showList = isPartyRoom(room) || (players?.length ?? 0) > 0;
+
+  els.playersList.classList.toggle('visually-hidden', !showList);
+  els.playersList.setAttribute('aria-hidden', showList ? 'false' : 'true');
+
+  if (!players || !players.length) {
+    if (showList && isPartyRoom(room)) {
+      els.playersList.innerHTML = `<li class="couple-empty">Esperando jugadores… (0/${maxPlayers})</li>`;
+    }
+    return;
+  }
+
+  if (isPartyRoom(room)) {
+    const head = document.createElement('li');
+    head.className = 'couple-players-head';
+    head.textContent = `Jugadores (${players.length}/${maxPlayers})`;
+    els.playersList.appendChild(head);
+  }
 
   players.forEach((player) => {
     const li = document.createElement('li');
@@ -218,7 +241,7 @@ function setGiftStatus(message, kind = '') {
 
 function renderGiftPanel(room) {
   const partner = getPartnerFromRoom(room);
-  const show = !!(room && partner);
+  const show = !!(room && partner && !isPartyRoom(room));
 
   els.giftPanel?.classList.toggle('hidden', !show);
   els.giftDivider?.classList.toggle('hidden', !show);
@@ -349,7 +372,7 @@ function renderCoupleScoreHud(ranking, coupleStats) {
 
   const leaderId = coupleStats?.bestPlayerId;
   const players = room.players || [];
-  const rows = ranking.slice(0, 2).map((entry) => {
+  const rows = ranking.slice(0, isPartyRoom(room) ? 4 : 2).map((entry) => {
     const type = resolveMascotType(entry.name, entry.id, players);
     const isLeader = leaderId === entry.id && entry.bestScore > 0;
     return renderScoreHudRow(type, entry.bestScore, isLeader);
@@ -400,7 +423,16 @@ function renderMascotScene(room, couple, overrideMode) {
   });
 
   els.mascotStage.innerHTML = scene.html;
-  if (els.mascotCaption) els.mascotCaption.textContent = scene.caption;
+  if (els.mascotCaption) {
+    if (isPartyRoom(room)) {
+      const online = room.players.filter(
+        (p) => CloudManager.isPresenceOnline?.(p.presence) === true
+      ).length;
+      els.mascotCaption.textContent = `👥 ${room.players.length}/${room.maxPlayers} jugadores · ${online} en línea`;
+    } else {
+      els.mascotCaption.textContent = scene.caption;
+    }
+  }
   els.mascotScene.className = `couple-mascot-scene ${scene.className}`;
 
   if (els.streakWrap) {
@@ -575,7 +607,15 @@ async function refreshRoomPanel() {
   await CloudManager.syncLocalRoomDisplayName?.().catch(() => {});
 
   const freshRoom = CloudManager.getCurrentRoom();
-  renderPlayers(freshRoom?.players || room.players);
+  const activeRoom = freshRoom || room;
+  renderPlayers(activeRoom.players, activeRoom);
+
+  const panelTitle = els.roomPanel?.querySelector('.couple-title');
+  if (panelTitle) {
+    panelTitle.textContent = isPartyRoom(activeRoom)
+      ? '👥 Sala de amigos'
+      : '❤️ Chocolate & La Cereza';
+  }
 
   const [coupleRes, rankRes] = await Promise.all([
     CloudManager.getCoupleStats(),
@@ -633,7 +673,7 @@ async function handleRoomEvent(event) {
 
   if (event.type === 'presence_updated') {
     const room = CloudManager.getCurrentRoom();
-    if (room) renderPlayers(room.players);
+    if (room) renderPlayers(room.players, room);
     return;
   }
 

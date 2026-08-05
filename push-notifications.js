@@ -5,7 +5,13 @@ import { getMessaging, getToken, isSupported, onMessage } from 'https://www.gsta
 import { getFirebaseApp, initFirebase, isFirebaseConfigValid } from './firebase-manager.js?v=__APP_VERSION__';
 import { registerPushToken, disablePushToken } from './cloud-push.js?v=__APP_VERSION__';
 
-const SW_URL = 'sw.js?v=__APP_VERSION__';
+function getServiceWorkerUrl() {
+  if (typeof globalThis.assetUrl === 'function') {
+    return globalThis.assetUrl('sw.js?v=__APP_VERSION__');
+  }
+  const path = location.pathname || '/';
+  return path.includes('/jugar') ? '../sw.js?v=__APP_VERSION__' : 'sw.js?v=__APP_VERSION__';
+}
 
 /** @type {import('firebase/messaging').Messaging | null} */
 let messaging = null;
@@ -94,12 +100,17 @@ async function ensureMessaging() {
       const tag = data.type || 'daily-charge-push-fg';
       if (Notification.permission === 'granted') {
         try {
-          new Notification(title, {
+          const n = new Notification(title, {
             body,
             icon: payload.notification?.icon || 'assets/app-icon-192.png',
             tag,
             data,
           });
+          n.onclick = () => {
+            window.focus();
+            globalThis.handleSocialPushAction?.(data);
+            n.close();
+          };
         } catch (_) { /* ignore */ }
       }
       globalThis.DailyChargeMission?.updateIntroNotificationButton?.();
@@ -142,15 +153,9 @@ export async function subscribePush() {
       await disablePushToken(oldToken);
     }
 
-    const reg = await navigator.serviceWorker.register(SW_URL);
+    const reg = await navigator.serviceWorker.register(getServiceWorkerUrl());
     await reg.update();
     await navigator.serviceWorker.ready;
-
-    const sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      status.reason = 'no_push_subscription';
-      return status;
-    }
 
     const token = await getToken(msg, { vapidKey, serviceWorkerRegistration: reg });
     if (!token) {
@@ -170,6 +175,8 @@ export async function subscribePush() {
     status.origin = getDeviceMeta().origin;
 
     if (saved.ok) await showLocalTestNotification();
+
+    globalThis.DailyChargeMission?.updateIntroNotificationButton?.();
 
     try {
       localStorage.setItem('ChocolateCerezaPushToken', token);

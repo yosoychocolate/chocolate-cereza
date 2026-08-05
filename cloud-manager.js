@@ -160,13 +160,16 @@ import {
  * @property {RoomStatus} status
  * @property {RoomPlayer[]} players
  * @property {number} maxPlayers
+ * @property {'couple'|'party'} [roomKind]
  * @property {number|null} createdAt
  * @property {number|null} updatedAt
  */
 
 const ROOMS_COLLECTION = 'rooms';
 const PLAYERS_SUBCOLLECTION = 'players';
-const MAX_PLAYERS = 2;
+const MAX_PLAYERS_COUPLE = 2;
+const MAX_PLAYERS_PARTY = 4;
+const MAX_PLAYERS = MAX_PLAYERS_COUPLE;
 const CODE_LENGTH = 6;
 const CODE_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MAX_CODE_ATTEMPTS = 40;
@@ -414,12 +417,15 @@ function randomRoomCode() {
  */
 function buildRoom(roomSnap, players) {
   const data = roomSnap.data() || {};
+  const maxPlayers = typeof data.maxPlayers === 'number' ? data.maxPlayers : MAX_PLAYERS_COUPLE;
+  const roomKind = data.roomKind === 'party' || maxPlayers > MAX_PLAYERS_COUPLE ? 'party' : 'couple';
   return {
     id: roomSnap.id,
     code: typeof data.code === 'string' ? data.code : roomSnap.id,
     status: data.status === 'full' || data.status === 'closed' ? data.status : 'waiting',
     players,
-    maxPlayers: typeof data.maxPlayers === 'number' ? data.maxPlayers : MAX_PLAYERS,
+    maxPlayers,
+    roomKind,
     createdAt: data.createdAt?.toMillis?.() ?? null,
     updatedAt: data.updatedAt?.toMillis?.() ?? null,
   };
@@ -1064,11 +1070,16 @@ export async function whenSessionReady() {
   }
 }
 
-export async function createRoom(player) {
+export async function createRoom(player, options = {}) {
   const normalized = normalizePlayer(player);
   if (!normalized) {
     return fail('INVALID_PLAYER', 'Jugador inválido — indica un id.');
   }
+
+  const maxPlayers = typeof options.maxPlayers === 'number'
+    ? Math.min(MAX_PLAYERS_PARTY, Math.max(MAX_PLAYERS_COUPLE, options.maxPlayers))
+    : MAX_PLAYERS_COUPLE;
+  const roomKind = options.roomKind === 'party' || maxPlayers > MAX_PLAYERS_COUPLE ? 'party' : 'couple';
 
   await reconcileLocalRoomState();
 
@@ -1086,7 +1097,8 @@ export async function createRoom(player) {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       status: 'waiting',
-      maxPlayers: MAX_PLAYERS,
+      maxPlayers,
+      roomKind,
       playerCount: 1,
     });
 
@@ -1165,7 +1177,7 @@ export async function joinRoom(code, player) {
       }
 
       const data = roomSnap.data();
-      const maxPlayers = typeof data.maxPlayers === 'number' ? data.maxPlayers : MAX_PLAYERS;
+      const maxPlayers = typeof data.maxPlayers === 'number' ? data.maxPlayers : MAX_PLAYERS_COUPLE;
       const existingPlayerSnap = await transaction.get(rootRef);
       const activeCount = resolvePlayerCount(data, listedPlayerCount);
 
@@ -1235,7 +1247,14 @@ export async function joinRoom(code, player) {
       return fail('ROOM_NOT_FOUND', 'Sala no encontrada.');
     }
     if (message === 'ROOM_FULL') {
-      return fail('ROOM_FULL', 'Sala llena (2 jugadores). Pide a tu pareja que salga o crea otra sala.');
+      let cap = MAX_PLAYERS_COUPLE;
+      try {
+        const snap = await getDoc(roomDocRef(requireDb(), roomCode));
+        if (snap.exists() && typeof snap.data()?.maxPlayers === 'number') {
+          cap = snap.data().maxPlayers;
+        }
+      } catch (_) { /* ignore */ }
+      return fail('ROOM_FULL', `Sala llena (${cap} jugadores). Crea otra sala o espera a que alguien salga.`);
     }
     if (message === 'ROOM_CLOSED') {
       return fail('ROOM_CLOSED', 'La sala está cerrada. Crea una nueva sala.');
@@ -1821,11 +1840,17 @@ export async function inviteFriendToRoom(friendId, friendName = '') {
       await reconcileLocalRoomState();
     }
 
-    let created = await createRoom(getSocialPlayerPayload());
+    let created = await createRoom(getSocialPlayerPayload(), {
+      maxPlayers: MAX_PLAYERS_PARTY,
+      roomKind: 'party',
+    });
     if (!created.success && created.error === 'ALREADY_IN_ROOM') {
       forceClearRoomSession();
       await reconcileLocalRoomState();
-      created = await createRoom(getSocialPlayerPayload());
+      created = await createRoom(getSocialPlayerPayload(), {
+        maxPlayers: MAX_PLAYERS_PARTY,
+        roomKind: 'party',
+      });
     }
     if (!created.success) return created;
 

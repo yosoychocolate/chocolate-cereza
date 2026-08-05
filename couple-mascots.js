@@ -296,7 +296,14 @@ export function renderStreakBadge(streak) {
  */
 export function detectSceneMode(room, localPlayerId) {
   const players = room?.players || [];
+  const maxPlayers = room?.maxPlayers ?? 2;
   if (players.length < 2) return 'waiting';
+
+  if (maxPlayers > 2 || room?.roomKind === 'party') {
+    const onlineCount = players.filter((p) => isPresenceOnline(p.presence)).length;
+    if (onlineCount >= 2) return 'together';
+    return 'alone';
+  }
 
   const partner = players.find((p) => p.id !== localPlayerId);
   if (!partner) return 'waiting';

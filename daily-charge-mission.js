@@ -402,6 +402,71 @@
     setIntroNotifHint('');
   }
 
+  async function waitForPushModule(maxMs = 10000) {
+    const start = Date.now();
+    while (Date.now() - start < maxMs) {
+      if (global.PushNotifications?.subscribe) return true;
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+    return false;
+  }
+
+  async function handleIntroNotificationClick(btn) {
+    if (global.IosPushGuide?.needsHomeScreenInstall?.()) {
+      global.IosPushGuide.showInstallGuide();
+      setIntroNotifHint('Sigue los pasos y abre desde el icono 🍒.', 'is-error');
+      return;
+    }
+
+    if (!('Notification' in global)) {
+      setIntroNotifHint('Tu navegador no soporta notificaciones.', 'is-error');
+      return;
+    }
+
+    btn.disabled = true;
+    setIntroNotifHint('Activando notificaciones…', '');
+
+    try {
+      if (Notification.permission === 'granted') {
+        registerServiceWorker();
+        const pushReady = await waitForPushModule();
+        if (!pushReady) {
+          setIntroNotifHint('Cargando módulo de push… vuelve a pulsar 🔔 en un segundo.', 'is-error');
+          return;
+        }
+        await syncRemotePush();
+        updateIntroNotificationButton();
+        return;
+      }
+
+      if (Notification.permission === 'denied') {
+        setIntroNotifHint('Actívalas en Ajustes → Notificaciones → Chrome.', 'is-error');
+        updateIntroNotificationButton();
+        return;
+      }
+
+      const ok = await requestNotificationPermission();
+      updateIntroNotificationButton();
+
+      if (ok) {
+        setIntroNotifHint('¡Listo! También te avisaremos con el navegador cerrado.', 'is-success');
+        return;
+      }
+
+      if (Notification.permission === 'denied') {
+        setIntroNotifHint('Actívalas en Ajustes → Notificaciones → Chrome.', 'is-error');
+      } else {
+        setIntroNotifHint('No se pudo activar. Pulsa 🔔 otra vez.', 'is-error');
+      }
+    } catch (err) {
+      console.warn('[DailyCharge] intro notif:', err);
+      setIntroNotifHint('Error al activar. Pulsa 🔔 otra vez.', 'is-error');
+    } finally {
+      btn.disabled = false;
+      updateIntroNotificationButton();
+    }
+  }
+
   function bindIntroNotificationButton() {
     const btn = document.getElementById('btn-intro-notifications');
     if (!btn || btn.dataset.bound === '1') return;
@@ -409,41 +474,13 @@
 
     updateIntroNotificationButton();
 
-    btn.addEventListener('click', async (e) => {
+    const onActivate = (e) => {
       e.preventDefault();
       e.stopPropagation();
+      void handleIntroNotificationClick(btn);
+    };
 
-      if (global.IosPushGuide?.needsHomeScreenInstall?.()) {
-        global.IosPushGuide.showInstallGuide();
-        setIntroNotifHint('Sigue los pasos y abre desde el icono 🍒.', 'is-error');
-        return;
-      }
-
-      if (!('Notification' in global)) return;
-
-      if (Notification.permission === 'granted') {
-        setIntroNotifHint('Registrando de nuevo…', '');
-        registerServiceWorker();
-        await syncRemotePush();
-        updateIntroNotificationButton();
-        return;
-      }
-
-      setIntroNotifHint('', '');
-
-      const ok = await requestNotificationPermission();
-      updateIntroNotificationButton();
-
-      if (ok) {
-        setIntroNotifHint('', 'is-success');
-        if (els.notifBtn) els.notifBtn.classList.add('hidden');
-        return;
-      }
-
-      if (Notification.permission === 'denied') {
-        setIntroNotifHint('Actívalas en Ajustes → Notificaciones → Chocolate.', 'is-error');
-      }
-    });
+    btn.addEventListener('click', onActivate);
   }
 
   function registerServiceWorker() {
@@ -604,12 +641,18 @@
     TIMEZONE,
   };
 
+  function bootIntroNotifications() {
+    bindIntroNotificationButton();
+    updateIntroNotificationButton();
+  }
+
   if (global.SaveManager) {
     startEarlyNotificationWatch();
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', bindIntroNotificationButton);
-    } else {
-      bindIntroNotificationButton();
-    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootIntroNotifications);
+  } else {
+    bootIntroNotifications();
   }
 })(typeof window !== 'undefined' ? window : globalThis);
