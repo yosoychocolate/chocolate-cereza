@@ -139,6 +139,7 @@ const foot = `
 ${overlays}
   <script src="../firebase-config.js?v=__APP_VERSION__"></script>
   <script src="../image-upload.js?v=__APP_VERSION__"></script>
+  <script src="../ios-push-guide.js?v=__APP_VERSION__"></script>
   <script src="../music-playlist.js?v=__APP_VERSION__"></script>
   <script src="../save-manager.js?v=__APP_VERSION__"></script>
   <script src="../audio-manager.js?v=__APP_VERSION__"></script>
@@ -155,6 +156,7 @@ ${overlays}
   <script src="../script.js?v=__APP_VERSION__"></script>
   <script type="module" src="../couple-ui.js?v=__APP_VERSION__"></script>
   <script type="module" src="../friends-chat-ui.js?v=__APP_VERSION__"></script>
+  <script type="module" src="../push-notifications.js?v=__APP_VERSION__"></script>
   <script type="module" src="jugar-boot.js?v=__APP_VERSION__"></script>
 </body>
 </html>

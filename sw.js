@@ -62,6 +62,8 @@ self.addEventListener('notificationclick', (event) => {
               friendId: data.friendId,
               friendName: data.friendName || 'Amigo',
             });
+          } else if (data.type === 'friend-request') {
+            client.postMessage({ type: 'social:open-friend-requests' });
           } else if (data.type === 'room-invite') {
             client.postMessage({ type: 'social:open-invites' });
           }

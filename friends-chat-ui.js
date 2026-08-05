@@ -41,6 +41,12 @@ let knownInviteIds = new Set();
 /** @type {boolean} */
 let invitesInboxReady = false;
 
+/** @type {boolean} */
+let friendRequestsInboxReady = false;
+
+/** @type {Set<string>} */
+let knownFriendRequestIds = new Set();
+
 /** @type {Array<{ id: string, fromPlayerId: string, fromName: string }>} */
 let friendRequests = [];
 
@@ -570,6 +576,75 @@ function renderFriendRequests(requests) {
   `;
 }
 
+async function showBrowserFriendRequestNotification(fromName, fromPlayerId) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+
+  const title = `👥 ${fromName}`;
+  const body = 'Te envió una solicitud de amistad';
+  const opts = {
+    body,
+    icon: assetUrl('assets/app-icon-192.png'),
+    badge: assetUrl('assets/cherry.png'),
+    tag: `friend-request-${fromPlayerId}`,
+    renotify: true,
+    data: { type: 'friend-request', fromPlayerId, url: location.href },
+  };
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, opts);
+      return;
+    }
+  } catch (_) { /* fallback */ }
+
+  try {
+    const n = new Notification(title, opts);
+    n.onclick = () => {
+      window.focus();
+      openFriendsPanel();
+      n.close();
+    };
+  } catch (_) { /* ignore */ }
+}
+
+function notifyIncomingFriendRequest(req) {
+  const fromName = formatDisplayName(req.fromName);
+  updateOnlineBadge();
+
+  showToast(`👥 ${fromName} quiere ser tu amigo/a`, {
+    duration: 8000,
+    onClick: () => openFriendsPanel(),
+  });
+
+  if (document.hidden || !document.hasFocus()) {
+    showBrowserFriendRequestNotification(fromName, req.fromPlayerId);
+  }
+
+  try {
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+  } catch (_) { /* ignore */ }
+}
+
+function handleFriendRequestsUpdate(requests) {
+  const list = requests || [];
+
+  if (!friendRequestsInboxReady) {
+    list.forEach((r) => knownFriendRequestIds.add(r.fromPlayerId));
+    friendRequestsInboxReady = true;
+    renderFriendRequests(list);
+    return;
+  }
+
+  list.forEach((req) => {
+    if (knownFriendRequestIds.has(req.fromPlayerId)) return;
+    knownFriendRequestIds.add(req.fromPlayerId);
+    notifyIncomingFriendRequest(req);
+  });
+
+  renderFriendRequests(list);
+}
+
 function renderInvites(invites) {
   if (!els.invitesWrap) return;
   if (!invites?.length) {
@@ -869,7 +944,9 @@ function initSocialListeners() {
   );
 
   if (friendRequestsUnsub) friendRequestsUnsub();
-  friendRequestsUnsub = CloudManager.subscribeFriendRequests(renderFriendRequests);
+  friendRequestsInboxReady = false;
+  knownFriendRequestIds = new Set();
+  friendRequestsUnsub = CloudManager.subscribeFriendRequests(handleFriendRequestsUpdate);
 
   if (dmInboxUnsub) dmInboxUnsub();
   dmInboxReady = false;
@@ -878,6 +955,10 @@ function initSocialListeners() {
 
   if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
     Notification.requestPermission().catch(() => {});
+  }
+
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && globalThis.PushNotifications?.subscribe) {
+    globalThis.PushNotifications.subscribe().catch(() => {});
   }
 }
 
@@ -925,6 +1006,10 @@ function bindEvents() {
         return;
       }
       if (event.data?.type === 'social:open-invites') {
+        openFriendsPanel();
+        return;
+      }
+      if (event.data?.type === 'social:open-friend-requests') {
         openFriendsPanel();
       }
     });

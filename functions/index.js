@@ -148,8 +148,12 @@ async function sendPushToPlayer(playerId, payload) {
     );
   }
 
-  console.log(`[push] DM → ${playerId.slice(0, 8)}…: ${sent}/${tokens.length} enviados.`);
+  console.log(`[push] → ${playerId.slice(0, 8)}…: ${sent}/${tokens.length} enviados (${payload.data?.type || 'generic'}).`);
   return { sent, total: tokens.length, failed };
+}
+
+function formatPushName(raw) {
+  return String(raw || 'Alguien').replace(/^@+/, '').trim() || 'Alguien';
 }
 
 exports.dailyChargePush2030 = onSchedule(
@@ -202,7 +206,7 @@ exports.onGlobalDmPush = onDocumentCreated(
     const data = event.data?.data();
     if (!data?.toPlayerId || !data.fromPlayerId) return;
 
-    const fromName = String(data.fromName || 'Amigo').trim() || 'Amigo';
+    const fromName = formatPushName(data.fromName);
     const preview = String(data.message || '').trim();
     if (!preview) return;
 
@@ -217,6 +221,34 @@ exports.onGlobalDmPush = onDocumentCreated(
         friendId: data.fromPlayerId,
         friendName: fromName,
         url: SITE_URL,
+      },
+    });
+  }
+);
+
+/** Push quando alguém envia pedido de amizade (celular com app fechado). */
+exports.onFriendRequestPush = onDocumentCreated(
+  {
+    document: 'friendRequests/{targetPlayerId}/incoming/{fromPlayerId}',
+    region: 'us-central1',
+  },
+  async (event) => {
+    const data = event.data?.data();
+    const { targetPlayerId, fromPlayerId } = event.params || {};
+    if (!targetPlayerId || !fromPlayerId) return;
+    if (data?.status && data.status !== 'pending') return;
+
+    const fromName = formatPushName(data?.fromName);
+
+    await sendPushToPlayer(targetPlayerId, {
+      title: `👥 ${fromName}`,
+      body: 'Te envió una solicitud de amistad',
+      url: `${SITE_URL}jugar/`,
+      data: {
+        type: 'friend-request',
+        fromPlayerId: data?.fromPlayerId || fromPlayerId,
+        fromName,
+        url: `${SITE_URL}jugar/`,
       },
     });
   }

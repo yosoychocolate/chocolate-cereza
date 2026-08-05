@@ -90,6 +90,7 @@ export async function sendFriendRequest(db, fromPlayerId, fromName, toPlayerId) 
     fromPlayerId,
     fromName: fromName || 'Jugador',
     status: 'pending',
+    pushNotified: false,
     createdAt: serverTimestamp(),
   });
 }

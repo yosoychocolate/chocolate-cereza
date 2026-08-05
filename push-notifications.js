@@ -88,14 +88,17 @@ async function ensureMessaging() {
   if (!messaging) {
     messaging = getMessaging(app);
     onMessage(messaging, (payload) => {
-      const title = payload.notification?.title || 'Chocolate & Cereza';
-      const body = payload.notification?.body || '';
+      const data = payload.data || {};
+      const title = payload.notification?.title || data.title || 'Chocolate & Cereza';
+      const body = payload.notification?.body || data.body || '';
+      const tag = data.type || 'daily-charge-push-fg';
       if (Notification.permission === 'granted') {
         try {
           new Notification(title, {
             body,
-            icon: payload.notification?.icon || 'assets/chocolate.png',
-            tag: 'daily-charge-push-fg',
+            icon: payload.notification?.icon || 'assets/app-icon-192.png',
+            tag,
+            data,
           });
         } catch (_) { /* ignore */ }
       }
