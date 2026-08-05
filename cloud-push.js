@@ -13,7 +13,7 @@ import {
   where,
   getDocs,
 } from './firebase-manager.js?v=__APP_VERSION__';
-import { getOrCreatePlayerId, getPlayerName } from './player-identity.js?v=__APP_VERSION__';
+import { getOrCreatePlayerId, getPlayerName, getUsername } from './player-identity.js?v=__APP_VERSION__';
 
 async function tokenDocId(token) {
   const data = new TextEncoder().encode(token);
@@ -91,6 +91,7 @@ export async function registerPushToken(token, meta = {}) {
         token,
         playerId: getOrCreatePlayerId(),
         playerName: getPlayerName() || '',
+        username: getUsername() || '',
         enabled: true,
         timezone: meta.timezone || 'America/New_York',
         reminderTime: meta.reminderTime || '20:30',

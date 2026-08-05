@@ -23,6 +23,9 @@ let friendRequestsUnsub = null;
 /** @type {(() => void) | null} */
 let dmInboxUnsub = null;
 
+/** @type {(() => void) | null} */
+let roomUnsub = null;
+
 /** @type {Set<string>} */
 let knownInboxMessageIds = new Set();
 
@@ -160,6 +163,11 @@ async function onClaimUsername(event) {
   renderUsernameUi();
   setFriendsStatus(`Usuario @${myUsername} listo — compártelo con amigos.`);
   showToast(`@${myUsername} guardado ✅`);
+
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && globalThis.PushNotifications?.subscribe) {
+    globalThis.PushNotifications.subscribe().catch(() => {});
+    showToast('Push de amigos actualizado 🔔');
+  }
 
   if (invitesUnsub) invitesUnsub();
   invitesInboxReady = false;
@@ -362,12 +370,20 @@ async function onProfilePhotoSelected(event) {
     return;
   }
 
-  setFriendsStatus('Subiendo foto…');
-  const prepared = await globalThis.ImageUpload.prepareImageFromFile(file);
+  setFriendsStatus('Elige la parte de la foto…');
+  const prepared = globalThis.ImageUpload.prepareProfilePhotoFromFile
+    ? await globalThis.ImageUpload.prepareProfilePhotoFromFile(file)
+    : await globalThis.ImageUpload.prepareImageFromFile(file);
   if (!prepared.ok) {
-    setFriendsStatus(globalThis.ImageUpload.reasonMessage(prepared.reason), true);
+    if (prepared.reason !== 'cancelled') {
+      setFriendsStatus(globalThis.ImageUpload.reasonMessage(prepared.reason), true);
+    } else {
+      setFriendsStatus('');
+    }
     return;
   }
+
+  setFriendsStatus('Subiendo foto…');
 
   const result = await CloudManager.setPlayerPhotoUrl(prepared.dataUrl);
   if (!result.success) {
@@ -504,6 +520,14 @@ function renderFriendsList() {
     const unreadBadge = unread > 0
       ? `<span class="social-friend-unread" aria-label="${unread} sin leer">${unread > 9 ? '9+' : unread}</span>`
       : '';
+    const room = CloudManager.getCurrentRoom?.();
+    const roomFull = room && room.players.length >= room.maxPlayers;
+    const inviteTitle = room
+      ? (roomFull
+        ? `Sala ${room.code} llena (${room.players.length}/${room.maxPlayers})`
+        : `Invitar a sala ${room.code} (${room.players.length}/${room.maxPlayers})`)
+      : 'Invitar a sala (crear party hasta 4)';
+    const inviteDisabled = roomFull ? ' disabled' : '';
     return `<li class="social-friend-item${unread > 0 ? ' has-unread' : ''}" data-friend-id="${escapeHtml(f.friendId)}">
       <div class="social-friend-main">
         ${renderAvatarHtml(displayName, getProfilePhoto(f.friendId), 'social-chat-avatar--sm social-friend-avatar', {
@@ -517,7 +541,7 @@ function renderFriendsList() {
       </div>
       <div class="social-friend-actions">
         <button type="button" class="social-icon-btn social-chat-open" data-friend-id="${escapeHtml(f.friendId)}" data-friend-name="${escapeHtml(f.friendName)}" title="Mensaje">💬</button>
-        <button type="button" class="social-icon-btn social-room-invite" data-friend-id="${escapeHtml(f.friendId)}" title="Invitar a sala">🎮</button>
+        <button type="button" class="social-icon-btn social-room-invite" data-friend-id="${escapeHtml(f.friendId)}" data-friend-name="${escapeHtml(f.friendName)}" title="${escapeHtml(inviteTitle)}"${inviteDisabled}>🎮</button>
         <button type="button" class="social-icon-btn social-friend-remove" data-friend-id="${escapeHtml(f.friendId)}" title="Eliminar">✕</button>
       </div>
     </li>`;
@@ -576,18 +600,21 @@ function renderFriendRequests(requests) {
   `;
 }
 
-async function showBrowserFriendRequestNotification(fromName, fromPlayerId) {
+async function showBrowserFriendRequestNotification(fromName, fromPlayerId, pushKey = '') {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
   const title = `👥 ${fromName}`;
   const body = 'Te envió una solicitud de amistad';
+  const tag = pushKey
+    ? `friend-request-${fromPlayerId}-${pushKey}`
+    : `friend-request-${fromPlayerId}-${Date.now()}`;
   const opts = {
     body,
     icon: assetUrl('assets/app-icon-192.png'),
     badge: assetUrl('assets/cherry.png'),
-    tag: `friend-request-${fromPlayerId}`,
+    tag,
     renotify: true,
-    data: { type: 'friend-request', fromPlayerId, url: location.href },
+    data: { type: 'friend-request', fromPlayerId, pushKey, url: location.href },
   };
 
   try {
@@ -618,7 +645,7 @@ function notifyIncomingFriendRequest(req) {
   });
 
   if (document.hidden || !document.hasFocus()) {
-    showBrowserFriendRequestNotification(fromName, req.fromPlayerId);
+    showBrowserFriendRequestNotification(fromName, req.fromPlayerId, req.pushKey || String(Date.now()));
   }
 
   try {
@@ -628,6 +655,11 @@ function notifyIncomingFriendRequest(req) {
 
 function handleFriendRequestsUpdate(requests) {
   const list = requests || [];
+  const currentIds = new Set(list.map((r) => r.fromPlayerId));
+
+  for (const knownId of [...knownFriendRequestIds]) {
+    if (!currentIds.has(knownId)) knownFriendRequestIds.delete(knownId);
+  }
 
   if (!friendRequestsInboxReady) {
     list.forEach((r) => knownFriendRequestIds.add(r.fromPlayerId));
@@ -1047,15 +1079,30 @@ async function onDeclineFriendRequest(fromPlayerId) {
 }
 
 async function onInviteFriend(friendId, friendName = '') {
-  setFriendsStatus('Creando sala nueva e invitando…');
+  const currentRoom = CloudManager.getCurrentRoom?.();
+  setFriendsStatus(
+    currentRoom
+      ? `Invitando a la sala ${currentRoom.code}…`
+      : 'Creando sala e invitando…'
+  );
   const result = await CloudManager.inviteFriendToRoom(friendId, friendName);
   if (!result.success) {
     setFriendsStatus(result.message || 'No se pudo invitar.', true);
     return;
   }
-  setFriendsStatus(`Sala ${result.roomCode} creada — invitación enviada.`);
-  showToast(`Sala ${result.roomCode} · abriendo juego…`);
-  goToJugarRoom(result.roomCode);
+
+  if (result.roomCreated) {
+    setFriendsStatus(`Sala ${result.roomCode} creada — invitación enviada.`);
+    showToast(`Sala ${result.roomCode} · abriendo juego…`);
+    goToJugarRoom(result.roomCode);
+    return;
+  }
+
+  const room = CloudManager.getCurrentRoom?.();
+  const count = room?.players?.length ?? '?';
+  const max = room?.maxPlayers ?? 4;
+  setFriendsStatus(`Invitación enviada · sala ${result.roomCode} (${count}/${max}).`);
+  showToast(`Invitación enviada 🎮 · ${count}/${max} en sala`);
 }
 
 async function onAcceptInvite(inviteId, roomCode) {
@@ -1102,6 +1149,11 @@ function initSocialListeners() {
   dmInboxReady = false;
   knownInboxMessageIds = new Set();
   dmInboxUnsub = CloudManager.subscribeIncomingFriendDms(handleDmInbox);
+
+  if (roomUnsub) roomUnsub();
+  roomUnsub = CloudManager.subscribeToRoom?.(() => {
+    renderFriendsList();
+  }) || null;
 
   if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
     Notification.requestPermission().catch(() => {});

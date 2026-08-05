@@ -45,11 +45,25 @@
     return next;
   }
 
+  function useNativeKeyboard() {
+    try {
+      return global.matchMedia('(max-width: 768px), (pointer: coarse)').matches;
+    } catch (_) {
+      return global.innerWidth <= 768;
+    }
+  }
+
   function updateInputDisplay(correct = false) {
-    if (els.input) {
+    const showNative = useNativeKeyboard();
+    if (els.input && !showNative) {
       els.input.textContent = inputBuffer || '—';
       els.input.classList.toggle('has-value', !!inputBuffer);
       els.input.classList.toggle('is-correct', correct);
+    }
+    if (els.nativeInput && showNative) {
+      els.nativeInput.value = inputBuffer;
+      els.nativeInput.classList.toggle('has-value', !!inputBuffer);
+      els.nativeInput.classList.toggle('is-correct', correct);
     }
     if (els.answerPanel) {
       els.answerPanel.classList.toggle('is-correct', correct);
@@ -58,16 +72,34 @@
 
   function clearInput() {
     inputBuffer = '';
+    if (els.nativeInput) els.nativeInput.value = '';
     updateInputDisplay(false);
   }
 
   function flashCorrectAnswer(answer) {
-    if (els.input) {
+    if (useNativeKeyboard() && els.nativeInput) {
+      els.nativeInput.value = `✔ ${answer}`;
+      els.nativeInput.classList.add('is-correct', 'has-value');
+    } else if (els.input) {
       els.input.textContent = `✔ ${answer}`;
       updateInputDisplay(true);
     }
+    if (els.answerPanel) els.answerPanel.classList.add('is-correct');
     clearTimeout(els._correctTimer);
     els._correctTimer = setTimeout(() => clearInput(), 400);
+  }
+
+  function focusNativeInput() {
+    if (!useNativeKeyboard() || !els.nativeInput || !active || gameOver || gamePaused || metaPanelPaused) return;
+    try {
+      els.nativeInput.focus({ preventScroll: true });
+    } catch (_) {
+      els.nativeInput.focus();
+    }
+  }
+
+  function blurNativeInput() {
+    els.nativeInput?.blur();
   }
 
   function getVisibleAnswers() {
@@ -156,7 +188,17 @@
   }
 
   function syncBlocked() {
-    engine?.setBlocked(gamePaused || gameOver || !active || metaPanelPaused);
+    if (!engine) return;
+    const blocked = gamePaused || gameOver || !active || metaPanelPaused;
+    engine.setBlocked(blocked);
+    if (blocked) {
+      blurNativeInput();
+      if (engine.running) engine.stop();
+      return;
+    }
+    if (active && !gameOver && !document.hidden && !engine.running) {
+      engine.start();
+    }
   }
 
   function getCannonMetaPayload() {
@@ -236,6 +278,8 @@
     if (label) label.textContent = gamePaused ? 'Reanudar' : 'Pausar';
   }
 
+  let resizeTimer = null;
+
   function resizeGame() {
     if (!container || !engine) return;
     const rect = container.getBoundingClientRect();
@@ -253,6 +297,14 @@
     engine.perfLite = perfLite;
     engine.resize(w, h, perfLite ? 1 : Math.min(global.devicePixelRatio || 1, 1.5));
     updateHud(true);
+  }
+
+  function scheduleResizeGame() {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resizeTimer = null;
+      resizeGame();
+    }, 250);
   }
 
   function isTypingElsewhere(target) {
@@ -297,13 +349,37 @@
       appendDigit(btn.dataset.digit);
     });
 
+    els.nativeInput?.addEventListener('input', () => {
+      if (!active || gameOver || gamePaused || metaPanelPaused || !els.nativeInput) return;
+      const raw = String(els.nativeInput.value || '').replace(/\D/g, '').slice(0, 2);
+      if (raw !== els.nativeInput.value) els.nativeInput.value = raw;
+      inputBuffer = raw;
+      updateInputDisplay(false);
+      if (raw) tryFireFromInput(false);
+    });
+
+    els.nativeInput?.addEventListener('keydown', (e) => {
+      if (!active || gameOver || gamePaused || metaPanelPaused) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        tryFireFromInput(true);
+      }
+    });
+
+    els.answerPanel?.addEventListener('click', () => {
+      focusNativeInput();
+    });
+
     els.pauseBtn?.addEventListener('click', togglePause);
     els.restartBtn?.addEventListener('click', restartGame);
     els.gameOverRestart?.addEventListener('click', restartGame);
     els.resumeBtn?.addEventListener('click', togglePause);
 
-    global.addEventListener('resize', () => { if (active) resizeGame(); });
+    global.addEventListener('resize', () => { if (active) scheduleResizeGame(); });
     global.addEventListener('gameshop:wallet-changed', () => updateHud(true));
+    global.addEventListener('orientationchange', () => {
+      if (active && useNativeKeyboard()) setTimeout(focusNativeInput, 400);
+    });
 
     document.addEventListener('visibilitychange', () => {
       if (!active || gameOver) return;
@@ -357,15 +433,21 @@
     hideGameOver();
     gamePaused = false;
     clearInput();
+    if (global.__JUGAR_PAGE__) {
+      document.body.classList.add('jugar-game-active');
+      global.__bindJugarCanvasInput__?.();
+    }
     global.CannonMissions?.resetRun?.();
     syncBlocked();
     resizeGame();
     applyShopCosmetics();
     if (!engine.running) engine.start();
-    engine.loadSprites();
     updateHud(true);
     if (els.highScore) els.highScore.textContent = String(loadRecords().highScore);
     updatePauseBtn();
+    if (useNativeKeyboard()) {
+      setTimeout(focusNativeInput, 350);
+    }
   }
 
   function deactivate() {
@@ -419,6 +501,7 @@
   }
 
   function observeVisibility() {
+    if (global.__JUGAR_PAGE__) return;
     if (!container || !('IntersectionObserver' in global)) return;
 
     let hideTimer = null;
@@ -431,7 +514,7 @@
 
       const ratio = entries.reduce((max, e) => Math.max(max, e.intersectionRatio), 0);
 
-      if (ratio >= 0.2) {
+      if (ratio >= 0.05) {
         if (hideTimer) {
           clearTimeout(hideTimer);
           hideTimer = null;
@@ -443,7 +526,7 @@
         return;
       }
 
-      if (ratio >= 0.05 || !engine?.running) return;
+      if (!engine?.running) return;
 
       if (hideTimer) return;
       hideTimer = setTimeout(() => {
@@ -483,6 +566,7 @@
       hits: document.getElementById('spaceship-hits-val'),
       wallet: document.getElementById('spaceship-wallet-val'),
       input: document.getElementById('spaceship-answer-input'),
+      nativeInput: document.getElementById('spaceship-answer-native'),
       answerPanel: document.querySelector('.spaceship-answer-panel'),
       numpad: document.getElementById('spaceship-numpad'),
       pauseScreen: document.getElementById('spaceship-pause-screen'),

@@ -805,11 +805,21 @@
       this._fallCached = 1.4;
 
       this.cosmetics = { shipId: 'ship_chocolate' };
+      this._lastSpriteBakeKey = '';
 
       this.onMiss = null;
       this.onCorrect = null;
       this.onResolve = null;
       this.onActiveTick = null;
+    }
+
+    _getSpriteBakeKey() {
+      const profile = this._getLayoutProfile();
+      const rocketDef = this._rocketDef();
+      const unitScale = rocketDef.unitScale ?? 1;
+      const targetH = Math.round((this.cannon.h || 48) * unitScale);
+      const platformW = Math.round((this.W || 0) * (profile.platformWidth || 0.88));
+      return `${this.cosmetics?.shipId || 'ship_chocolate'}|${targetH}|${platformW}|${this.dpr || 1}`;
     }
 
     setCosmetics(partial) {
@@ -937,6 +947,7 @@
         this._syncCannonAnchor();
         this.sprites.ready = !!(this.sprites.ship || this.sprites.cherry);
         if (!this.useHtmlBg && this.bgImage) this._buildBgCache();
+        this._lastSpriteBakeKey = this._getSpriteBakeKey();
       })().finally(() => {
         this._loadingSprites = null;
       });
@@ -974,7 +985,13 @@
 
       this._initBgMotion();
       if (!this.useHtmlBg) this._buildBgCache();
-      if (this.sprites.ready || this.sprites.ship || this.sprites.cherry) this.loadSprites();
+      if (this.sprites.ready || this.sprites.ship || this.sprites.cherry) {
+        const bakeKey = this._getSpriteBakeKey();
+        if (bakeKey !== this._lastSpriteBakeKey) {
+          this._lastSpriteBakeKey = bakeKey;
+          this.loadSprites();
+        }
+      }
     }
 
     _initBgMotion() {
@@ -1661,7 +1678,11 @@
     frame(time) {
       if (!this.running) return;
       if (typeof document !== 'undefined' && document.hidden) {
-        this.animId = requestAnimationFrame((t) => this.frame(t));
+        this.stop();
+        return;
+      }
+      if (this._blocked) {
+        this.stop();
         return;
       }
 

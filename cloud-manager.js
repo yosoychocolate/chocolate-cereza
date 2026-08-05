@@ -8,6 +8,8 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  updateDoc,
+  deleteDoc,
   collection,
   query,
   runTransaction,
@@ -60,6 +62,7 @@ import {
   sendFriendRequest,
   acceptFriendRequest,
   declineFriendRequest,
+  friendRequestRef,
   subscribeIncomingFriendRequests,
 } from './cloud-friend-requests.js?v=__APP_VERSION__';
 import {
@@ -1523,7 +1526,7 @@ export function stopSocialLayer() {
 export async function addFriend(friendIdentifier, friendName = '') {
   try {
     const db = requireDb();
-    const ownerId = requirePlayerId();
+    const ownerId = requireSocialPlayerId();
     const fid = await resolvePlayerId(db, friendIdentifier);
     if (fid === ownerId) return fail('SELF', 'No puedes añadirte a ti mismo.');
 
@@ -1700,7 +1703,13 @@ export function subscribeFriendRequests(callback) {
 export async function removeFriend(friendId) {
   try {
     const db = requireDb();
-    await removeFriendContact(db, requirePlayerId(), friendId);
+    const ownerId = requireSocialPlayerId();
+    await removeFriendContact(db, ownerId, friendId);
+    await removeFriendContact(db, friendId, ownerId);
+    try {
+      await deleteDoc(friendRequestRef(db, ownerId, friendId));
+      await deleteDoc(friendRequestRef(db, friendId, ownerId));
+    } catch (_) { /* pedidos antigos — ok */ }
     return { success: true };
   } catch (err) {
     return fail('REMOVE_FRIEND_FAILED', err instanceof Error ? err.message : String(err));
@@ -1822,7 +1831,80 @@ async function resolveFriendTargetId(db, friendId, friendName = '') {
 }
 
 /**
- * Convida amigo — sempre cria sala nova para o convite.
+ * Amplía una sala de pareja (2) a party (4) para seguir invitando amigos.
+ * @param {import('firebase/firestore').Firestore} db
+ * @param {string} roomCode
+ */
+async function upgradeRoomToParty(db, roomCode) {
+  const roomRef = roomDocRef(db, roomCode);
+  await updateDoc(roomRef, {
+    maxPlayers: MAX_PLAYERS_PARTY,
+    roomKind: 'party',
+    status: 'waiting',
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Reutiliza la sala actual si tiene huecos; si no, crea una party nueva.
+ * @returns {Promise<{ action: 'reuse'|'create', room: Room } | { action: 'fail', result: ReturnType<typeof fail> }>}
+ */
+async function resolveRoomForFriendInvite(db, targetId) {
+  await reconcileLocalRoomState();
+
+  if (currentRoom) {
+    let live = await fetchRoom(db, currentRoom.code);
+    if (!live || live.status === 'closed') {
+      forceClearRoomSession();
+      await reconcileLocalRoomState();
+      live = null;
+    }
+
+    if (live) {
+      if (live.players.some((p) => p.id === targetId)) {
+        return {
+          action: 'fail',
+          result: fail('FRIEND_IN_ROOM', 'Tu amigo/a ya está en tu sala.'),
+        };
+      }
+
+      if (live.maxPlayers < MAX_PLAYERS_PARTY) {
+        await upgradeRoomToParty(db, live.code);
+        live = await fetchRoom(db, live.code);
+      }
+
+      if (live) {
+        currentRoom = live;
+        if (currentPlayerId) setLocalRoom(live, currentPlayerId);
+
+        if (live.players.length >= live.maxPlayers) {
+          return {
+            action: 'fail',
+            result: fail(
+              'ROOM_FULL',
+              `Sala llena (${live.maxPlayers} jugadores). Espera a que alguien salga.`
+            ),
+          };
+        }
+
+        return { action: 'reuse', room: live };
+      }
+    }
+  }
+
+  const created = await createRoom(getSocialPlayerPayload(), {
+    maxPlayers: MAX_PLAYERS_PARTY,
+    roomKind: 'party',
+  });
+  if (!created.success) {
+    return { action: 'fail', result: created };
+  }
+
+  return { action: 'create', room: created.room };
+}
+
+/**
+ * Convida amigo à sala atual (até 4 jogadores) ou cria uma party nova se necessário.
  * @param {string} friendId
  * @param {string} [friendName]
  */
@@ -1835,27 +1917,14 @@ export async function inviteFriendToRoom(friendId, friendName = '') {
     if (!targetId) return fail('INVALID_FRIEND', 'Amigo inválido.');
     if (targetId === fromId) return fail('SELF', 'No puedes invitarte a ti mismo.');
 
-    if (currentRoom) {
-      forceClearRoomSession();
-      await reconcileLocalRoomState();
-    }
+    const resolved = await resolveRoomForFriendInvite(db, targetId);
+    if (resolved.action === 'fail') return resolved.result;
 
-    let created = await createRoom(getSocialPlayerPayload(), {
-      maxPlayers: MAX_PLAYERS_PARTY,
-      roomKind: 'party',
-    });
-    if (!created.success && created.error === 'ALREADY_IN_ROOM') {
-      forceClearRoomSession();
-      await reconcileLocalRoomState();
-      created = await createRoom(getSocialPlayerPayload(), {
-        maxPlayers: MAX_PLAYERS_PARTY,
-        roomKind: 'party',
-      });
+    const room = resolved.room;
+    const roomCreated = resolved.action === 'create';
+    if (roomCreated) {
+      window.dispatchEvent(new CustomEvent('couple:roomChanged'));
     }
-    if (!created.success) return created;
-
-    const room = created.room;
-    window.dispatchEvent(new CustomEvent('couple:roomChanged'));
 
     const myProfile = await fetchPlayerProfile(db, fromId);
     const fromName = myProfile.username
@@ -1876,7 +1945,7 @@ export async function inviteFriendToRoom(friendId, friendName = '') {
       fromName,
     }, targetUsername);
 
-    return { success: true, roomCode: room.code, inviteId, roomCreated: true };
+    return { success: true, roomCode: room.code, inviteId, roomCreated };
   } catch (err) {
     return fail('INVITE_FAILED', err instanceof Error ? err.message : String(err));
   }

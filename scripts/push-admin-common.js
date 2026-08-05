@@ -28,24 +28,61 @@ async function disableBadToken(db, token) {
 
 /**
  * @param {import('firebase-admin/firestore').Firestore} db
+ * @param {{ playerId?: string, username?: string }} target
+ */
+async function collectPushTokens(db, target = {}) {
+  const playerId = String(target.playerId || '').trim();
+  const username = String(target.username || '').trim().toLowerCase().replace(/^@+/, '');
+  const tokenMap = new Map();
+
+  function addFromSnap(snap) {
+    snap.forEach((docSnap) => {
+      const d = docSnap.data();
+      if (d.enabled === false) return;
+      if (typeof d.token !== 'string' || d.token.length <= 20) return;
+      tokenMap.set(d.token, d);
+    });
+  }
+
+  if (playerId) {
+    addFromSnap(await db.collection('pushTokens').where('playerId', '==', playerId).get());
+  }
+
+  if (!tokenMap.size && username) {
+    try {
+      addFromSnap(await db.collection('pushTokens').where('username', '==', username).get());
+    } catch (_) { /* índice pode faltar — fallback abaixo */ }
+
+    if (!tokenMap.size) {
+      const all = await db.collection('pushTokens').where('enabled', '==', true).get();
+      all.forEach((docSnap) => {
+        const d = docSnap.data();
+        const tokenUsername = String(d.username || '').toLowerCase().replace(/^@+/, '');
+        if (tokenUsername && tokenUsername === username && typeof d.token === 'string' && d.token.length > 20) {
+          tokenMap.set(d.token, d);
+        }
+      });
+    }
+  }
+
+  return Array.from(tokenMap.keys());
+}
+
+/**
+ * @param {import('firebase-admin/firestore').Firestore} db
  * @param {string} playerId
- * @param {{ title: string, body: string, url?: string, data?: Record<string, string> }} payload
+ * @param {{ title: string, body: string, url?: string, data?: Record<string, string>, username?: string }} payload
  */
 async function sendPushToPlayer(db, playerId, payload) {
-  if (!playerId) return { sent: 0, total: 0, failed: 0 };
+  if (!playerId && !payload.username) return { sent: 0, total: 0, failed: 0 };
 
-  const snap = await db.collection('pushTokens').where('playerId', '==', playerId).get();
-  const tokens = [];
-
-  snap.forEach((docSnap) => {
-    const d = docSnap.data();
-    if (d.enabled !== false && typeof d.token === 'string' && d.token.length > 20) {
-      tokens.push(d.token);
-    }
+  const tokens = await collectPushTokens(db, {
+    playerId,
+    username: payload.username,
   });
 
   if (!tokens.length) {
-    console.log(`[push] Sem token para ${playerId.slice(0, 8)}…`);
+    console.log(`[push] Sem token para ${playerId ? playerId.slice(0, 8) + '…' : '?'}${payload.username ? ` (@${payload.username})` : ''}`);
     return { sent: 0, total: 0, failed: 0 };
   }
 
@@ -68,7 +105,7 @@ async function sendPushToPlayer(db, playerId, payload) {
       tokens: chunk,
       notification: { title: payload.title, body: payload.body },
       data,
-      android: { priority: 'high', notification: { priority: 'high' } },
+      android: { priority: 'high', notification: { channelId: 'social', priority: 'high' } },
       webpush: {
         headers: { Urgency: 'high' },
         fcmOptions: { link: url },
@@ -104,5 +141,6 @@ module.exports = {
   SITE_URL,
   initAdmin,
   formatPushName,
+  collectPushTokens,
   sendPushToPlayer,
 };

@@ -19,7 +19,9 @@ function buildNotificationOptions(payload) {
       body,
       icon: n.icon || d.icon || `${SW_ORIGIN}/assets/app-icon-192.png`,
       badge: `${SW_ORIGIN}/assets/cherry.png`,
-      tag: d.type || 'daily-charge-push',
+      tag: d.tag || (d.pushKey && d.fromPlayerId
+        ? `friend-request-${d.fromPlayerId}-${d.pushKey}`
+        : (d.type || 'daily-charge-push')),
       renotify: true,
       data: { url: targetUrl, ...d },
     },

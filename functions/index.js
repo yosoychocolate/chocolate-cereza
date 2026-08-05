@@ -93,21 +93,45 @@ async function sendDailyChargePush(kind) {
 }
 
 async function sendPushToPlayer(playerId, payload) {
-  if (!playerId) return { sent: 0, total: 0, failed: 0 };
+  if (!playerId && !payload.username) return { sent: 0, total: 0, failed: 0 };
 
   const db = admin.firestore();
-  const snap = await db.collection('pushTokens').where('playerId', '==', playerId).get();
-  const tokens = [];
+  const tokenSet = new Map();
 
-  snap.forEach((docSnap) => {
-    const d = docSnap.data();
-    if (d.enabled !== false && typeof d.token === 'string' && d.token.length > 20) {
-      tokens.push(d.token);
+  function addFromSnap(snap) {
+    snap.forEach((docSnap) => {
+      const d = docSnap.data();
+      if (d.enabled === false) return;
+      if (typeof d.token !== 'string' || d.token.length <= 20) return;
+      tokenSet.set(d.token, d);
+    });
+  }
+
+  if (playerId) {
+    addFromSnap(await db.collection('pushTokens').where('playerId', '==', playerId).get());
+  }
+
+  const username = String(payload.username || '').trim().toLowerCase().replace(/^@+/, '');
+  if (!tokenSet.size && username) {
+    try {
+      addFromSnap(await db.collection('pushTokens').where('username', '==', username).get());
+    } catch (_) { /* ignore */ }
+    if (!tokenSet.size) {
+      const all = await db.collection('pushTokens').where('enabled', '==', true).get();
+      all.forEach((docSnap) => {
+        const d = docSnap.data();
+        const u = String(d.username || '').toLowerCase().replace(/^@+/, '');
+        if (u === username && typeof d.token === 'string' && d.token.length > 20) {
+          tokenSet.set(d.token, d);
+        }
+      });
     }
-  });
+  }
+
+  const tokens = [...tokenSet.keys()];
 
   if (!tokens.length) {
-    console.log(`[push] Nenhum token para player ${playerId.slice(0, 8)}…`);
+    console.log(`[push] Nenhum token para player ${playerId ? playerId.slice(0, 8) + '…' : '?'}${username ? ` (@${username})` : ''}`);
     return { sent: 0, total: 0, failed: 0 };
   }
 
@@ -239,15 +263,26 @@ exports.onFriendRequestPush = onDocumentCreated(
     if (data?.status && data.status !== 'pending') return;
 
     const fromName = formatPushName(data?.fromName);
+    const pushKey = String(data?.pushKey || Date.now());
+    let targetUsername = '';
+    try {
+      const prof = await admin.firestore().doc(`playerProfiles/${targetPlayerId}`).get();
+      if (prof.exists) {
+        targetUsername = String(prof.data()?.username || '').toLowerCase().replace(/^@+/, '');
+      }
+    } catch (_) { /* ignore */ }
 
     await sendPushToPlayer(targetPlayerId, {
       title: `👥 ${fromName}`,
       body: 'Te envió una solicitud de amistad',
       url: `${SITE_URL}jugar/#amigos`,
+      username: targetUsername,
       data: {
         type: 'friend-request',
         fromPlayerId: data?.fromPlayerId || fromPlayerId,
         fromName,
+        pushKey,
+        tag: `friend-request-${fromPlayerId}-${pushKey}`,
         url: `${SITE_URL}jugar/#amigos`,
       },
     });

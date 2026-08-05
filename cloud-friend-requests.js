@@ -47,6 +47,7 @@ export function friendRequestFromDoc(docSnap) {
     fromPlayerId: typeof data.fromPlayerId === 'string' ? data.fromPlayerId : docSnap.id,
     fromName: typeof data.fromName === 'string' ? data.fromName : 'Jugador',
     status: data.status === 'accepted' || data.status === 'declined' ? data.status : 'pending',
+    pushKey: typeof data.pushKey === 'string' ? data.pushKey : '',
     createdAt: data.createdAt?.toMillis?.() ?? null,
   };
 }
@@ -86,11 +87,19 @@ export async function sendFriendRequest(db, fromPlayerId, fromName, toPlayerId) 
     throw new Error('Solicitud ya enviada — espera respuesta.');
   }
 
+  if (existing.exists()) {
+    await deleteDoc(friendRequestRef(db, toPlayerId, fromPlayerId));
+  }
+
+  const pushKey = String(Date.now());
+
   await setDoc(friendRequestRef(db, toPlayerId, fromPlayerId), {
     fromPlayerId,
     fromName: fromName || 'Jugador',
     status: 'pending',
     pushNotified: false,
+    pushKey,
+    targetPlayerId: toPlayerId,
     createdAt: serverTimestamp(),
   });
 }

@@ -94,7 +94,8 @@ const head = `<!DOCTYPE html>
     html.jugar-page #spaceship-shell:not(.hidden) .spaceship-chrome,
     html.jugar-page #spaceship-shell:not(.hidden) .spaceship-numpad,
     html.jugar-page #spaceship-shell:not(.hidden) .spaceship-numpad button,
-    html.jugar-page #spaceship-shell:not(.hidden) .spaceship-answer-panel {
+    html.jugar-page #spaceship-shell:not(.hidden) .spaceship-answer-panel,
+    html.jugar-page #spaceship-shell:not(.hidden) .spaceship-answer-native {
       pointer-events: auto !important; touch-action: manipulation !important;
     }
     html.jugar-page .couple-mode, html.jugar-page .couple-mode *,

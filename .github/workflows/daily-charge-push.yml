@@ -56,3 +56,9 @@ jobs:
           FORCE_DEVICE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.android_only == 'true' && 'android' || '' }}
           FORCE_ORIGIN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.android_only == 'true' && 'github' || '' }}
         run: node send-daily-push.js
+
+      - name: Send friend request pushes
+        working-directory: scripts
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node send-friend-request-push.js

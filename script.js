@@ -145,6 +145,9 @@ function initIntro() {
       initMainSections();
     });
   });
+
+  window.DailyChargeMission?.bindIntroNotificationButton?.();
+  window.DailyChargeMission?.updateIntroNotificationButton?.();
 }
 
 function skipIntroToMain() {
@@ -1800,6 +1803,7 @@ function initGame() {
 
   window.addEventListener('keydown', (e) => {
     if (isTypingInFormField(e.target)) return;
+    if (!cherryGameActive) return;
     engine.keys[e.key] = true;
     if (!e.repeat && (e.key === 'p' || e.key === 'P' || e.key === 'Escape') && !milestonePause && !gameOver) {
       e.preventDefault();
@@ -1808,6 +1812,7 @@ function initGame() {
   });
   window.addEventListener('keyup', (e) => {
     if (isTypingInFormField(e.target)) return;
+    if (!cherryGameActive) return;
     engine.keys[e.key] = false;
   });
 

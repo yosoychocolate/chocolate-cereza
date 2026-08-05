@@ -1456,6 +1456,66 @@ html.is-ios-browser-tab .btn-notif-pink {
   text-shadow: 0 0 14px rgba(105, 240, 174, 0.55);
 }
 
+.spaceship-answer-native {
+  display: none;
+  width: 100%;
+  min-height: 2rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: rgba(255, 212, 236, 0.45);
+  text-align: center;
+  letter-spacing: 0.08em;
+  caret-color: #ff4fa3;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.spaceship-answer-native::placeholder {
+  color: rgba(255, 212, 236, 0.45);
+}
+
+.spaceship-answer-native.has-value {
+  color: #fff;
+  text-shadow: 0 0 12px rgba(255, 79, 163, 0.45);
+}
+
+.spaceship-answer-native.is-correct {
+  color: #69F0AE;
+  text-shadow: 0 0 14px rgba(105, 240, 174, 0.55);
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  .spaceship-numpad {
+    display: none !important;
+  }
+
+  .spaceship-answer-panel #spaceship-answer-input {
+    display: none !important;
+  }
+
+  .spaceship-answer-native {
+    display: block;
+  }
+
+  .spaceship-answer-panel {
+    cursor: text;
+  }
+
+  .spaceship-answer-label::after {
+    content: ' · teclado del celular';
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    opacity: 0.75;
+  }
+}
+
 .spaceship-lives {
   position: absolute;
   top: 0.45rem;
@@ -9132,6 +9192,95 @@ body.casa-together-complete .nossa-casa-scene {
 .social-profile-photo-btn:focus-visible {
   outline: 2px solid rgba(255, 79, 163, 0.65);
   outline-offset: 2px;
+}
+
+body.image-crop-open {
+  overflow: hidden;
+}
+
+.image-crop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  background: rgba(6, 4, 12, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.image-crop-card {
+  width: min(100%, 22rem);
+  padding: 1rem 1rem 0.85rem;
+  text-align: center;
+}
+
+.image-crop-title {
+  margin: 0 0 0.35rem;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 1.05rem;
+  color: #fff;
+}
+
+.image-crop-hint {
+  margin: 0 0 0.85rem;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(255, 210, 230, 0.78);
+}
+
+.image-crop-stage-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.image-crop-stage {
+  display: block;
+  width: min(72vw, 280px);
+  height: min(72vw, 280px);
+  border-radius: 50%;
+  touch-action: none;
+  cursor: grab;
+  box-shadow:
+    0 0 0 3px rgba(255, 79, 163, 0.45),
+    0 10px 28px rgba(0, 0, 0, 0.45);
+  background: #120a1c;
+}
+
+.image-crop-stage:active {
+  cursor: grabbing;
+}
+
+.image-crop-zoom-label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.85rem;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.75rem;
+  color: rgba(255, 220, 235, 0.85);
+}
+
+.image-crop-zoom-label span {
+  flex: 0 0 auto;
+  min-width: 2.2rem;
+  text-align: left;
+}
+
+.image-crop-zoom {
+  flex: 1;
+  accent-color: #ff4fa3;
+}
+
+.image-crop-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
 }
 
 .social-my-id-row code {

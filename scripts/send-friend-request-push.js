@@ -4,6 +4,17 @@
  */
 const { initAdmin, admin, SITE_URL, formatPushName, sendPushToPlayer } = require('./push-admin-common.js');
 
+async function fetchTargetUsername(db, playerId) {
+  if (!playerId) return '';
+  try {
+    const snap = await db.doc(`playerProfiles/${playerId}`).get();
+    if (!snap.exists) return '';
+    return String(snap.data()?.username || '').toLowerCase().replace(/^@+/, '');
+  } catch (_) {
+    return '';
+  }
+}
+
 async function findPendingFriendRequests(db) {
   const root = await db.collection('friendRequests').get();
   const pending = [];
@@ -16,17 +27,28 @@ async function findPendingFriendRequests(db) {
 
     incoming.forEach((docSnap) => {
       const data = docSnap.data();
-      if (data.pushNotified === true) return;
+      if (!needsFriendRequestPush(data)) return;
       pending.push({
         targetPlayerId,
         fromPlayerId: docSnap.id,
         ref: docSnap.ref,
         fromName: data.fromName || 'Alguien',
+        pushKey: data.pushKey || '',
       });
     });
   }
 
   return pending;
+}
+
+function needsFriendRequestPush(data) {
+  if (data.pushNotified !== true) return true;
+  const pushKey = String(data.pushKey || '');
+  const notifiedKey = String(data.pushNotifiedKey || '');
+  if (pushKey && pushKey !== notifiedKey) return true;
+  const created = data.createdAt?.toMillis?.() || 0;
+  const notified = data.pushNotifiedAt?.toMillis?.() || 0;
+  return created > notified + 500;
 }
 
 async function main() {
@@ -46,14 +68,20 @@ async function main() {
 
   for (const req of pending) {
     const fromName = formatPushName(req.fromName);
+    const targetUsername = await fetchTargetUsername(db, req.targetPlayerId);
+    const pushKey = req.pushKey || String(Date.now());
+    const tag = `friend-request-${req.fromPlayerId}-${pushKey}`;
     const result = await sendPushToPlayer(db, req.targetPlayerId, {
       title: `👥 ${fromName}`,
       body: 'Te envió una solicitud de amistad',
+      username: targetUsername,
       url: `${SITE_URL}jugar/#amigos`,
       data: {
         type: 'friend-request',
         fromPlayerId: req.fromPlayerId,
         fromName,
+        pushKey,
+        tag,
         url: `${SITE_URL}jugar/#amigos`,
       },
     });
@@ -61,6 +89,7 @@ async function main() {
     if (result.sent > 0) {
       await req.ref.set({
         pushNotified: true,
+        pushNotifiedKey: pushKey,
         pushNotifiedAt: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
       totalSent += result.sent;
