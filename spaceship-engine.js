@@ -472,6 +472,7 @@
   }
 
   function assetUrl(relativePath) {
+    if (typeof global.assetUrl === 'function') return global.assetUrl(relativePath);
     try {
       return new URL(relativePath, global.location.href).href;
     } catch (_) {

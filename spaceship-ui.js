@@ -239,11 +239,15 @@
   function resizeGame() {
     if (!container || !engine) return;
     const rect = container.getBoundingClientRect();
-    const w = Math.max(280, Math.floor(rect.width));
+    const jugarCompact = global.__JUGAR_PAGE__;
+    const maxW = jugarCompact ? 340 : Infinity;
+    const w = Math.max(jugarCompact ? 260 : 280, Math.min(Math.floor(rect.width), maxW));
     const perfLite = global.matchMedia('(max-width: 768px)').matches;
     const mobileSm = w < 340;
-    const aspect = perfLite ? (mobileSm ? 460 / 360 : 440 / 360) : 400 / 360;
-    const h = Math.max(240, Math.floor(w * aspect));
+    let aspect = perfLite ? (mobileSm ? 460 / 360 : 440 / 360) : 400 / 360;
+    if (jugarCompact) aspect = mobileSm ? (360 / 360) : (380 / 360);
+    let h = Math.max(jugarCompact ? 220 : 240, Math.floor(w * aspect));
+    if (jugarCompact) h = Math.min(h, 280);
     container.classList.toggle('spaceship-mobile', perfLite);
     container.classList.toggle('spaceship-mobile-sm', mobileSm);
     engine.perfLite = perfLite;
@@ -375,6 +379,8 @@
 
   function initGameRouter() {
     const tabs = document.querySelectorAll('[data-game-mode]');
+    const cherryShell = document.getElementById('cherry-game-shell');
+    const shipShell = document.getElementById('spaceship-shell');
     const cherryWrap = document.getElementById('game-container');
     const shipWrap = document.getElementById('spaceship-container');
     const hint = document.getElementById('game-mode-hint');
@@ -386,8 +392,13 @@
         btn.classList.toggle('is-active', btn.dataset.gameMode === mode);
         btn.setAttribute('aria-selected', btn.dataset.gameMode === mode ? 'true' : 'false');
       });
-      cherryWrap?.classList.toggle('hidden', isCannon);
-      shipWrap?.classList.toggle('hidden', !isCannon);
+      if (cherryShell || shipShell) {
+        cherryShell?.classList.toggle('hidden', isCannon);
+        shipShell?.classList.toggle('hidden', !isCannon);
+      } else {
+        cherryWrap?.classList.toggle('hidden', isCannon);
+        shipWrap?.classList.toggle('hidden', !isCannon);
+      }
       if (hint) {
         hint.textContent = isCannon
           ? 'Escribe la respuesta (ej: 4 para 2×2) — primero ✔, luego el cañón dispara'

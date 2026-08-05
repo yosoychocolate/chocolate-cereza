@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es" class="jugar-page">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>Jugar — El Chocolate & La Cereza</title>
+  <link rel="icon" type="image/png" href="../assets/app-icon-192.png?v=1">
+  <link rel="manifest" href="../manifest.json?v=__APP_VERSION__">
+  <meta name="theme-color" content="#ff4fa3">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="../styles.css?v=20260804jugar13">
+  <style id="jugar-critical-fix">
+    html.jugar-page, body.jugar-body { height: 100% !important; overflow: hidden !important; margin: 0; }
+    body.jugar-body { display: flex !important; flex-direction: column !important; }
+    .jugar-topbar { flex: 0 0 auto; }
+    .jugar-header { flex: 0 0 auto !important; max-width: min(100%, 460px) !important; margin-left: auto !important; margin-right: auto !important; }
+    .jugar-main {
+      flex: 1 1 auto !important; min-height: 0 !important;
+      max-width: min(100%, 460px) !important; margin-left: auto !important; margin-right: auto !important;
+      overflow-x: hidden !important; overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important; touch-action: pan-y !important;
+      scrollbar-width: thin !important;
+      scrollbar-color: rgba(255, 79, 163, 0.45) rgba(18, 10, 28, 0.3) !important;
+    }
+    html.jugar-page .jugar-main::-webkit-scrollbar { width: 5px; }
+    html.jugar-page .jugar-main::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+    html.jugar-page #ambient-bg, html.jugar-page #ambient-bg * { pointer-events: none !important; }
+    html.jugar-page #section-game > #cherry-game-shell,
+    html.jugar-page #section-game > #spaceship-shell,
+    html.jugar-page .game-chrome,
+    html.jugar-page .spaceship-chrome { pointer-events: auto !important; touch-action: pan-y !important; }
+    html.jugar-page body:not(.jugar-game-active) #game-canvas-stack,
+    html.jugar-page body:not(.jugar-game-active) #game-canvas-stack .game-layer-canvas,
+    html.jugar-page body:not(.jugar-game-active) #spaceship-shell:not(.hidden) .spaceship-canvas {
+      pointer-events: none !important; touch-action: pan-y !important;
+    }
+    html.jugar-page body.jugar-game-active #game-canvas-stack,
+    html.jugar-page body.jugar-game-active #game-canvas-stack .game-layer-canvas,
+    html.jugar-page body.jugar-game-active #spaceship-shell:not(.hidden) .spaceship-canvas {
+      pointer-events: auto !important; touch-action: none !important;
+    }
+    html.jugar-page #spaceship-shell:not(.hidden) .spaceship-chrome,
+    html.jugar-page #spaceship-shell:not(.hidden) .spaceship-numpad,
+    html.jugar-page #spaceship-shell:not(.hidden) .spaceship-numpad button,
+    html.jugar-page #spaceship-shell:not(.hidden) .spaceship-answer-panel {
+      pointer-events: auto !important; touch-action: manipulation !important;
+    }
+    html.jugar-page .couple-mode, html.jugar-page .couple-mode *,
+    html.jugar-page .jugar-header, html.jugar-page .jugar-header *,
+    html.jugar-page .game-mode-tabs, html.jugar-page .game-mode-tabs *,
+    html.jugar-page .game-meta-wrap, html.jugar-page .game-meta-bar,
+    html.jugar-page .game-meta-bar * { pointer-events: auto !important; }
+  </style>
+  <script>
+    window.__SITE_ROOT__ = '../';
+    window.__JUGAR_PAGE__ = true;
+    window.__FILE_PROTOCOL__ = location.protocol === 'file:';
+  </script>
+  <script src="../site-assets.js?v=__APP_VERSION__"></script>
+</head>
+<body class="jugar-body">
+  <div id="ambient-bg" aria-hidden="true"></div>
+  <header class="jugar-header glass">
+    <div class="jugar-topbar">
+      <a href="../" class="jugar-back-link">← Volver al sitio</a>
+      <span class="jugar-topbar-title">🎮 Mini Games</span>
+    </div>
+    <nav class="game-mode-tabs jugar-mode-tabs" aria-label="Seleccionar juego">
+      <button type="button" class="game-mode-tab is-active" data-game-mode="cherry" aria-selected="true">🍒 Cereza</button>
+      <button type="button" class="game-mode-tab" data-game-mode="spaceship" aria-selected="false">🍫 Cañón</button>
+    </nav>
+    <p id="game-mode-hint" class="game-hint jugar-mode-hint visually-hidden">Controla la cereza con ← → , el mouse o tocando la pantalla</p>
+  </header>
+  <main id="jugar-main" class="jugar-main">
+<section class="section glass" id="section-game">
+      <h2 class="visually-hidden">Mini Games</h2>
+
+      <!-- Modo Pareja (online) -->
+      <div id="couple-mode" class="couple-mode">
+        <div id="couple-recovery-bar" class="couple-recovery-bar hidden" role="status" aria-live="polite">
+          <p id="couple-recovery-text" class="couple-recovery-text"></p>
+          <button type="button" id="couple-rejoin-btn" class="couple-btn couple-btn-primary couple-rejoin-btn">Reconectar a la sala</button>
+        </div>
+        <div id="couple-guardians" class="couple-guardians" aria-hidden="true"></div>
+        <div id="couple-lobby" class="couple-panel">
+          <h3 class="couple-title">❤️ Jugar en Pareja</h3>
+          <label class="couple-field">
+            <span class="couple-label">Nombre</span>
+            <input id="couple-player-name" class="couple-input" type="text" maxlength="24" placeholder="Chocolate" autocomplete="nickname">
+          </label>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <button id="couple-create-btn" class="couple-btn couple-btn-primary" type="button">Crear Sala</button>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <label class="couple-field">
+            <span class="couple-label">Código</span>
+            <input id="couple-join-code" class="couple-input couple-input-code" type="text" maxlength="6" placeholder="ABC234" autocapitalize="characters" autocomplete="off">
+          </label>
+          <button id="couple-join-btn" class="couple-btn" type="button">Entrar</button>
+          <button id="couple-reset-session" class="couple-btn couple-btn-ghost couple-reset-btn" type="button">🔄 Reiniciar sesión de sala</button>
+          <p id="couple-status-msg" class="couple-status-msg" role="status" aria-live="polite"></p>
+        </div>
+
+        <div id="couple-room-panel" class="couple-panel hidden">
+          <h3 class="couple-title">❤️ Chocolate &amp; La Cereza</h3>
+          <div class="couple-room-head">
+            <span class="couple-room-label">Sala</span>
+            <strong id="couple-room-code" class="couple-room-code">------</strong>
+            <button id="couple-copy-code" class="couple-btn couple-btn-small" type="button">📋 Copiar</button>
+          </div>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <div id="couple-mascot-scene" class="couple-mascot-scene is-waiting">
+            <div id="couple-mascot-stage" class="couple-mascot-stage"></div>
+            <p id="couple-mascot-caption" class="couple-mascot-caption">🧸 esperando…</p>
+            <div id="couple-streak-wrap"></div>
+            <div id="couple-mascot-fx" class="couple-mascot-fx" aria-hidden="true"></div>
+          </div>
+          <ul id="couple-players-list" class="couple-players-list visually-hidden" aria-hidden="true"></ul>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <div class="couple-ranking-wrap">
+            <h4 class="couple-subtitle">👑 Ranking</h4>
+            <ol id="couple-ranking-list" class="couple-ranking-list"></ol>
+          </div>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <div class="couple-chat-wrap">
+            <h4 class="couple-subtitle">💬 Chat</h4>
+            <div id="couple-chat-messages" class="couple-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+            <div id="couple-chat-emojis" class="couple-chat-emojis" aria-label="Emojis rápidos">
+              <button type="button" class="couple-chat-emoji" data-emoji="❤️" aria-label="Enviar ❤️">❤️</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="😂" aria-label="Enviar 😂">😂</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="😭" aria-label="Enviar 😭">😭</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="😎" aria-label="Enviar 😎">😎</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="😘" aria-label="Enviar 😘">😘</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="🍫" aria-label="Enviar 🍫">🍫</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="🍒" aria-label="Enviar 🍒">🍒</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="👏" aria-label="Enviar 👏">👏</button>
+              <button type="button" class="couple-chat-emoji" data-emoji="👑" aria-label="Enviar 👑">👑</button>
+            </div>
+            <form id="couple-chat-form" class="couple-chat-form">
+              <input id="couple-chat-input" class="couple-chat-input" type="text" maxlength="200" placeholder="Escribe un mensaje…" autocomplete="off">
+              <button id="couple-chat-send" class="couple-btn couple-btn-small couple-chat-send" type="submit">Enviar</button>
+            </form>
+          </div>
+          <div class="couple-divider" aria-hidden="true"></div>
+          <div id="couple-gift-panel" class="couple-gift-panel hidden">
+            <h4 class="couple-subtitle">🎁 Regalar chocolates</h4>
+            <p class="couple-gift-meta">
+              Tu saldo: <strong id="couple-gift-wallet">0</strong> 🍫
+              · Para: <strong id="couple-gift-partner">—</strong>
+            </p>
+            <div class="couple-gift-row">
+              <input id="couple-gift-amount" class="couple-gift-input" type="number" min="1" max="9999" inputmode="numeric" placeholder="Cantidad" autocomplete="off">
+              <button id="couple-gift-send" class="couple-btn couple-btn-small couple-btn-primary" type="button">Enviar 🍫</button>
+            </div>
+            <div id="couple-gift-presets" class="couple-gift-presets" aria-label="Cantidades rápidas">
+              <button type="button" class="couple-gift-preset" data-gift="10">10</button>
+              <button type="button" class="couple-gift-preset" data-gift="50">50</button>
+              <button type="button" class="couple-gift-preset" data-gift="100">100</button>
+              <button type="button" class="couple-gift-preset" data-gift="250">250</button>
+              <button type="button" class="couple-gift-preset" data-gift="all">Todo</button>
+            </div>
+            <p id="couple-gift-status" class="couple-gift-status" role="status" aria-live="polite"></p>
+          </div>
+          <div class="couple-divider couple-gift-divider hidden" id="couple-gift-divider" aria-hidden="true"></div>
+          <div id="couple-stats-summary" class="couple-stats-summary"></div>
+          <div class="couple-actions">
+            <button id="couple-leave-room" class="couple-btn couple-btn-ghost" type="button">Salir de la sala</button>
+          </div>
+        </div>
+
+        <div id="couple-toast" class="couple-toast hidden" role="status" aria-live="polite"></div>
+      </div>
+
+      <div class="game-meta-wrap">
+        <div class="game-meta-bar">
+          <button id="game-stats-toggle" class="game-meta-btn" type="button" aria-expanded="false" aria-controls="game-stats-panel">
+            <span class="meta-label-full">📊 Estadísticas</span>
+            <span class="meta-label-short">📊 Stats</span>
+          </button>
+          <button id="game-achievements-toggle" class="game-meta-btn" type="button" aria-expanded="false" aria-controls="game-achievements-panel">
+            <span class="meta-label-full">🏆 Galería de Logros</span>
+            <span class="meta-label-short">🏆 Logros</span>
+          </button>
+          <button id="game-settings-toggle" class="game-meta-btn" type="button" aria-expanded="false" aria-controls="game-settings-panel">
+            <span class="meta-label-full">⚙️ Ajustes</span>
+            <span class="meta-label-short">⚙️ Ajustes</span>
+          </button>
+          <button id="game-shop-toggle" class="game-meta-btn game-shop-toggle" type="button" aria-expanded="false" aria-controls="game-shop-panel">
+            <span class="meta-label-full">🍫 Tienda</span>
+            <span class="meta-label-short">🍫 Tienda</span>
+          </button>
+        </div>
+        <div id="game-meta-backdrop" class="game-meta-backdrop hidden" aria-hidden="true"></div>
+        <div id="game-stats-panel" class="game-meta-panel hidden" role="region" aria-label="Estadísticas del juego">
+          <h3 class="game-meta-panel-title">📊 Estadísticas</h3>
+          <div class="game-stats-grid">
+            <div class="game-stat"><span class="game-stat-label">Chocolates</span><span id="game-stat-chocolates" class="game-stat-val">0</span></div>
+            <div class="game-stat"><span class="game-stat-label">Tiempo</span><span id="game-stat-time" class="game-stat-val">0s</span></div>
+            <div class="game-stat"><span class="game-stat-label">Racha máx.</span><span id="game-stat-streak" class="game-stat-val">0</span></div>
+            <div class="game-stat"><span class="game-stat-label">Racha actual</span><span id="game-stat-streak-current" class="game-stat-val">0</span></div>
+          </div>
+        </div>
+        <div id="game-achievements-panel" class="game-meta-panel hidden" role="region" aria-label="Galería de logros">
+          <div class="game-ach-progress">
+            <h3 class="game-meta-panel-title">🏆 Galería de Logros</h3>
+            <div class="game-ach-progress-track" aria-hidden="true">
+              <div id="game-ach-progress-fill" class="game-ach-progress-fill"></div>
+            </div>
+            <p class="game-ach-progress-meta">
+              <span id="game-ach-count">0 / 4 desbloqueados</span>
+              <span class="game-ach-progress-sep">·</span>
+              <span id="game-ach-pct">0%</span>
+            </p>
+          </div>
+          <div id="game-ach-filter" class="game-ach-filter" role="tablist" aria-label="Filtrar logros">
+            <button type="button" class="game-ach-filter-btn is-active" data-ach-filter="all" role="tab" aria-selected="true">Todos</button>
+            <button type="button" class="game-ach-filter-btn" data-ach-filter="cherry" role="tab" aria-selected="false">🍒 Cereza</button>
+            <button type="button" class="game-ach-filter-btn" data-ach-filter="cannon" role="tab" aria-selected="false">🍫 Cañón</button>
+          </div>
+          <ul id="game-achievements-gallery" class="game-achievements-gallery"></ul>
+        </div>
+        <div id="game-settings-panel" class="game-meta-panel hidden" role="region" aria-label="Ajustes del juego">
+          <h3 class="game-meta-panel-title">⚙️ Ajustes</h3>
+          <div class="game-audio-settings" aria-label="Volumen de audio">
+            <h4 class="game-audio-heading">🔊 Audio</h4>
+            <div class="game-setting-row game-setting-volume">
+              <span class="game-setting-label">🎵 Música del sitio</span>
+              <div class="game-sfx-volume-controls">
+                <input id="audio-bgm-volume" type="range" min="0" max="100" value="75" aria-label="Volumen música del sitio">
+                <span id="audio-bgm-label" class="game-sfx-vol-label" aria-live="polite">75%</span>
+              </div>
+            </div>
+            <label class="game-setting-row">
+              <span class="game-setting-label">Efectos de sonido (juegos)</span>
+              <input id="game-sfx-toggle" class="game-setting-toggle" type="checkbox" checked>
+            </label>
+            <div id="game-sfx-volume-wrap" class="game-setting-row game-setting-volume">
+              <span class="game-setting-label">🎮 Efectos de los juegos</span>
+              <div class="game-sfx-volume-controls">
+                <input id="audio-sfx-volume" type="range" min="0" max="100" value="80" aria-label="Volumen efectos de juego">
+                <span id="audio-sfx-label" class="game-sfx-vol-label" aria-live="polite">80%</span>
+              </div>
+            </div>
+            <div class="game-setting-row game-setting-volume">
+              <span class="game-setting-label">🐻 Teddy</span>
+              <div class="game-sfx-volume-controls">
+                <input id="audio-teddy-volume" type="range" min="0" max="100" value="65" aria-label="Volumen sonidos de Teddy">
+                <span id="audio-teddy-label" class="game-sfx-vol-label" aria-live="polite">65%</span>
+              </div>
+            </div>
+            <div class="game-setting-row game-setting-volume">
+              <span class="game-setting-label">🔔 Notificaciones</span>
+              <div class="game-sfx-volume-controls">
+                <input id="audio-ui-volume" type="range" min="0" max="100" value="40" aria-label="Volumen notificaciones">
+                <span id="audio-ui-label" class="game-sfx-vol-label" aria-live="polite">40%</span>
+              </div>
+            </div>
+          </div>
+          <p class="game-setting-hint">También puedes ajustar la música con 🔉/🔊 en la sección ♪ Música.</p>
+        </div>
+        <div id="game-shop-panel" class="game-meta-panel game-shop-panel hidden" role="region" aria-label="Tienda del chocolate">
+          <div class="game-shop-head">
+            <h3 class="game-meta-panel-title">🍫 Tienda del Chocolate</h3>
+            <p class="game-shop-wallet">Saldo: <strong id="game-shop-wallet">0</strong> 🍫</p>
+          </div>
+          <nav id="game-shop-tabs" class="game-shop-tabs" aria-label="Categorías de la tienda">
+            <button type="button" class="game-shop-tab is-active" data-shop-tab="cherry">🍒</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="theme">🌈</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="effect">✨</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="mascot">🧸</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="album">💌</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="spaceship">🍫</button>
+            <button type="button" class="game-shop-tab" data-shop-tab="special">💍</button>
+          </nav>
+          <div id="game-shop-grid" class="game-shop-grid"></div>
+        </div>
+      </div>
+      <div id="cherry-game-shell" class="cherry-game-shell">
+      <div id="game-container">
+        <div id="game-canvas-stack" class="game-canvas-stack">
+          <canvas id="game-canvas-bg" class="game-layer-canvas"></canvas>
+          <canvas id="game-canvas-game" class="game-layer-canvas"></canvas>
+          <canvas id="game-canvas-fx" class="game-layer-canvas"></canvas>
+        </div>
+        <div id="game-cursor" class="game-cursor hidden" aria-hidden="true">🍒</div>
+        <div id="game-touch-fx" class="game-touch-fx" aria-hidden="true"></div>
+        <div id="game-mascot-buddy" class="game-mascot-buddy hidden" aria-hidden="true"></div>
+        <div id="game-celebrate-fx" class="game-celebrate-fx" aria-hidden="true"></div>
+        <div id="game-achievement-toast" class="game-achievement-toast hidden" role="status" aria-live="polite"></div>
+        <div id="game-shop-toast" class="game-shop-toast hidden" role="status" aria-live="polite"></div>
+        <div id="couple-score-hud" class="couple-score-hud hidden" aria-hidden="true"></div>
+        <div id="game-love-word-popup" class="game-love-word-popup hidden" aria-hidden="true" role="status">
+          <span id="game-love-word-emoji" class="game-love-word-emoji" aria-hidden="true">💖</span>
+          <p id="game-love-word-text" class="game-love-word-text"></p>
+          <p id="game-love-word-reward" class="game-love-word-reward"></p>
+        </div>
+      </div>
+      <div class="game-chrome" aria-label="Controles del juego">
+        <div class="game-hud-row">
+          <div id="game-score" class="game-score">
+            <span class="game-score-label" aria-hidden="true">🍫</span>
+            <span class="game-score-num">0</span>
+            <span id="game-wallet-inline" class="game-wallet-inline" title="Chocolates para la tienda">🛒 <span>0</span></span>
+            <span id="game-ring-badge" class="game-ring-badge hidden" aria-hidden="true" title="Anillo del Amor">💍</span>
+            <span id="game-shield-badge" class="game-shield-badge hidden" aria-label="Escudo activo" title="Escudo — protege 1 chocolate perdido">🛡️</span>
+            <span class="game-record-inline" aria-label="Récord">🏆 <span id="game-high-score-val">0</span></span>
+            <span id="game-endless-badge" class="game-endless-badge hidden">✨ Modo Infinito</span>
+          </div>
+          <div id="game-lives" class="game-lives lives-locked" aria-label="Vidas de la cereza">
+            <span class="game-lives-label">Vidas</span>
+            <div id="game-lives-hearts" class="game-lives-hearts"></div>
+          </div>
+        </div>
+        <div id="game-milestone" class="game-milestone hidden">
+          <p id="game-milestone-text"></p>
+          <p id="game-milestone-sub" class="game-milestone-sub hidden"></p>
+          <p id="game-toast-timer" class="game-toast-timer hidden" aria-live="polite"></p>
+          <button id="game-toast-dismiss" class="game-toast-dismiss hidden" type="button">▶ Continuar</button>
+        </div>
+        <div id="game-pause-screen" class="game-pause-screen hidden" aria-hidden="true">
+          <p>⏸ Pausado</p>
+          <button id="game-resume" class="game-resume-btn" type="button">▶ Continuar</button>
+        </div>
+        <div id="game-over-screen" class="game-over-screen hidden" aria-hidden="true">
+          <p>Sin vidas... 🍒</p>
+          <p class="game-over-sub">Perdiste 5 chocolates. ¡Intenta de nuevo!</p>
+          <button id="game-over-restart" class="game-resume-btn" type="button">🔄 Reiniciar juego</button>
+        </div>
+        <button id="game-continue" class="game-continue hidden" type="button">▶ Continuar jugando</button>
+        <div id="game-endless-reward" class="game-endless-reward hidden" aria-hidden="true">
+          <div class="game-reward-medal" aria-hidden="true">🏆</div>
+          <p class="game-reward-title">¡Modo Infinito desbloqueado!</p>
+          <p class="game-reward-sub">Tu cereza ganó 5 vidas y un amor sin fin. Sigue atrapando chocolates para siempre.</p>
+          <p class="game-reward-bonus">💫 Mensajes secretos cada 25 chocolates</p>
+          <button id="game-endless-enter" class="game-resume-btn" type="button">▶ Entrar al Modo Infinito</button>
+        </div>
+        <div class="game-actions">
+          <button id="game-pause" class="game-pause-btn" type="button" aria-label="Pausar juego">
+            <span class="game-pause-icon" aria-hidden="true">⏸</span>
+            <span class="game-pause-label">Pausar</span>
+          </button>
+          <button id="game-reload" class="game-action-btn" type="button" aria-label="Reiniciar juego">
+            <span class="game-action-icon" aria-hidden="true">🔄</span>
+            <span class="game-action-text">Reiniciar</span>
+          </button>
+        </div>
+        <div class="game-progress" aria-label="Metas del juego">
+          <div class="game-progress-inner">
+            <div id="game-progress-markers" class="game-progress-markers"></div>
+            <div class="game-progress-bar">
+              <div id="game-progress-fill" class="game-progress-fill"></div>
+              <span id="game-progress-infinity" class="game-progress-infinity hidden">∞</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <div id="spaceship-shell" class="spaceship-shell hidden">
+      <div id="spaceship-container" class="spaceship-container">
+        <img
+          id="spaceship-bg"
+          class="spaceship-bg"
+          src="../assets/cannon-bg.png"
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          fetchpriority="low"
+        >
+        <canvas id="spaceship-bg-canvas" class="spaceship-bg-canvas" aria-hidden="true"></canvas>
+        <div id="spaceship-partner-badge" class="spaceship-partner-badge hidden" aria-live="polite"></div>
+        <canvas id="spaceship-canvas" class="spaceship-canvas"></canvas>
+        <div id="spaceship-mission-toast" class="spaceship-toast" role="status" aria-live="polite"></div>
+      </div>
+      <div class="spaceship-chrome" aria-label="Controles del cañón">
+        <div class="spaceship-top-ui">
+          <div id="spaceship-hud" class="spaceship-hud">
+            <div class="spaceship-hud-pill spaceship-hud-score">
+              <span class="spaceship-hud-icon" aria-hidden="true">⭐</span>
+              <span class="spaceship-score-num">0</span>
+            </div>
+            <div class="spaceship-hud-pill spaceship-hud-record">
+              <span class="spaceship-hud-icon" aria-hidden="true">🏆</span>
+              <span id="spaceship-high-score-val">0</span>
+            </div>
+            <div class="spaceship-hud-pill spaceship-hud-wallet" title="Chocolates para la tienda">
+              <span class="spaceship-hud-icon" aria-hidden="true">🍫</span>
+              <span id="spaceship-wallet-val">0</span>
+            </div>
+            <div class="spaceship-hud-pill spaceship-hud-time">
+              <span class="spaceship-hud-icon" aria-hidden="true">⏱</span>
+              <span id="spaceship-time-val">0:00</span>
+            </div>
+            <div class="spaceship-hud-pill spaceship-hud-hits">
+              <span class="spaceship-hud-icon" aria-hidden="true">🎯</span>
+              <span id="spaceship-hits-val">0</span>
+            </div>
+          </div>
+          <div id="spaceship-missions" class="spaceship-missions" aria-label="Misiones de la partida">
+            <div class="spaceship-missions-head">🎯 Misiones</div>
+            <ul id="spaceship-missions-list" class="spaceship-missions-list"></ul>
+          </div>
+        </div>
+        <div id="spaceship-lives" class="spaceship-lives" aria-label="Vidas">
+          <div id="spaceship-lives-hearts" class="spaceship-lives-hearts"></div>
+        </div>
+        <div class="spaceship-answer-panel">
+          <div class="spaceship-answer-panel-line" aria-hidden="true"></div>
+          <span class="spaceship-answer-label">Respuesta</span>
+          <div id="spaceship-answer-input" class="spaceship-answer-input" aria-live="polite">—</div>
+          <div class="spaceship-answer-panel-line" aria-hidden="true"></div>
+        </div>
+        <div id="spaceship-numpad" class="spaceship-numpad" aria-label="Teclado numérico">
+          <button type="button" data-digit="1">1</button>
+          <button type="button" data-digit="2">2</button>
+          <button type="button" data-digit="3">3</button>
+          <button type="button" data-digit="4">4</button>
+          <button type="button" data-digit="5">5</button>
+          <button type="button" data-digit="6">6</button>
+          <button type="button" data-digit="7">7</button>
+          <button type="button" data-digit="8">8</button>
+          <button type="button" data-digit="9">9</button>
+          <button type="button" data-digit="0">0</button>
+        </div>
+        <div id="spaceship-pause-screen" class="spaceship-overlay hidden" aria-hidden="true">
+          <p>⏸ Pausado</p>
+          <button id="spaceship-resume" class="game-resume-btn" type="button">▶ Continuar</button>
+        </div>
+        <div id="spaceship-game-over-screen" class="spaceship-overlay hidden" aria-hidden="true">
+          <p>💫 Sin vidas...</p>
+          <p class="spaceship-go-meta">Puntos: <strong id="spaceship-go-score">0</strong> · Tiempo: <strong id="spaceship-go-time">0:00</strong> · Aciertos: <strong id="spaceship-go-hits">0</strong></p>
+          <button id="spaceship-over-restart" class="game-resume-btn" type="button">🔄 Reiniciar</button>
+        </div>
+        <div class="spaceship-actions">
+          <button id="spaceship-pause" class="game-pause-btn" type="button" aria-label="Pausar juego">
+            <span class="spaceship-pause-icon" aria-hidden="true">⏸</span>
+            <span class="spaceship-pause-label">Pausar</span>
+          </button>
+          <button id="spaceship-reload" class="game-action-btn" type="button" aria-label="Reiniciar juego">
+            <span class="game-action-icon" aria-hidden="true">🔄</span>
+            <span class="game-action-text">Reiniciar</span>
+          </button>
+        </div>
+      </div>
+      </div>
+    </section>
+  </main>
+
+  <audio id="song-audio" preload="metadata"></audio>
+  <div id="music-toast" class="music-toast hidden" role="status" aria-live="polite">
+    Esta página se disfruta mejor con música. 🎵❤️
+  </div>
+  <div id="music-autoplay-prompt" class="music-autoplay-prompt hidden">
+    <button type="button" id="music-autoplay-btn" class="music-autoplay-btn">🎵 Reproducir nuestra canción</button>
+  </div>
+  <div id="music-float-wrap" class="music-float-wrap">
+    <div id="music-notes" class="music-notes" aria-hidden="true"></div>
+    <div class="music-float-controls">
+      <button type="button" class="music-float-vol-btn" data-music-vol-down aria-label="Bajar volumen">−</button>
+      <button type="button" id="music-toggle" class="music-toggle" aria-label="Reproducir música">
+        <span id="music-icon" class="music-icon">🎵</span>
+      </button>
+      <button type="button" class="music-float-vol-btn" data-music-vol-up aria-label="Subir volumen">+</button>
+    </div>
+  </div>
+  <div id="social-dock" class="social-dock hidden" aria-label="Amigos y mensajes">
+    <div id="social-chat-window" class="social-chat-window hidden" role="dialog" aria-labelledby="social-chat-title">
+      <header class="social-chat-header">
+        <div id="social-chat-title" class="social-chat-title">💬 Chat</div>
+        <div class="social-chat-header-actions">
+          <button type="button" id="social-chat-minimize" class="social-header-btn" aria-label="Minimizar">—</button>
+          <button type="button" id="social-chat-close" class="social-header-btn" aria-label="Cerrar">✕</button>
+        </div>
+      </header>
+      <div id="social-chat-messages" class="social-chat-messages" role="log" aria-live="polite"></div>
+      <form id="social-chat-form" class="social-chat-form">
+        <input id="social-chat-input" class="social-chat-input" type="text" maxlength="200" placeholder="Escribe un mensaje…" autocomplete="off">
+        <button type="submit" class="social-chat-send" aria-label="Enviar mensaje"><span aria-hidden="true">➤</span></button>
+      </form>
+    </div>
+
+    <div id="social-friends-panel" class="social-friends-panel hidden" role="dialog" aria-label="Lista de amigos">
+      <header class="social-panel-header">
+        <h3>👥 Amigos</h3>
+        <form id="social-username-form" class="social-username-form">
+          <label class="social-username-label" for="social-username-input">Elige tu usuario corto</label>
+          <div class="social-username-row">
+            <span class="social-username-prefix" aria-hidden="true">@</span>
+            <input id="social-username-input" class="couple-input social-username-input" type="text" maxlength="16" placeholder="sophie" autocomplete="username" autocapitalize="off" spellcheck="false">
+            <button type="submit" class="couple-btn couple-btn-small couple-btn-primary">Guardar</button>
+          </div>
+        </form>
+        <p id="social-username-display" class="social-my-id-row hidden">
+          <span class="social-my-profile">
+            <button type="button" id="social-profile-photo-btn" class="social-profile-photo-btn" title="Cambiar foto de perfil">
+              <span id="social-my-photo-preview" class="social-chat-avatar social-chat-avatar--sm" aria-hidden="true">?</span>
+            </button>
+            <span class="social-my-profile-text">
+              Tu usuario: <code><span id="social-my-username">…</span></code>
+              <button type="button" id="social-copy-username" class="couple-btn couple-btn-small" title="Copiar">📋</button>
+            </span>
+          </span>
+        </p>
+        <input type="file" id="social-profile-photo-input" class="hidden" accept="image/*">
+      </header>
+      <div id="social-friend-requests-wrap" class="social-friend-requests-wrap hidden"></div>
+      <div id="social-invites-wrap" class="social-invites-wrap hidden"></div>
+      <form id="social-add-friend-form" class="social-add-friend-form">
+        <input id="social-add-friend-user" class="couple-input" type="text" maxlength="16" placeholder="Usuario del amigo/a (ej: sophie)" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button type="submit" class="couple-btn couple-btn-small couple-btn-primary">📨 Enviar solicitud</button>
+      </form>
+      <p id="social-friends-status" class="social-friends-status" role="status"></p>
+      <ul id="social-friends-list" class="social-friends-list"></ul>
+    </div>
+
+    <button type="button" id="social-friends-toggle" class="social-friends-toggle" aria-expanded="false" aria-controls="social-friends-panel">
+      <span class="social-toggle-icon">👥</span>
+      <span class="social-toggle-label">Amigos</span>
+      <span id="social-friends-badge" class="social-friends-badge hidden">0</span>
+    </button>
+    <div id="social-toast" class="social-toast hidden" role="status"></div>
+  </div>
+
+  <script src="../firebase-config.js?v=__APP_VERSION__"></script>
+  <script src="../image-upload.js?v=__APP_VERSION__"></script>
+  <script src="../music-playlist.js?v=__APP_VERSION__"></script>
+  <script src="../save-manager.js?v=__APP_VERSION__"></script>
+  <script src="../audio-manager.js?v=__APP_VERSION__"></script>
+  <script src="../game-audit.js?v=__APP_VERSION__"></script>
+  <script src="../love-words.js?v=__APP_VERSION__"></script>
+  <script src="../game-engine.js?v=__APP_VERSION__"></script>
+  <script src="../cannon-shot-system.js?v=__APP_VERSION__"></script>
+  <script src="../spaceship-engine.js?v=__APP_VERSION__"></script>
+  <script src="../game-meta.js?v=__APP_VERSION__"></script>
+  <script src="../game-shop.js?v=__APP_VERSION__"></script>
+  <script src="../daily-charge-mission.js?v=__APP_VERSION__"></script>
+  <script src="../cannon-missions.js?v=__APP_VERSION__"></script>
+  <script src="../spaceship-ui.js?v=__APP_VERSION__"></script>
+  <script src="../script.js?v=__APP_VERSION__"></script>
+  <script type="module" src="../couple-ui.js?v=__APP_VERSION__"></script>
+  <script type="module" src="../friends-chat-ui.js?v=__APP_VERSION__"></script>
+  <script type="module" src="jugar-boot.js?v=__APP_VERSION__"></script>
+</body>
+</html>

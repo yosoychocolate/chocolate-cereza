@@ -12,6 +12,7 @@
  */
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onRequest } = require('firebase-functions/v2/https');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const admin = require('firebase-admin');
 
 admin.initializeApp();
@@ -91,6 +92,66 @@ async function sendDailyChargePush(kind) {
   return { sent, total: tokens.length, failed, kind };
 }
 
+async function sendPushToPlayer(playerId, payload) {
+  if (!playerId) return { sent: 0, total: 0, failed: 0 };
+
+  const db = admin.firestore();
+  const snap = await db.collection('pushTokens').where('playerId', '==', playerId).get();
+  const tokens = [];
+
+  snap.forEach((docSnap) => {
+    const d = docSnap.data();
+    if (d.enabled !== false && typeof d.token === 'string' && d.token.length > 20) {
+      tokens.push(d.token);
+    }
+  });
+
+  if (!tokens.length) {
+    console.log(`[push] Nenhum token para player ${playerId.slice(0, 8)}…`);
+    return { sent: 0, total: 0, failed: 0 };
+  }
+
+  let sent = 0;
+  let failed = 0;
+
+  for (let i = 0; i < tokens.length; i += 500) {
+    const chunk = tokens.slice(i, i + 500);
+    const res = await admin.messaging().sendEachForMulticast({
+      tokens: chunk,
+      notification: {
+        title: payload.title,
+        body: payload.body,
+      },
+      webpush: {
+        fcmOptions: { link: payload.url || SITE_URL },
+        notification: {
+          icon: `${SITE_URL}assets/app-icon-192.png`,
+          badge: `${SITE_URL}assets/cherry.png`,
+        },
+      },
+      data: payload.data || {},
+    });
+
+    sent += res.successCount;
+    failed += res.failureCount;
+
+    await Promise.all(
+      res.responses.map(async (r, idx) => {
+        const code = r.error?.code;
+        if (
+          code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token'
+        ) {
+          await disableBadToken(db, chunk[idx]);
+        }
+      })
+    );
+  }
+
+  console.log(`[push] DM → ${playerId.slice(0, 8)}…: ${sent}/${tokens.length} enviados.`);
+  return { sent, total: tokens.length, failed };
+}
+
 exports.dailyChargePush2030 = onSchedule(
   {
     schedule: '30 20 * * *',
@@ -128,5 +189,35 @@ exports.testDailyChargePush = onRequest(
       console.error('[push] test error:', err);
       res.status(500).json({ ok: false, error: String(err) });
     }
+  }
+);
+
+/** Push quando chega mensagem privada (Chrome fechado). */
+exports.onGlobalDmPush = onDocumentCreated(
+  {
+    document: 'globalDm/{messageId}',
+    region: 'us-central1',
+  },
+  async (event) => {
+    const data = event.data?.data();
+    if (!data?.toPlayerId || !data.fromPlayerId) return;
+
+    const fromName = String(data.fromName || 'Amigo').trim() || 'Amigo';
+    const preview = String(data.message || '').trim();
+    if (!preview) return;
+
+    const body = preview.length > 120 ? `${preview.slice(0, 117)}…` : preview;
+
+    await sendPushToPlayer(data.toPlayerId, {
+      title: `💬 ${fromName}`,
+      body,
+      url: SITE_URL,
+      data: {
+        type: 'dm',
+        friendId: data.fromPlayerId,
+        friendName: fromName,
+        url: SITE_URL,
+      },
+    });
   }
 );

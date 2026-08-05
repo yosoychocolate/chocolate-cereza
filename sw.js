@@ -48,15 +48,22 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || SW_ORIGIN + '/';
+  const data = event.notification.data || {};
+  const targetUrl = data.url || SW_ORIGIN + '/';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (let i = 0; i < clients.length; i++) {
         const client = clients[i];
         if ('focus' in client) {
-          if ('navigate' in client && targetUrl) {
-            return client.focus().then(() => client.navigate(targetUrl));
+          if (data.type === 'dm' && data.friendId) {
+            client.postMessage({
+              type: 'social:open-dm',
+              friendId: data.friendId,
+              friendName: data.friendName || 'Amigo',
+            });
+          } else if (data.type === 'room-invite') {
+            client.postMessage({ type: 'social:open-invites' });
           }
           return client.focus();
         }

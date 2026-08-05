@@ -448,7 +448,10 @@
 
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('sw.js?v=__APP_VERSION__').catch(() => {});
+    const swPath = typeof global.assetUrl === 'function'
+      ? global.assetUrl('sw.js?v=__APP_VERSION__')
+      : 'sw.js?v=__APP_VERSION__';
+    navigator.serviceWorker.register(swPath).catch(() => {});
   }
 
   async function sendDailyNotification() {

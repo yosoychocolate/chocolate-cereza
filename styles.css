@@ -225,6 +225,10 @@ html.intro-lock body {
   overflow: hidden;
 }
 
+#petal-rain * {
+  pointer-events: none !important;
+}
+
 .petal, .rain-heart {
   position: absolute;
   top: -30px;
@@ -2533,6 +2537,165 @@ html.is-ios-browser-tab .btn-notif-pink {
   font-size: 1.15rem;
   letter-spacing: 0.18em;
   color: rgba(255, 220, 130, 0.98);
+}
+
+.couple-room-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.couple-room-tab {
+  border: 1px solid rgba(255, 88, 168, 0.28);
+  background: rgba(20, 8, 18, 0.55);
+  color: rgba(255, 210, 230, 0.82);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.couple-room-tab.is-active {
+  background: rgba(255, 79, 163, 0.22);
+  border-color: rgba(255, 120, 190, 0.55);
+  color: #fff;
+}
+
+.couple-room-tabpanels {
+  margin-top: 0.35rem;
+}
+
+.couple-private-hint,
+.couple-invite-lead {
+  font-size: 0.82rem;
+  color: rgba(255, 200, 230, 0.72);
+  margin: 0 0 0.65rem;
+  text-align: center;
+}
+
+.couple-private-messages .couple-chat-msg.is-private {
+  display: flex;
+  width: 100%;
+}
+
+.couple-private-messages .couple-chat-msg.is-private.is-mine {
+  justify-content: flex-end;
+}
+
+.couple-private-messages .couple-chat-msg.is-private.is-theirs {
+  justify-content: flex-start;
+}
+
+.couple-private-messages .couple-chat-msg.is-private .couple-chat-bubble {
+  max-width: 85%;
+}
+
+.couple-private-messages .couple-chat-msg.is-mine .couple-chat-bubble {
+  background: rgba(255, 79, 163, 0.22);
+  border-color: rgba(255, 120, 190, 0.45);
+}
+
+.couple-private-messages .couple-chat-msg.is-theirs .couple-chat-bubble {
+  background: rgba(108, 59, 255, 0.18);
+  border-color: rgba(140, 100, 255, 0.35);
+}
+
+.couple-chat-empty {
+  text-align: center;
+  font-size: 0.82rem;
+  color: rgba(255, 200, 230, 0.55);
+  padding: 0.75rem 0.5rem;
+}
+
+.couple-invite-wrap,
+.couple-private-wrap {
+  padding-top: 0.15rem;
+}
+
+.couple-invite-code-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.couple-invite-add-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.couple-invite-add-form .couple-input {
+  flex: 1 1 160px;
+  max-width: 100%;
+  margin: 0;
+}
+
+.couple-invite-status {
+  min-height: 1.1rem;
+  font-size: 0.78rem;
+  text-align: center;
+  color: rgba(255, 200, 230, 0.65);
+  margin: 0.25rem 0 0.5rem;
+}
+
+.couple-invite-status.is-error {
+  color: #ff8a9a;
+}
+
+.couple-invite-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.couple-invite-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(255, 88, 168, 0.12);
+}
+
+.couple-invite-name {
+  font-size: 0.88rem;
+  color: rgba(255, 220, 235, 0.92);
+}
+
+.couple-invite-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.couple-invite-empty {
+  font-size: 0.82rem;
+  color: rgba(255, 200, 230, 0.55);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.couple-player-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.35rem 0;
+  font-size: 0.84rem;
+  border-bottom: 1px solid rgba(255, 88, 168, 0.1);
+}
+
+.couple-players-list {
+  margin: 0.5rem 0 0.25rem;
+  padding: 0;
 }
 
 .couple-players-list,
@@ -8809,4 +8972,1411 @@ body.casa-together-complete .nossa-casa-scene {
   border-radius: var(--radius-md);
 }
 
+/* ===== Amigos + mini chat flutuante ===== */
+.social-dock {
+  position: fixed;
+  bottom: clamp(0.85rem, 3vw, 1.5rem);
+  left: clamp(0.85rem, 3vw, 1.5rem);
+  z-index: 1600;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  max-width: min(22rem, calc(100vw - 1.5rem));
+}
 
+.social-friends-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 88, 168, 0.45);
+  background: linear-gradient(135deg, rgba(255, 79, 163, 0.28), rgba(108, 59, 255, 0.25));
+  color: #fff;
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.social-friends-badge {
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: #ff4fa3;
+  color: #fff;
+  font-size: 0.68rem;
+  line-height: 1.15rem;
+  text-align: center;
+}
+
+.social-friends-badge.is-pending {
+  background: #ffb020;
+  animation: social-badge-pulse 1.4s ease-in-out infinite;
+}
+
+.social-friends-badge.is-unread {
+  background: #6c3bff;
+  animation: social-badge-pulse 1.4s ease-in-out infinite;
+}
+
+.social-friends-badge.is-invite {
+  background: #20b4ff;
+  animation: social-badge-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes social-badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.social-friends-panel,
+.social-chat-window {
+  width: min(22rem, calc(100vw - 1.5rem));
+  max-height: min(32rem, 70vh);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 120, 190, 0.38);
+  background: linear-gradient(165deg, rgba(22, 12, 32, 0.98), rgba(10, 6, 18, 0.96));
+  box-shadow:
+    0 14px 42px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(255, 79, 163, 0.08) inset;
+  backdrop-filter: blur(12px);
+}
+
+.social-panel-header {
+  padding: 0.65rem 0.75rem 0.35rem;
+  border-bottom: 1px solid rgba(255, 88, 168, 0.15);
+}
+
+.social-panel-header h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.social-my-id-row {
+  margin: 0;
+  font-size: 0.72rem;
+  color: rgba(255, 200, 230, 0.75);
+  word-break: break-all;
+}
+
+.social-my-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.social-my-profile-text {
+  min-width: 0;
+}
+
+.social-profile-photo-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.social-profile-photo-btn:hover {
+  transform: scale(1.06);
+}
+
+.social-profile-photo-btn:focus-visible {
+  outline: 2px solid rgba(255, 79, 163, 0.65);
+  outline-offset: 2px;
+}
+
+.social-my-id-row code {
+  font-size: 0.68rem;
+}
+
+.social-username-form {
+  margin: 0.35rem 0 0.5rem;
+}
+
+.social-username-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.72rem;
+  color: rgba(255, 200, 230, 0.85);
+}
+
+.social-username-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.social-username-prefix {
+  font-size: 0.9rem;
+  color: rgba(255, 140, 200, 0.9);
+  flex-shrink: 0;
+}
+
+.social-username-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.social-invites-wrap,
+.social-friend-requests-wrap {
+  padding: 0.5rem 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 88, 168, 0.12);
+}
+
+.social-invites-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  color: rgba(255, 200, 120, 0.9);
+}
+
+.social-invite-card {
+  margin-bottom: 0.45rem;
+  padding: 0.45rem;
+  border-radius: 10px;
+  background: rgba(255, 79, 163, 0.1);
+  font-size: 0.78rem;
+}
+
+.social-invite-btns {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.social-add-friend-form {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.social-friends-status {
+  min-height: 1rem;
+  margin: 0;
+  padding: 0 0.75rem;
+  font-size: 0.72rem;
+  color: rgba(255, 200, 230, 0.65);
+}
+
+.social-friends-status.is-error {
+  color: #ff8a9a;
+}
+
+.social-friends-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0.75rem 0.65rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.social-friend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255, 88, 168, 0.1);
+}
+
+.social-friend-main {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.social-friend-name {
+  font-size: 0.84rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.social-friend-item.has-unread .social-friend-name {
+  font-weight: 600;
+}
+
+.social-friend-unread {
+  flex-shrink: 0;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: #6c3bff;
+  color: #fff;
+  font-size: 0.62rem;
+  line-height: 1.1rem;
+  text-align: center;
+}
+
+.social-friend-actions {
+  display: flex;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.social-icon-btn {
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 1px solid rgba(255, 88, 168, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 79, 163, 0.12);
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.social-icon-btn:hover {
+  background: rgba(255, 79, 163, 0.25);
+}
+
+.social-empty {
+  font-size: 0.78rem;
+  color: rgba(255, 200, 230, 0.55);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.social-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 88, 168, 0.18);
+  background: linear-gradient(135deg, rgba(255, 79, 163, 0.16), rgba(108, 59, 255, 0.12));
+}
+
+.social-chat-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.social-chat-avatar {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #fff;
+  background: linear-gradient(135deg, #ff4fa3, #6c3bff);
+  box-shadow: 0 2px 10px rgba(255, 79, 163, 0.35);
+  overflow: hidden;
+  position: relative;
+}
+
+.social-chat-avatar.is-online::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: #5dff9a;
+  border: 1.5px solid rgba(10, 6, 18, 0.92);
+  box-shadow: 0 0 3px rgba(93, 255, 154, 0.45);
+  pointer-events: none;
+}
+
+.social-avatar-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  flex-shrink: 0;
+  line-height: 0;
+  transition: transform 0.15s ease;
+}
+
+.social-avatar-btn:hover {
+  transform: scale(1.06);
+}
+
+.social-avatar-btn:focus-visible {
+  outline: 2px solid rgba(255, 79, 163, 0.65);
+  outline-offset: 2px;
+}
+
+.social-chat-avatar--sm {
+  width: 1.65rem;
+  height: 1.65rem;
+  font-size: 0.72rem;
+}
+
+.social-chat-avatar--xs {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.62rem;
+  box-shadow: 0 1px 6px rgba(255, 79, 163, 0.28);
+}
+
+.social-chat-avatar.social-avatar--photo img,
+.social-avatar--photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.social-chat-peer {
+  min-width: 0;
+}
+
+.social-chat-peer-name {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.social-chat-peer-status {
+  display: block;
+  margin-top: 0.08rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(255, 200, 230, 0.62);
+}
+
+.social-chat-peer-status.is-online {
+  color: #7dffb0;
+}
+
+.social-header-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 240, 250, 0.92);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.social-header-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: scale(1.04);
+}
+
+.social-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-height: 9rem;
+  max-height: 18rem;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(255, 79, 163, 0.07), transparent 52%),
+    radial-gradient(ellipse at 90% 100%, rgba(108, 59, 255, 0.06), transparent 45%),
+    rgba(6, 4, 12, 0.35);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 120, 190, 0.35) transparent;
+}
+
+.social-chat-messages::-webkit-scrollbar {
+  width: 5px;
+}
+
+.social-chat-messages::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 120, 190, 0.35);
+}
+
+.social-chat-msg {
+  max-width: 88%;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.35rem;
+  animation: social-chat-in 0.22s ease-out;
+}
+
+.social-friend-avatar {
+  flex-shrink: 0;
+}
+
+@keyframes social-chat-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.social-chat-bubble {
+  padding: 0.52rem 0.72rem 0.38rem;
+  border-radius: 16px;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+}
+
+.social-chat-msg.is-mine {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.social-chat-msg.is-mine .social-chat-bubble {
+  background: linear-gradient(135deg, rgba(255, 79, 163, 0.92), rgba(190, 55, 130, 0.88));
+  color: #fff;
+  border-bottom-right-radius: 5px;
+}
+
+.social-chat-msg.is-theirs {
+  align-self: flex-start;
+}
+
+.social-chat-msg.is-theirs .social-chat-bubble {
+  background: linear-gradient(135deg, rgba(58, 38, 98, 0.95), rgba(36, 28, 68, 0.92));
+  color: rgba(255, 235, 250, 0.96);
+  border: 1px solid rgba(108, 59, 255, 0.28);
+  border-bottom-left-radius: 5px;
+}
+
+.social-chat-msg.is-pending {
+  opacity: 0.65;
+}
+
+.social-chat-text {
+  display: block;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.social-chat-time {
+  display: block;
+  margin-top: 0.22rem;
+  font-size: 0.62rem;
+  opacity: 0.72;
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+
+.social-chat-empty {
+  margin: auto;
+  text-align: center;
+  font-size: 0.82rem;
+  color: rgba(255, 200, 230, 0.62);
+  padding: 1.25rem 0.5rem;
+}
+
+.social-avatar-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.social-avatar-lightbox.hidden {
+  display: none;
+}
+
+.social-avatar-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(4, 2, 10, 0.78);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.social-avatar-lightbox-card {
+  position: relative;
+  z-index: 1;
+  width: min(18rem, 88vw);
+  padding: 1rem 1rem 0.85rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 120, 190, 0.35);
+  background: linear-gradient(165deg, rgba(22, 12, 32, 0.98), rgba(10, 6, 18, 0.96));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+
+.social-avatar-lightbox-close {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 240, 250, 0.92);
+  cursor: pointer;
+}
+
+.social-avatar-lightbox-visual {
+  width: min(11rem, 72vw);
+  height: min(11rem, 72vw);
+  margin: 0.35rem auto 0.65rem;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(255, 79, 163, 0.35);
+  background: linear-gradient(135deg, #ff4fa3, #6c3bff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.social-avatar-lightbox-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.social-avatar-lightbox-fallback {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 3.2rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.social-avatar-lightbox-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(255, 235, 250, 0.96);
+}
+
+.social-chat-form {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.65rem 0.65rem;
+  border-top: 1px solid rgba(255, 88, 168, 0.14);
+  background: rgba(8, 4, 14, 0.55);
+}
+
+.social-chat-input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 88, 168, 0.28);
+  background: rgba(8, 4, 16, 0.72);
+  color: #fff;
+  padding: 0.48rem 0.85rem;
+  font-size: 0.84rem;
+  font-family: 'Quicksand', sans-serif;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.social-chat-input::placeholder {
+  color: rgba(255, 200, 230, 0.42);
+}
+
+.social-chat-input:focus {
+  outline: none;
+  border-color: rgba(255, 79, 163, 0.55);
+  box-shadow: 0 0 0 3px rgba(255, 79, 163, 0.12);
+}
+
+.social-chat-send {
+  width: 2.4rem;
+  height: 2.4rem;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  background: linear-gradient(135deg, #ff4fa3, #6c3bff);
+  box-shadow: 0 3px 14px rgba(255, 79, 163, 0.42);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.social-chat-send:hover:not(:disabled) {
+  transform: scale(1.06);
+  box-shadow: 0 4px 18px rgba(255, 79, 163, 0.52);
+}
+
+.social-chat-send:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.social-chat-window.is-minimized .social-chat-messages,
+.social-chat-window.is-minimized .social-chat-form {
+  display: none;
+}
+
+.social-toast {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(20, 10, 28, 0.95);
+  border: 1px solid rgba(255, 88, 168, 0.35);
+  font-size: 0.75rem;
+  max-width: min(18rem, calc(100vw - 2rem));
+  white-space: normal;
+  line-height: 1.35;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  z-index: 2;
+}
+
+.social-toast.is-clickable {
+  cursor: pointer;
+  border-color: rgba(108, 59, 255, 0.55);
+}
+
+.social-toast.is-clickable:hover {
+  background: rgba(30, 16, 42, 0.98);
+}
+
+@media (max-width: 520px) {
+  .social-dock {
+    bottom: 5.5rem;
+  }
+}
+
+/* Portal → /jugar/ */
+.portal-game-lead {
+  margin: 0.35rem 0 0.85rem;
+  font-size: 0.92rem;
+  color: rgba(255, 210, 235, 0.88);
+}
+
+.portal-game-actions {
+  margin-bottom: 0.65rem;
+}
+
+.portal-jugar-btn {
+  display: inline-flex;
+  text-decoration: none;
+  font-size: 1rem;
+  padding: 0.55rem 1.1rem;
+}
+
+.portal-game-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 200, 230, 0.72);
+  line-height: 1.45;
+}
+
+.site-hub-nav-link {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Página /jugar/ — scroll no .jugar-main (flex), jogo inerte até toque */
+html.jugar-page {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.jugar-page,
+body.jugar-body {
+  margin: 0;
+}
+
+body.jugar-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  height: 100%;
+}
+
+html.jugar-page #petal-rain {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html.jugar-page #ambient-bg,
+html.jugar-page #ambient-bg * {
+  pointer-events: none !important;
+}
+
+.jugar-topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+html.jugar-page .jugar-header {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1200;
+  width: min(100%, 460px);
+  margin: 0.45rem auto 0;
+  padding: 0.45rem 0.55rem 0.5rem;
+  border-radius: 14px;
+  pointer-events: auto;
+}
+
+html.jugar-page .jugar-header .jugar-topbar {
+  margin: 0;
+  padding: 0 0.1rem 0.45rem;
+  background: none;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.jugar-page .jugar-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+html.jugar-page .jugar-mode-tabs .game-mode-tab {
+  width: 100%;
+  margin: 0;
+  padding: 0.42rem 0.5rem;
+  font-size: 0.78rem;
+  border-radius: 10px;
+}
+
+html.jugar-page .jugar-mode-hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.jugar-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  z-index: 1100;
+  padding: 0 0.75rem 1.5rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 79, 163, 0.45) rgba(18, 10, 28, 0.3);
+  scrollbar-gutter: stable;
+}
+
+html.jugar-page .jugar-main::-webkit-scrollbar {
+  width: 5px;
+}
+
+html.jugar-page .jugar-main::-webkit-scrollbar-track {
+  margin: 0.35rem 0;
+  background: rgba(18, 10, 28, 0.4);
+  border-radius: 999px;
+}
+
+html.jugar-page .jugar-main::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 79, 163, 0.7) 0%,
+    rgba(108, 59, 255, 0.55) 100%
+  );
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(255, 79, 163, 0.22);
+}
+
+html.jugar-page .jugar-main::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 88, 168, 0.9) 0%,
+    rgba(120, 70, 255, 0.75) 100%
+  );
+}
+
+html.jugar-page .jugar-main::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+html.jugar-page,
+html.jugar-page body.jugar-body {
+  scrollbar-width: none;
+}
+
+html.jugar-page::-webkit-scrollbar,
+html.jugar-page body.jugar-body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.jugar-main #section-game {
+  position: relative;
+  isolation: isolate;
+  margin-top: 0.65rem;
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+
+html.jugar-page #section-game > h2 {
+  display: none;
+}
+
+html.jugar-page #section-game > .game-hint,
+html.jugar-page #section-game > .game-mode-tabs {
+  display: none;
+}
+
+html.jugar-page #section-game > .couple-mode,
+html.jugar-page #section-game > .game-meta-wrap,
+html.jugar-page #section-game > #cherry-game-shell,
+html.jugar-page #section-game > #spaceship-shell {
+  position: relative;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+html.jugar-page #section-game > #cherry-game-shell,
+html.jugar-page #section-game > #spaceship-shell,
+html.jugar-page #game-container,
+html.jugar-page #spaceship-container,
+html.jugar-page .game-chrome,
+html.jugar-page .spaceship-chrome {
+  pointer-events: auto !important;
+  touch-action: pan-y !important;
+}
+
+/* Só o canvas fica bloqueado até interagir */
+html.jugar-page body:not(.jugar-game-active) #game-canvas-stack,
+html.jugar-page body:not(.jugar-game-active) #game-canvas-stack .game-layer-canvas,
+html.jugar-page body:not(.jugar-game-active) #spaceship-shell:not(.hidden) .spaceship-canvas {
+  pointer-events: none !important;
+  touch-action: pan-y !important;
+}
+
+html.jugar-page body.jugar-game-active #game-canvas-stack,
+html.jugar-page body.jugar-game-active #game-canvas-stack .game-layer-canvas,
+html.jugar-page body.jugar-game-active #spaceship-shell:not(.hidden) .spaceship-canvas {
+  pointer-events: auto !important;
+  touch-action: none !important;
+}
+
+html.jugar-page #spaceship-shell:not(.hidden) .spaceship-chrome,
+html.jugar-page #spaceship-shell:not(.hidden) .spaceship-numpad,
+html.jugar-page #spaceship-shell:not(.hidden) .spaceship-numpad button,
+html.jugar-page #spaceship-shell:not(.hidden) .spaceship-answer-panel {
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+}
+
+.game-meta-panel:not(.is-open) {
+  pointer-events: none !important;
+}
+
+.jugar-back-link {
+  color: rgba(255, 200, 230, 0.95);
+  text-decoration: none;
+  font-size: 0.82rem;
+}
+
+.jugar-back-link:hover {
+  text-decoration: underline;
+}
+
+.jugar-topbar-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+html.jugar-page .music-float-wrap {
+  z-index: 1650;
+  pointer-events: auto;
+}
+
+html.jugar-page .music-float-wrap * {
+  pointer-events: auto;
+}
+
+html.jugar-page .social-dock {
+  z-index: 1650;
+  pointer-events: auto;
+}
+
+/* /jugar/ — layout compacto (estilo portal de mini games) */
+html.jugar-page .jugar-main {
+  max-width: min(100%, 460px);
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0.45rem 0.5rem 1rem;
+}
+
+html.jugar-page .jugar-header .jugar-back-link {
+  font-size: 0.78rem;
+}
+
+html.jugar-page .jugar-header .jugar-topbar-title {
+  font-size: 0.82rem;
+}
+
+html.jugar-page #section-game {
+  padding: 0.65rem 0.55rem 0.85rem;
+  margin-bottom: 0.65rem;
+}
+
+html.jugar-page #section-game > h2 {
+  display: none;
+}
+
+html.jugar-page .game-mode-tabs {
+  margin-bottom: 0;
+}
+
+html.jugar-page #section-game > .game-hint {
+  display: none;
+}
+
+html.jugar-page .couple-mode {
+  margin-bottom: 0.65rem;
+}
+
+html.jugar-page .couple-panel {
+  padding: 0.75rem 0.7rem 0.85rem;
+}
+
+html.jugar-page .couple-title {
+  font-size: 0.95rem;
+  margin-bottom: 0.55rem;
+  padding-right: 3.5rem;
+}
+
+html.jugar-page .couple-subtitle {
+  font-size: 0.78rem;
+  margin-bottom: 0.35rem;
+}
+
+html.jugar-page .couple-mascot-scene {
+  padding: 0.45rem 0.35rem;
+}
+
+html.jugar-page .couple-mascot-stage {
+  min-height: 52px;
+}
+
+html.jugar-page .couple-mascot-caption {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+html.jugar-page .couple-chat-messages {
+  max-height: 110px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+html.jugar-page .couple-chat-emoji {
+  width: 1.85rem;
+  height: 1.85rem;
+  font-size: 0.95rem;
+}
+
+html.jugar-page .couple-btn {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+  min-height: 40px;
+}
+
+html.jugar-page .couple-btn-small {
+  min-height: 36px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+html.jugar-page .couple-ranking-list {
+  font-size: 0.78rem;
+}
+
+html.jugar-page #game-container,
+html.jugar-page #game-container.game-mobile {
+  min-height: 0 !important;
+  max-width: min(100%, 340px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+html.jugar-page #game-container.game-mobile .game-canvas-stack,
+html.jugar-page #game-container .game-canvas-stack {
+  min-height: 0 !important;
+  max-height: none;
+}
+
+html.jugar-page #spaceship-container,
+html.jugar-page #spaceship-container.spaceship-mobile {
+  min-height: 0 !important;
+  max-width: min(100%, 340px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+html.jugar-page .game-meta-wrap {
+  margin-bottom: 0.35rem;
+}
+
+html.jugar-page .game-meta-btn {
+  padding: 0.32rem 0.25rem;
+  font-size: 0.58rem;
+  min-height: 2rem;
+}
+
+html.jugar-page .game-meta-panel {
+  padding: 0.65rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  html.jugar-page #game-container.game-mobile {
+    min-height: 0 !important;
+  }
+
+  html.jugar-page #spaceship-container.spaceship-mobile {
+    min-height: 0 !important;
+  }
+}
+
+/* /jugar/ — canvas limpo; chrome (HUD, botões, modais) fora da tela do jogo */
+html.jugar-page #section-game {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+html.jugar-page #section-game > .couple-mode {
+  order: 1;
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+html.jugar-page #section-game > #cherry-game-shell,
+html.jugar-page #section-game > #spaceship-shell {
+  order: 2;
+  flex: 0 0 auto;
+}
+
+html.jugar-page #section-game > .game-meta-wrap {
+  order: 3;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+html.jugar-page .cherry-game-shell,
+html.jugar-page .spaceship-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: min(100%, 340px);
+  margin: 0 auto;
+}
+
+html.jugar-page .cherry-game-shell.hidden,
+html.jugar-page .spaceship-shell.hidden {
+  display: none !important;
+}
+
+html.jugar-page #game-container,
+html.jugar-page #spaceship-container {
+  padding-bottom: 0 !important;
+  max-width: 100%;
+  margin: 0;
+}
+
+html.jugar-page .game-chrome,
+html.jugar-page .spaceship-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+html.jugar-page .game-hud-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+html.jugar-page .game-chrome .game-score {
+  position: static;
+  top: auto;
+  left: auto;
+  max-width: none;
+  flex: 1 1 auto;
+  padding: 0.2rem 0.45rem;
+}
+
+html.jugar-page .game-chrome .game-score-num {
+  font-size: 0.78rem;
+}
+
+html.jugar-page .game-chrome .game-record-inline {
+  font-size: 0.48rem;
+}
+
+html.jugar-page .game-chrome .game-lives {
+  position: static;
+  top: auto;
+  bottom: auto;
+  left: auto;
+  flex: 0 0 auto;
+  flex-direction: row;
+  padding: 0.15rem 0.35rem;
+}
+
+html.jugar-page .game-chrome .game-lives-label {
+  display: inline;
+  font-size: 0.58rem;
+}
+
+html.jugar-page .game-chrome .life-heart {
+  font-size: 0.58rem;
+}
+
+html.jugar-page .game-chrome .game-actions {
+  position: static;
+  top: auto;
+  right: auto;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0;
+  pointer-events: auto !important;
+}
+
+html.jugar-page .game-chrome .game-actions .game-pause-btn,
+html.jugar-page .game-chrome .game-actions .game-action-btn {
+  min-height: 1.75rem;
+  min-width: auto;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.64rem;
+}
+
+html.jugar-page .game-chrome .game-pause-label,
+html.jugar-page .game-chrome .game-action-text {
+  display: inline !important;
+}
+
+html.jugar-page .game-chrome .game-progress {
+  position: static;
+  padding: 0.3rem 0.4rem 0.25rem;
+  background: rgba(18, 11, 23, 0.55);
+  border-radius: 8px;
+}
+
+html.jugar-page .game-chrome .game-pause-screen {
+  display: none !important;
+}
+
+html.jugar-page .game-chrome .game-milestone,
+html.jugar-page .game-chrome .game-over-screen,
+html.jugar-page .game-chrome .game-endless-reward {
+  position: static;
+  inset: auto;
+  transform: none;
+  width: 100%;
+  max-height: none;
+  overflow: visible;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 79, 163, 0.28);
+  background: rgba(18, 11, 23, 0.92);
+  box-shadow: none;
+  padding: 0.5rem 0.6rem;
+  gap: 0.3rem;
+  pointer-events: auto !important;
+}
+
+html.jugar-page .game-chrome .game-milestone.hidden,
+html.jugar-page .game-chrome .game-over-screen.hidden,
+html.jugar-page .game-chrome .game-endless-reward.hidden {
+  display: none !important;
+}
+
+html.jugar-page .game-chrome .game-milestone p,
+html.jugar-page .game-chrome .game-over-screen p {
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+html.jugar-page .game-chrome .game-over-sub,
+html.jugar-page .game-chrome .game-milestone-sub {
+  font-size: 0.62rem !important;
+}
+
+html.jugar-page .game-chrome .game-continue {
+  position: static;
+  transform: none;
+  width: 100%;
+  margin: 0;
+  min-height: 1.85rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.66rem;
+}
+
+html.jugar-page .game-chrome .game-continue.hidden {
+  display: none !important;
+}
+
+html.jugar-page .game-chrome .game-resume-btn,
+html.jugar-page .game-chrome .game-toast-dismiss,
+html.jugar-page .game-chrome #game-endless-enter {
+  min-height: 1.85rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.66rem;
+}
+
+html.jugar-page .game-chrome .game-reward-medal {
+  font-size: 1.35rem;
+}
+
+html.jugar-page .game-chrome .game-reward-title {
+  font-size: 0.74rem;
+}
+
+html.jugar-page .game-chrome .game-reward-sub,
+html.jugar-page .game-chrome .game-reward-bonus {
+  font-size: 0.6rem;
+  line-height: 1.25;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-top-ui {
+  position: static;
+  top: auto;
+  left: auto;
+  right: auto;
+  gap: 0.25rem;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-hud {
+  justify-content: center;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-missions {
+  position: static;
+  width: 100%;
+  max-width: 100%;
+  max-height: none;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-missions-list {
+  max-height: 3.5rem;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-lives {
+  position: static;
+  top: auto;
+  right: auto;
+  display: flex;
+  justify-content: center;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-answer-panel {
+  position: static;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-numpad {
+  position: static;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  left: auto;
+  bottom: auto;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-numpad button {
+  min-height: 2rem;
+  font-size: 0.82rem;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-actions {
+  position: static;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-actions .game-pause-btn,
+html.jugar-page .spaceship-chrome .spaceship-actions .game-action-btn {
+  min-height: 1.75rem;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.64rem;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-pause-label,
+html.jugar-page .spaceship-chrome .game-action-text {
+  display: inline !important;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-overlay,
+html.jugar-page .spaceship-chrome #spaceship-pause-screen {
+  position: static;
+  inset: auto;
+  transform: none;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 79, 163, 0.28);
+  padding: 0.5rem 0.6rem;
+  gap: 0.3rem;
+}
+
+html.jugar-page .spaceship-chrome #spaceship-pause-screen {
+  display: none !important;
+}
+
+html.jugar-page .spaceship-chrome .spaceship-overlay.hidden {
+  display: none !important;
+}
+
+html.jugar-page .spaceship-container.spaceship-mobile {
+  padding-bottom: 0 !important;
+}
+
+html.jugar-page .game-meta-bar {
+  gap: 0.3rem;
+}

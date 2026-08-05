@@ -254,6 +254,25 @@ export function renderChatRow(type, name, message, timeLabel = '', timeIso = '')
 }
 
 /**
+ * @param {string} message
+ * @param {boolean} isMine
+ * @param {string} [timeLabel]
+ * @param {string} [timeIso]
+ * @returns {string}
+ */
+export function renderPrivateChatRow(message, isMine, timeLabel = '', timeIso = '') {
+  const timeHtml = timeLabel
+    ? `<time class="couple-chat-time" datetime="${escapeHtml(timeIso)}">${escapeHtml(timeLabel)}</time>`
+    : '';
+  return `<div class="couple-chat-msg is-private ${isMine ? 'is-mine' : 'is-theirs'}">
+    <div class="couple-chat-bubble">
+      <div class="couple-chat-meta">${timeHtml}</div>
+      <span class="couple-chat-text">${escapeHtml(message)}</span>
+    </div>
+  </div>`;
+}
+
+/**
  * @param {number} streak
  * @returns {string}
  */
@@ -405,6 +424,7 @@ export const CoupleMascots = {
   buildMascotScene,
   renderRankingRow,
   renderChatRow,
+  renderPrivateChatRow,
   renderStreakBadge,
   renderGuardianPair,
   renderFooterGuardians,

@@ -44,6 +44,46 @@ import {
   MAX_CHAT_LENGTH,
 } from './cloud-chat.js?v=__APP_VERSION__';
 import {
+  startGlobalPresenceLifecycle,
+  stopGlobalPresenceLifecycle,
+  fetchGlobalPresence,
+  isPresenceOnline as isGlobalPresenceOnline,
+  globalPresenceRef,
+} from './cloud-global-presence.js?v=__APP_VERSION__';
+import {
+  addFriendContact,
+  removeFriendContact,
+  subscribeFriends,
+  fetchFriendProfileName,
+} from './cloud-friends.js?v=__APP_VERSION__';
+import {
+  sendFriendRequest,
+  acceptFriendRequest,
+  declineFriendRequest,
+  subscribeIncomingFriendRequests,
+} from './cloud-friend-requests.js?v=__APP_VERSION__';
+import {
+  sendGlobalDm,
+  subscribeGlobalDm,
+  subscribeIncomingGlobalDm,
+  buildDmThreadId,
+} from './cloud-global-dm.js?v=__APP_VERSION__';
+import {
+  sendRoomInvite,
+  subscribePendingInvites,
+  subscribePendingInvitesByName,
+  updateInviteStatus,
+  updateInviteStatusByName,
+} from './cloud-room-invites.js?v=__APP_VERSION__';
+import {
+  claimUsername,
+  resolvePlayerId,
+  fetchPlayerProfile,
+  setPlayerPhotoUrl as persistPlayerPhotoUrl,
+  normalizeUsername,
+} from './cloud-usernames.js?v=__APP_VERSION__';
+import { onSnapshot } from './firebase-manager.js?v=__APP_VERSION__';
+import {
   coupleRef,
   createDefaultCoupleStats,
   fetchCoupleStats,
@@ -155,6 +195,24 @@ let restoreGeneration = 0;
 const roomListener = createRoomListener(fetchRoom);
 const chatListener = createChatListener();
 const giftListener = createGiftListener();
+
+/** @type {boolean} */
+let socialPresenceActive = false;
+
+/** @type {(() => void) | null} */
+let unsubscribeFriendRequests = null;
+
+/** @type {(() => void) | null} */
+let unsubscribeFriends = null;
+
+/** @type {(() => void) | null} */
+let unsubscribeInvites = null;
+
+/** @type {(() => void) | null} */
+let unsubscribeInvitesByName = null;
+
+/** @type {(() => void) | null} */
+let unsubscribeIncomingDms = null;
 
 /** @type {Set<string>} */
 const processedGiftIds = new Set();
@@ -1328,6 +1386,603 @@ export function unsubscribeFromChat(callback) {
   chatListener.unsubscribe(callback);
 }
 
+function requirePlayerId() {
+  if (currentPlayerId) return currentPlayerId;
+  const id = ensureSocialIdentity();
+  currentPlayerId = id;
+  return id;
+}
+
+function getSocialPlayerPayload() {
+  const id = ensureSocialIdentity();
+  let name = 'Jugador';
+  try {
+    const raw = localStorage.getItem('ChocolateCerezaPlayerIdentity');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.username) name = `@${parsed.username}`;
+      else if (parsed.name?.trim()) name = parsed.name.trim();
+    }
+  } catch (_) { /* ignore */ }
+  return { id, name, joinedAt: Date.now() };
+}
+
+/**
+ * Inicia presença global + listeners sociais (amigos, convites).
+ * @param {string} [displayName]
+ */
+export function initSocialLayer(displayName = '') {
+  if (!isFirebaseConfigValid() || !isFirebaseReady()) return fail('NOT_READY', 'Firebase no listo.');
+  initFirebase();
+  const db = getFirestoreDb();
+  if (!db) return fail('NO_DB', 'Sin conexión.');
+
+  const id = ensureSocialIdentity();
+  if (!currentRoom) currentPlayerId = id;
+  let name = 'Jugador';
+  try {
+    const raw = localStorage.getItem('ChocolateCerezaPlayerIdentity');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.username) name = `@${parsed.username}`;
+      else if (parsed.name?.trim()) name = parsed.name.trim();
+      else if (displayName?.trim()) name = displayName.trim();
+    }
+  } catch (_) {
+    name = (displayName || getLocalPlayer()?.name || '').trim() || 'Jugador';
+  }
+
+  if (!socialPresenceActive) {
+    startGlobalPresenceLifecycle(db, id, name);
+    socialPresenceActive = true;
+  }
+
+  return { success: true, playerId: id };
+}
+
+function getOrCreatePlayerIdFromIdentity() {
+  try {
+    const raw = localStorage.getItem('ChocolateCerezaPlayerIdentity');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.id) return parsed.id;
+    }
+  } catch (_) { /* ignore */ }
+
+  const id = crypto.randomUUID();
+  try {
+    const raw = localStorage.getItem('ChocolateCerezaPlayerIdentity');
+    let name = '';
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      name = typeof parsed?.name === 'string' ? parsed.name : '';
+    }
+    localStorage.setItem('ChocolateCerezaPlayerIdentity', JSON.stringify({ id, name }));
+  } catch (_) { /* ignore */ }
+  return id;
+}
+
+/**
+ * ID estável para amigos, convites e DM — sempre o da identidade local.
+ * @returns {string}
+ */
+function ensureSocialIdentity() {
+  const identityId = getOrCreatePlayerIdFromIdentity();
+  if (!identityId) throw new Error('Jugador no identificado.');
+
+  const session = getSession();
+  if (session && session.playerId !== identityId) {
+    clearSession();
+  }
+
+  return identityId;
+}
+
+function requireSocialPlayerId() {
+  const id = ensureSocialIdentity();
+  if (!currentRoom) {
+    currentPlayerId = id;
+  }
+  return id;
+}
+
+export function stopSocialLayer() {
+  if (!socialPresenceActive) return;
+  try {
+    const db = getFirestoreDb();
+    const id = currentPlayerId || getOrCreatePlayerIdFromIdentity();
+    if (db && id) stopGlobalPresenceLifecycle();
+  } catch (_) { /* ignore */ }
+  socialPresenceActive = false;
+}
+
+/**
+ * Envia pedido de amizade por @usuario (ou UUID legado).
+ * @param {string} friendIdentifier @usuario ou UUID
+ * @param {string} [friendName]
+ */
+export async function addFriend(friendIdentifier, friendName = '') {
+  try {
+    const db = requireDb();
+    const ownerId = requirePlayerId();
+    const fid = await resolvePlayerId(db, friendIdentifier);
+    if (fid === ownerId) return fail('SELF', 'No puedes añadirte a ti mismo.');
+
+    const player = getLocalPlayer();
+    const myProfile = await fetchPlayerProfile(db, ownerId);
+    const fromName = myProfile.username
+      ? `@${myProfile.username}`
+      : (friendName.trim() || player?.name || getSocialPlayerPayload().name || 'Jugador');
+
+    await sendFriendRequest(db, ownerId, fromName, fid);
+    const profile = await fetchPlayerProfile(db, fid);
+    const label = profile.username ? `@${profile.username}` : (profile.displayName || 'Amigo');
+    return { success: true, friendId: fid, pending: true, message: `Solicitud enviada a ${label}.` };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return fail('ADD_FRIEND_FAILED', msg);
+  }
+}
+
+/**
+ * @param {string} rawUsername
+ */
+export async function setPlayerUsername(rawUsername) {
+  try {
+    const db = requireDb();
+    const playerId = requireSocialPlayerId();
+    const username = await claimUsername(db, playerId, `@${normalizeUsername(rawUsername)}`, rawUsername);
+    const displayName = `@${username}`;
+
+    if (currentRoom && currentPlayerId) {
+      await setDoc(profileRef(db, currentRoom.code, currentPlayerId), { name: displayName }, { merge: true });
+      const refreshed = await fetchRoom(db, currentRoom.code);
+      if (refreshed) {
+        currentRoom = refreshed;
+        window.dispatchEvent(new CustomEvent('couple:roomChanged'));
+      }
+    }
+
+    return { success: true, username, displayName };
+  } catch (err) {
+    return fail('USERNAME_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * Atualiza o nome na sala atual para @usuario (se definido).
+ */
+export async function syncLocalRoomDisplayName() {
+  if (!currentRoom || !currentPlayerId) {
+    return fail('NOT_IN_ROOM', 'No estás en una sala.');
+  }
+  try {
+    const db = requireDb();
+    const { name } = getSocialPlayerPayload();
+    if (!name || name === 'Jugador') {
+      return fail('NO_NAME', 'Sin usuario configurado.');
+    }
+    await setDoc(profileRef(db, currentRoom.code, currentPlayerId), { name }, { merge: true });
+    const refreshed = await fetchRoom(db, currentRoom.code);
+    if (refreshed) currentRoom = refreshed;
+    persistSession(currentRoom, {
+      id: currentPlayerId,
+      name,
+      joinedAt: getLocalPlayer()?.joinedAt || Date.now(),
+    });
+    return { success: true, name };
+  } catch (err) {
+    return fail('SYNC_NAME_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @returns {Promise<{ success: boolean, username?: string, photoUrl?: string, message?: string }>}
+ */
+export async function loadPlayerUsername() {
+  try {
+    const db = requireDb();
+    const playerId = requirePlayerId();
+    const profile = await fetchPlayerProfile(db, playerId);
+    return {
+      success: true,
+      username: profile.username || '',
+      photoUrl: profile.photoUrl || '',
+    };
+  } catch (err) {
+    return fail('USERNAME_LOAD_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {string} playerId
+ * @returns {Promise<{ success: boolean, profile?: { username: string, displayName: string, photoUrl: string }, message?: string }>}
+ */
+export async function getPlayerProfile(playerId) {
+  try {
+    const db = requireDb();
+    const id = String(playerId || '').trim();
+    if (!id) return fail('NO_PLAYER', 'Jugador no identificado.');
+    const profile = await fetchPlayerProfile(db, id);
+    return { success: true, profile };
+  } catch (err) {
+    return fail('PROFILE_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {string} photoUrl
+ * @returns {Promise<{ success: boolean, photoUrl?: string, message?: string }>}
+ */
+export async function setPlayerPhotoUrl(photoUrl) {
+  try {
+    const db = requireDb();
+    const playerId = requireSocialPlayerId();
+    const url = await persistPlayerPhotoUrl(db, playerId, photoUrl);
+    return { success: true, photoUrl: url };
+  } catch (err) {
+    return fail('PHOTO_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {string} fromPlayerId
+ */
+export async function acceptFriendRequestFrom(fromPlayerId) {
+  try {
+    const db = requireDb();
+    const myId = requirePlayerId();
+    const myName = getSocialPlayerPayload().name || 'Jugador';
+    await acceptFriendRequest(db, myId, fromPlayerId, myName);
+    return { success: true };
+  } catch (err) {
+    return fail('ACCEPT_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {string} fromPlayerId
+ */
+export async function declineFriendRequestFrom(fromPlayerId) {
+  try {
+    const db = requireDb();
+    await declineFriendRequest(db, requirePlayerId(), fromPlayerId);
+    return { success: true };
+  } catch (err) {
+    return fail('DECLINE_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {(requests: import('./cloud-friend-requests.js').FriendRequest[]) => void} callback
+ */
+export function subscribeFriendRequests(callback) {
+  if (typeof callback !== 'function') return () => {};
+  try {
+    const db = requireDb();
+    const id = requirePlayerId();
+    if (unsubscribeFriendRequests) unsubscribeFriendRequests();
+    unsubscribeFriendRequests = subscribeIncomingFriendRequests(db, id, callback);
+    return () => {
+      if (unsubscribeFriendRequests) {
+        unsubscribeFriendRequests();
+        unsubscribeFriendRequests = null;
+      }
+    };
+  } catch (err) {
+    console.warn('[CloudManager] subscribeFriendRequests:', err);
+    return () => {};
+  }
+}
+
+/**
+ * @param {string} friendId
+ */
+export async function removeFriend(friendId) {
+  try {
+    const db = requireDb();
+    await removeFriendContact(db, requirePlayerId(), friendId);
+    return { success: true };
+  } catch (err) {
+    return fail('REMOVE_FRIEND_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {(friends: import('./cloud-friends.js').ReturnType<typeof import('./cloud-friends.js').friendFromDoc>[]) => void} callback
+ */
+export function subscribeFriendsList(callback) {
+  if (typeof callback !== 'function') return () => {};
+  try {
+    const db = requireDb();
+    const ownerId = requirePlayerId();
+    if (unsubscribeFriends) unsubscribeFriends();
+    unsubscribeFriends = subscribeFriends(db, ownerId, callback);
+    return () => {
+      if (unsubscribeFriends) {
+        unsubscribeFriends();
+        unsubscribeFriends = null;
+      }
+    };
+  } catch (err) {
+    console.warn('[CloudManager] subscribeFriendsList:', err);
+    return () => {};
+  }
+}
+
+/**
+ * @param {string} friendId
+ * @param {(presence: { online: boolean, lastSeen: number, name: string }) => void} callback
+ */
+export function subscribeFriendPresence(friendId, callback) {
+  if (!friendId || typeof callback !== 'function') return () => {};
+  try {
+    const db = requireDb();
+    return onSnapshot(
+      globalPresenceRef(db, friendId),
+      (snap) => {
+        if (!snap.exists()) {
+          callback({ online: false, lastSeen: 0, name: '' });
+          return;
+        }
+        const data = snap.data();
+        const lastSeen = typeof data.lastSeen === 'number' ? data.lastSeen : 0;
+        callback({
+          name: typeof data.name === 'string' ? data.name : '',
+          lastSeen,
+          online: isGlobalPresenceOnline({ online: data.online === true, lastSeen }),
+        });
+      },
+      () => callback({ online: false, lastSeen: 0, name: '' })
+    );
+  } catch (err) {
+    console.warn('[CloudManager] subscribeFriendPresence:', err);
+    return () => {};
+  }
+}
+
+/**
+ * @param {string} friendId
+ * @param {string} message
+ */
+export async function sendFriendMessage(friendId, message) {
+  try {
+    const db = requireDb();
+    const fromId = requirePlayerId();
+    const player = getLocalPlayer();
+    const fromName = player?.name || getSocialPlayerPayload().name || 'Jugador';
+    await sendGlobalDm(db, fromId, friendId, fromName, message);
+    return { success: true };
+  } catch (err) {
+    return fail('DM_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {string} friendId
+ * @param {(messages: import('./cloud-global-dm.js').GlobalDmMessage[]) => void} callback
+ * @param {(err: Error) => void} [onError]
+ */
+export function subscribeFriendMessages(friendId, callback, onError) {
+  if (!friendId || typeof callback !== 'function') return () => {};
+  try {
+    const db = requireDb();
+    const threadId = buildDmThreadId(requirePlayerId(), friendId);
+    return subscribeGlobalDm(db, threadId, callback, onError);
+  } catch (err) {
+    console.warn('[CloudManager] subscribeFriendMessages:', err);
+    if (typeof onError === 'function') {
+      onError(err instanceof Error ? err : new Error(String(err)));
+    }
+    return () => {};
+  }
+}
+
+/**
+ * Resolve amigo por @usuario (ID pode estar desatualizado na lista).
+ * @param {import('firebase/firestore').Firestore} db
+ * @param {string} friendId
+ * @param {string} [friendName]
+ */
+async function resolveFriendTargetId(db, friendId, friendName = '') {
+  const label = (friendName || '').trim();
+  if (label.startsWith('@')) {
+    try {
+      return await resolvePlayerId(db, label);
+    } catch (_) { /* fallback to stored id */ }
+  }
+
+  const normalized = normalizeUsername(label);
+  if (normalized) {
+    try {
+      return await resolvePlayerId(db, normalized);
+    } catch (_) { /* fallback */ }
+  }
+
+  return friendId;
+}
+
+/**
+ * Convida amigo — sempre cria sala nova para o convite.
+ * @param {string} friendId
+ * @param {string} [friendName]
+ */
+export async function inviteFriendToRoom(friendId, friendName = '') {
+  try {
+    const db = requireDb();
+    const fromId = requireSocialPlayerId();
+    const targetId = await resolveFriendTargetId(db, friendId, friendName);
+
+    if (!targetId) return fail('INVALID_FRIEND', 'Amigo inválido.');
+    if (targetId === fromId) return fail('SELF', 'No puedes invitarte a ti mismo.');
+
+    if (currentRoom) {
+      forceClearRoomSession();
+      await reconcileLocalRoomState();
+    }
+
+    let created = await createRoom(getSocialPlayerPayload());
+    if (!created.success && created.error === 'ALREADY_IN_ROOM') {
+      forceClearRoomSession();
+      await reconcileLocalRoomState();
+      created = await createRoom(getSocialPlayerPayload());
+    }
+    if (!created.success) return created;
+
+    const room = created.room;
+    window.dispatchEvent(new CustomEvent('couple:roomChanged'));
+
+    const myProfile = await fetchPlayerProfile(db, fromId);
+    const fromName = myProfile.username
+      ? `@${myProfile.username}`
+      : (getSocialPlayerPayload().name || 'Jugador');
+
+    let targetUsername = '';
+    if ((friendName || '').trim().startsWith('@')) {
+      targetUsername = normalizeUsername(friendName);
+    } else {
+      const targetProfile = await fetchPlayerProfile(db, targetId);
+      targetUsername = targetProfile.username || '';
+    }
+
+    const inviteId = await sendRoomInvite(db, targetId, {
+      roomCode: room.code,
+      fromPlayerId: fromId,
+      fromName,
+    }, targetUsername);
+
+    return { success: true, roomCode: room.code, inviteId, roomCreated: true };
+  } catch (err) {
+    return fail('INVITE_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {(messages: import('./cloud-global-dm.js').GlobalDmMessage[]) => void} callback
+ * @param {(err: Error) => void} [onError]
+ */
+export function subscribeIncomingFriendDms(callback, onError) {
+  if (typeof callback !== 'function') return () => {};
+  try {
+    const db = requireDb();
+    const id = requireSocialPlayerId();
+    if (unsubscribeIncomingDms) unsubscribeIncomingDms();
+    unsubscribeIncomingDms = subscribeIncomingGlobalDm(db, id, callback, onError);
+    return () => {
+      if (unsubscribeIncomingDms) {
+        unsubscribeIncomingDms();
+        unsubscribeIncomingDms = null;
+      }
+    };
+  } catch (err) {
+    console.warn('[CloudManager] subscribeIncomingFriendDms:', err);
+    if (typeof onError === 'function') {
+      onError(err instanceof Error ? err : new Error(String(err)));
+    }
+    return () => {};
+  }
+}
+
+/**
+ * @param {(invites: import('./cloud-room-invites.js').RoomInvite[]) => void} callback
+ * @param {(err: Error) => void} [onError]
+ */
+export function subscribeIncomingInvites(callback, onError) {
+  if (typeof callback !== 'function') return () => {};
+  try {
+    const db = requireDb();
+    const id = requireSocialPlayerId();
+    if (unsubscribeInvites) unsubscribeInvites();
+    if (unsubscribeInvitesByName) unsubscribeInvitesByName();
+
+    /** @type {import('./cloud-room-invites.js').RoomInvite[]} */
+    let uuidInvites = [];
+    /** @type {import('./cloud-room-invites.js').RoomInvite[]} */
+    let nameInvites = [];
+
+    const emitMerged = () => {
+      const byKey = new Map();
+      [...uuidInvites, ...nameInvites].forEach((inv) => {
+        const key = `${inv.fromPlayerId}:${inv.roomCode}`;
+        const prev = byKey.get(key);
+        if (!prev || (inv.createdAt || 0) >= (prev.createdAt || 0)) {
+          byKey.set(key, inv);
+        }
+      });
+      const merged = Array.from(byKey.values())
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      callback(merged);
+    };
+
+    unsubscribeInvites = subscribePendingInvites(db, id, (list) => {
+      uuidInvites = list;
+      emitMerged();
+    }, onError);
+
+    fetchPlayerProfile(db, id).then((profile) => {
+      if (!profile.username) return;
+      if (unsubscribeInvitesByName) unsubscribeInvitesByName();
+      unsubscribeInvitesByName = subscribePendingInvitesByName(
+        db,
+        profile.username,
+        (list) => {
+          nameInvites = list;
+          emitMerged();
+        },
+        onError
+      );
+    }).catch(() => {});
+
+    return () => {
+      if (unsubscribeInvites) {
+        unsubscribeInvites();
+        unsubscribeInvites = null;
+      }
+      if (unsubscribeInvitesByName) {
+        unsubscribeInvitesByName();
+        unsubscribeInvitesByName = null;
+      }
+    };
+  } catch (err) {
+    console.warn('[CloudManager] subscribeIncomingInvites:', err);
+    if (typeof onError === 'function') {
+      onError(err instanceof Error ? err : new Error(String(err)));
+    }
+    return () => {};
+  }
+}
+
+/**
+ * @param {string} inviteId
+ * @param {boolean} accept
+ */
+export async function respondToRoomInvite(inviteId, accept) {
+  try {
+    const db = requireDb();
+    const id = requireSocialPlayerId();
+    const status = accept ? 'accepted' : 'declined';
+    await updateInviteStatus(db, id, inviteId, status);
+
+    const profile = await fetchPlayerProfile(db, id);
+    if (profile.username) {
+      await updateInviteStatusByName(db, profile.username, inviteId, status);
+    }
+
+    return { success: true };
+  } catch (err) {
+    return fail('INVITE_RESPONSE_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function fetchFriendPresence(friendId) {
+  try {
+    const db = requireDb();
+    return { success: true, presence: await fetchGlobalPresence(db, friendId) };
+  } catch (err) {
+    return fail('PRESENCE_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
 export { MAX_CHAT_LENGTH };
 
 /**
@@ -1569,6 +2224,27 @@ export const CloudManager = {
   unsubscribeFromRoom,
   isListeningToRoom,
   sendChatMessage,
+  initSocialLayer,
+  stopSocialLayer,
+  addFriend,
+  setPlayerUsername,
+  loadPlayerUsername,
+  getPlayerProfile,
+  setPlayerPhotoUrl,
+  syncLocalRoomDisplayName,
+  acceptFriendRequestFrom,
+  declineFriendRequestFrom,
+  subscribeFriendRequests,
+  removeFriend,
+  subscribeFriendsList,
+  subscribeFriendPresence,
+  sendFriendMessage,
+  subscribeFriendMessages,
+  subscribeIncomingFriendDms,
+  inviteFriendToRoom,
+  subscribeIncomingInvites,
+  respondToRoomInvite,
+  fetchFriendPresence,
   notifyGameStarted,
   subscribeToChat,
   unsubscribeFromChat,

@@ -146,7 +146,8 @@ function updateRecoveryBar() {
 }
 
 function getPlayerPayload() {
-  const name = (els.nameInput?.value || '').trim() || PlayerIdentity.getPlayerName() || 'Jugador';
+  const name = PlayerIdentity.getPreferredDisplayName();
+  if (els.nameInput) els.nameInput.value = name.startsWith('@') ? name.slice(1) : name;
   PlayerIdentity.setPlayerName(name);
   return {
     id: PlayerIdentity.getOrCreatePlayerId(),
@@ -465,6 +466,15 @@ function bindChatListener() {
   unsubscribeChat = CloudManager.subscribeToChat(handleChatEvent);
 }
 
+function cleanupChatSubscriptions() {
+  if (unsubscribeChat) {
+    unsubscribeChat();
+    unsubscribeChat = null;
+  }
+  renderChatMessages([]);
+  setChatEnabled(false);
+}
+
 function setChatEnabled(enabled) {
   if (els.chatInput) els.chatInput.disabled = !enabled;
   if (els.chatSend) els.chatSend.disabled = !enabled;
@@ -562,7 +572,10 @@ async function refreshRoomPanel() {
   showRoomPanel();
   if (els.roomCode) els.roomCode.textContent = room.code;
 
-  renderPlayers(room.players);
+  await CloudManager.syncLocalRoomDisplayName?.().catch(() => {});
+
+  const freshRoom = CloudManager.getCurrentRoom();
+  renderPlayers(freshRoom?.players || room.players);
 
   const [coupleRes, rankRes] = await Promise.all([
     CloudManager.getCoupleStats(),
@@ -599,12 +612,7 @@ function handleCoupleUpdated(couple) {
 
 async function handleRoomEvent(event) {
   if (event.type === 'room_removed') {
-    if (unsubscribeChat) {
-      unsubscribeChat();
-      unsubscribeChat = null;
-    }
-    renderChatMessages([]);
-    setChatEnabled(false);
+    cleanupChatSubscriptions();
     lastPlayerCount = 0;
     lastBestPlayerId = null;
     forcedSceneMode = null;
@@ -807,12 +815,7 @@ async function onResetSession() {
     unsubscribeRoom();
     unsubscribeRoom = null;
   }
-  if (unsubscribeChat) {
-    unsubscribeChat();
-    unsubscribeChat = null;
-  }
-  renderChatMessages([]);
-  setChatEnabled(false);
+  cleanupChatSubscriptions();
   lastPlayerCount = 0;
   lastBestPlayerId = null;
   forcedSceneMode = null;
@@ -833,12 +836,7 @@ async function onLeaveRoom() {
       unsubscribeRoom();
       unsubscribeRoom = null;
     }
-    if (unsubscribeChat) {
-      unsubscribeChat();
-      unsubscribeChat = null;
-    }
-    renderChatMessages([]);
-    setChatEnabled(false);
+    cleanupChatSubscriptions();
     lastPlayerCount = 0;
     lastBestPlayerId = null;
     forcedSceneMode = null;
@@ -936,8 +934,11 @@ async function init() {
   initGuardians();
 
   const identity = PlayerIdentity.getIdentity();
-  if (els.nameInput && identity.name) {
-    els.nameInput.value = identity.name;
+  if (els.nameInput) {
+    const display = PlayerIdentity.getPreferredDisplayName();
+    if (identity.username) els.nameInput.value = identity.username;
+    else if (identity.name) els.nameInput.value = identity.name;
+    else if (display !== 'Jugador') els.nameInput.value = display.replace(/^@/, '');
   }
 
   els.createBtn?.addEventListener('click', onCreateRoom);
@@ -962,6 +963,19 @@ async function init() {
     if (!els.chatMessages) return;
     const el = els.chatMessages;
     chatStickToBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+  });
+
+  window.addEventListener('social:join-room', (event) => {
+    const code = event.detail?.roomCode;
+    if (code) connectToRoom(code);
+  });
+
+  window.addEventListener('couple:roomChanged', () => {
+    if (CloudManager.getCurrentRoom()) {
+      refreshRoomPanel().catch(() => {});
+    } else {
+      updateRecoveryBar();
+    }
   });
 
   els.joinCode?.addEventListener('input', () => {
@@ -1000,8 +1014,15 @@ async function init() {
     notifyHubRoomChanged();
   } else {
     showLobby();
-    await runStartupRecovery();
+    const params = new URLSearchParams(window.location.search);
+    const sala = params.get('sala')?.trim().toUpperCase();
+    if (sala && sala.length === 6) {
+      if (els.joinCode) els.joinCode.value = sala;
+      await connectToRoom(sala);
+    }
   }
+
+  await runStartupRecovery();
 }
 
 if (document.readyState === 'loading') {

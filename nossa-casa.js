@@ -413,7 +413,7 @@
       <button type="button" class="couple-btn couple-btn-primary" id="casa-go-games">Entrar a la sala de juegos</button>
     </div>`;
     body.querySelector('#casa-go-games')?.addEventListener('click', () => {
-      $('section-game')?.scrollIntoView({ behavior: 'smooth' });
+      window.location.href = 'jugar/';
       exitRoom();
     });
   }

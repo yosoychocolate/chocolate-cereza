@@ -2,7 +2,7 @@
 title Chocolate ^& Cereza - Servidor local
 cd /d "%~dp0"
 echo.
-echo  Abrindo o site em http://localhost:8080
+echo  Abrindo o site em http://localhost:8765
 echo  NAO FECHE esta janela enquanto usar o site.
 echo.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0serve.ps1"
