@@ -72,6 +72,10 @@ import {
   buildDmThreadId,
 } from './cloud-global-dm.js?v=__APP_VERSION__';
 import {
+  setDmTyping,
+  subscribePeerDmTyping,
+} from './cloud-dm-typing.js?v=__APP_VERSION__';
+import {
   sendRoomInvite,
   subscribePendingInvites,
   subscribePendingInvitesByName,
@@ -1779,10 +1783,46 @@ export async function sendFriendMessage(friendId, message) {
     const fromId = requirePlayerId();
     const player = getLocalPlayer();
     const fromName = player?.name || getSocialPlayerPayload().name || 'Jugador';
+    const threadId = buildDmThreadId(fromId, friendId);
+    await setDmTyping(db, threadId, fromId, false);
     await sendGlobalDm(db, fromId, friendId, fromName, message);
     return { success: true };
   } catch (err) {
     return fail('DM_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * Marca que o jogador local está a digitar para um amigo.
+ * @param {string} friendId
+ * @param {boolean} typing
+ */
+export async function setFriendTyping(friendId, typing) {
+  try {
+    const db = requireDb();
+    const fromId = requirePlayerId();
+    const threadId = buildDmThreadId(fromId, friendId);
+    await setDmTyping(db, threadId, fromId, typing);
+    return { success: true };
+  } catch (err) {
+    return fail('TYPING_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {string} friendId
+ * @param {(typing: boolean) => void} callback
+ */
+export function subscribeFriendTyping(friendId, callback) {
+  if (!friendId || typeof callback !== 'function') return () => {};
+  try {
+    const db = requireDb();
+    const myId = requirePlayerId();
+    const threadId = buildDmThreadId(myId, friendId);
+    return subscribePeerDmTyping(db, threadId, friendId, callback);
+  } catch (err) {
+    console.warn('[CloudManager] subscribeFriendTyping:', err);
+    return () => {};
   }
 }
 
@@ -2333,6 +2373,8 @@ export const CloudManager = {
   subscribeFriendsList,
   subscribeFriendPresence,
   sendFriendMessage,
+  setFriendTyping,
+  subscribeFriendTyping,
   subscribeFriendMessages,
   subscribeIncomingFriendDms,
   inviteFriendToRoom,

@@ -97,7 +97,10 @@ async function ensureMessaging() {
       const data = payload.data || {};
       const title = payload.notification?.title || data.title || 'Chocolate & Cereza';
       const body = payload.notification?.body || data.body || '';
-      const tag = data.type || 'daily-charge-push-fg';
+      const tag = data.tag
+        || (data.type === 'dm' && data.friendId
+          ? `dm-${data.friendId}-${data.messageId || ''}`
+          : (data.type || 'daily-charge-push-fg'));
       if (Notification.permission === 'granted') {
         try {
           const n = new Notification(title, {

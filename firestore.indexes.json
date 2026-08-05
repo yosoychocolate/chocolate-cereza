@@ -4,6 +4,14 @@
       "collectionGroup": "globalDm",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "pushNotified", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "globalDm",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "threadId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]

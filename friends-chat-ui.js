@@ -12,6 +12,24 @@ const presenceUnsubs = new Map();
 let dmUnsub = null;
 
 /** @type {(() => void) | null} */
+let typingUnsub = null;
+
+/** @type {boolean} */
+let peerTyping = false;
+
+/** @type {boolean} */
+let localTypingActive = false;
+
+/** @type {ReturnType<typeof setTimeout> | null} */
+let typingStopTimer = null;
+
+/** @type {ReturnType<typeof setInterval> | null} */
+let typingHeartbeatTimer = null;
+
+const TYPING_STOP_MS = 1600;
+const TYPING_HEARTBEAT_MS = 2200;
+
+/** @type {(() => void) | null} */
 let friendsUnsub = null;
 
 /** @type {(() => void) | null} */
@@ -293,17 +311,85 @@ function updateMyPhotoPreview() {
   }
 }
 
+function renderChatPeerStatus(friendId) {
+  if (peerTyping) {
+    return `<span class="social-chat-peer-status is-typing">
+      <span class="social-typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+      Escribiendo…
+    </span>`;
+  }
+  const online = presenceMap[friendId]?.online;
+  return `<span class="social-chat-peer-status${online ? ' is-online' : ''}">${online ? 'En línea' : 'Desconectado'}</span>`;
+}
+
 function renderChatHeader(friendId, friendName) {
   if (!els.chatTitle) return;
-  const online = presenceMap[friendId]?.online;
   const displayName = formatDisplayName(friendName);
   const photo = getProfilePhoto(friendId);
+  const online = presenceMap[friendId]?.online;
   els.chatTitle.innerHTML = `
-    ${renderAvatarHtml(displayName, photo, '', { online, preview: true, playerId: friendId, rawName: friendName })}
+    ${renderAvatarHtml(displayName, photo, '', { online: online && !peerTyping, preview: true, playerId: friendId, rawName: friendName })}
     <span class="social-chat-peer">
       <span class="social-chat-peer-name">${escapeHtml(displayName)}</span>
-      <span class="social-chat-peer-status${online ? ' is-online' : ''}">${online ? 'En línea' : 'Desconectado'}</span>
+      ${renderChatPeerStatus(friendId)}
     </span>`;
+}
+
+function setPeerTyping(typing) {
+  if (peerTyping === typing) return;
+  peerTyping = typing;
+  if (activeChat) renderChatHeader(activeChat.friendId, activeChat.friendName);
+}
+
+function clearLocalTypingTimers() {
+  if (typingStopTimer) {
+    clearTimeout(typingStopTimer);
+    typingStopTimer = null;
+  }
+  if (typingHeartbeatTimer) {
+    clearInterval(typingHeartbeatTimer);
+    typingHeartbeatTimer = null;
+  }
+}
+
+async function stopLocalTyping() {
+  clearLocalTypingTimers();
+  if (!localTypingActive || !activeChat) return;
+  localTypingActive = false;
+  await CloudManager.setFriendTyping(activeChat.friendId, false);
+}
+
+function pulseLocalTyping() {
+  if (!activeChat) return;
+  if (!localTypingActive) {
+    localTypingActive = true;
+    CloudManager.setFriendTyping(activeChat.friendId, true);
+    typingHeartbeatTimer = setInterval(() => {
+      if (localTypingActive && activeChat) {
+        CloudManager.setFriendTyping(activeChat.friendId, true);
+      }
+    }, TYPING_HEARTBEAT_MS);
+  }
+
+  if (typingStopTimer) clearTimeout(typingStopTimer);
+  typingStopTimer = setTimeout(() => {
+    stopLocalTyping();
+  }, TYPING_STOP_MS);
+}
+
+function onChatInputActivity() {
+  const value = els.chatInput?.value || '';
+  if (!value.trim()) {
+    stopLocalTyping();
+    return;
+  }
+  pulseLocalTyping();
+}
+
+function bindFriendTyping(friendId) {
+  if (typingUnsub) typingUnsub();
+  peerTyping = false;
+  typingUnsub = CloudManager.subscribeFriendTyping(friendId, setPeerTyping);
 }
 
 function ensureAvatarLightbox() {
@@ -966,11 +1052,13 @@ function renderDmMessages(messages) {
 function openFloatingChat(friendId, friendName) {
   activeChat = { friendId, friendName };
   chatMinimized = false;
+  peerTyping = false;
   delete unreadByFriend[friendId];
   updateOnlineBadge();
   renderFriendsList();
   if (els.chatWindow) els.chatWindow.classList.remove('hidden', 'is-minimized');
   renderChatHeader(friendId, friendName);
+  bindFriendTyping(friendId);
 
   if (dmUnsub) dmUnsub();
   dmUnsub = CloudManager.subscribeFriendMessages(
@@ -984,6 +1072,12 @@ function openFloatingChat(friendId, friendName) {
 }
 
 function closeFloatingChat() {
+  stopLocalTyping();
+  if (typingUnsub) {
+    typingUnsub();
+    typingUnsub = null;
+  }
+  peerTyping = false;
   activeChat = null;
   dmMessages = [];
   if (dmUnsub) {
@@ -1005,6 +1099,8 @@ async function sendActiveChatMessage(text) {
   if (!activeChat) return;
   const msg = (text || '').trim();
   if (!msg) return;
+
+  await stopLocalTyping();
 
   const pendingId = `pending-${Date.now()}`;
   const optimistic = {
@@ -1284,6 +1380,11 @@ function bindEvents() {
   els.chatForm?.addEventListener('submit', (e) => {
     e.preventDefault();
     sendActiveChatMessage(els.chatInput?.value || '');
+  });
+
+  els.chatInput?.addEventListener('input', onChatInputActivity);
+  els.chatInput?.addEventListener('blur', () => {
+    stopLocalTyping();
   });
 
   els.chatMinBtn?.addEventListener('click', () => {

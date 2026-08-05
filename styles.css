@@ -9552,6 +9552,48 @@ body.image-crop-open {
   color: #7dffb0;
 }
 
+.social-chat-peer-status.is-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #ffb8e8;
+}
+
+.social-typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.14rem;
+  height: 0.55rem;
+}
+
+.social-typing-dots span {
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  animation: social-typing-bounce 1.1s ease-in-out infinite;
+}
+
+.social-typing-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.social-typing-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes social-typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-0.18rem);
+    opacity: 1;
+  }
+}
+
 .social-header-btn {
   width: 1.75rem;
   height: 1.75rem;

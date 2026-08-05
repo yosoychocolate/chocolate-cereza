@@ -146,7 +146,9 @@ async function sendPushToPlayer(playerId, payload) {
         title: payload.title,
         body: payload.body,
       },
+      android: { priority: 'high', notification: { channelId: 'social', priority: 'high' } },
       webpush: {
+        headers: { Urgency: 'high' },
         fcmOptions: { link: payload.url || SITE_URL },
         notification: {
           icon: `${SITE_URL}assets/app-icon-192.png`,
@@ -228,25 +230,47 @@ exports.onGlobalDmPush = onDocumentCreated(
   },
   async (event) => {
     const data = event.data?.data();
+    const messageId = event.params?.messageId || '';
     if (!data?.toPlayerId || !data.fromPlayerId) return;
+    if (data.pushNotified === true) return;
 
     const fromName = formatPushName(data.fromName);
     const preview = String(data.message || '').trim();
     if (!preview) return;
 
     const body = preview.length > 120 ? `${preview.slice(0, 117)}…` : preview;
+    const url = `${SITE_URL}jugar/#amigos`;
+    const tag = `dm-${data.fromPlayerId}-${messageId}`;
 
-    await sendPushToPlayer(data.toPlayerId, {
+    let targetUsername = '';
+    try {
+      const prof = await admin.firestore().doc(`playerProfiles/${data.toPlayerId}`).get();
+      if (prof.exists) {
+        targetUsername = String(prof.data()?.username || '').toLowerCase().replace(/^@+/, '');
+      }
+    } catch (_) { /* ignore */ }
+
+    const result = await sendPushToPlayer(data.toPlayerId, {
       title: `💬 ${fromName}`,
       body,
-      url: SITE_URL,
+      url,
+      username: targetUsername,
       data: {
         type: 'dm',
         friendId: data.fromPlayerId,
         friendName: fromName,
-        url: SITE_URL,
+        messageId,
+        tag,
+        url,
       },
     });
+
+    if (result.sent > 0 && event.data?.ref) {
+      await event.data.ref.update({
+        pushNotified: true,
+        pushNotifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
   }
 );
 

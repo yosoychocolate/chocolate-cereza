@@ -94,6 +94,7 @@ export async function sendGlobalDm(db, fromPlayerId, toPlayerId, fromName, messa
     toPlayerId,
     fromName: fromName || 'Jugador',
     message: text,
+    pushNotified: false,
     createdAt: serverTimestamp(),
   });
 
