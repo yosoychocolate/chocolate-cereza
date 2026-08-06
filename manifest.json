@@ -1,0 +1,36 @@
+{
+  "name": "El Chocolate & La Cereza",
+  "short_name": "🍫🍒",
+  "gcm_sender_id": "103953800507",
+  "description": "Mensajes, amigos y mini juegos — avisos aunque cierres la app.",
+  "id": "chocolate-cereza-pwa",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "prefer_related_applications": false,
+  "orientation": "portrait",
+  "background_color": "#120810",
+  "theme_color": "#ff4fa3",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

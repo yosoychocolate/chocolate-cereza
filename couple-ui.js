@@ -1,0 +1,1074 @@
+/**
+ * CoupleUI — interface do modo online (Jugar en Pareja).
+ */
+import CloudManager from './cloud-manager.js?v=7cbf9eb';
+import PlayerIdentity from './player-identity.js?v=7cbf9eb';
+import CoupleMascots from './couple-mascots.js?v=7cbf9eb';
+
+const {
+  resolveMascotType,
+  buildMascotScene,
+  renderRankingRow,
+  renderChatRow,
+  renderStreakBadge,
+  renderGuardianPair,
+  renderFooterGuardians,
+  renderScoreHudRow,
+  playGuardianAnim,
+  detectSceneMode,
+} = CoupleMascots;
+
+const els = {};
+
+/** @type {(() => void) | null} */
+let unsubscribeRoom = null;
+
+/** @type {(() => void) | null} */
+let unsubscribeChat = null;
+
+/** @type {boolean} */
+let chatStickToBottom = true;
+
+/** @type {ReturnType<typeof setTimeout> | null} */
+let refreshRoomTimer = null;
+
+/** @type {boolean} */
+let cherryGameActive = false;
+
+/** @type {boolean} */
+let cannonGameActive = false;
+
+function isGameplayActive() {
+  return cherryGameActive || cannonGameActive;
+}
+
+function bindGameplayRefreshGuard() {
+  window.addEventListener('cherrygame:activate', () => { cherryGameActive = true; });
+  window.addEventListener('cherrygame:deactivate', () => {
+    cherryGameActive = false;
+    if (!isGameplayActive()) scheduleRefreshRoomPanel(true);
+  });
+  window.addEventListener('spaceship:activate', () => { cannonGameActive = true; });
+  window.addEventListener('spaceship:deactivate', () => {
+    cannonGameActive = false;
+    if (!isGameplayActive()) scheduleRefreshRoomPanel(true);
+  });
+}
+
+function scheduleRefreshRoomPanel(forceFull = false) {
+  if (refreshRoomTimer) clearTimeout(refreshRoomTimer);
+  const delay = isGameplayActive() && !forceFull ? 2500 : 400;
+  refreshRoomTimer = setTimeout(() => {
+    refreshRoomTimer = null;
+    if (isGameplayActive() && !forceFull) {
+      refreshRoomPanelLight().catch(() => {});
+      scheduleRefreshRoomPanel(true);
+      return;
+    }
+    refreshRoomPanel().catch(() => {});
+  }, delay);
+}
+
+async function refreshRoomPanelLight() {
+  const room = CloudManager.getCurrentRoom();
+  if (!room) {
+    showLobby();
+    return;
+  }
+  renderPlayers(room.players, room);
+  renderGiftPanel(room);
+}
+
+/** @type {number} */
+let lastPlayerCount = 0;
+
+/** @type {string | null} */
+let lastBestPlayerId = null;
+
+/** @type {ReturnType<typeof setTimeout> | null} */
+let hugTimer = null;
+
+/** @type {'waiting' | 'together' | 'alone' | 'hugging' | null} */
+let forcedSceneMode = null;
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+function setStatus(message, isError = false) {
+  if (!els.statusMsg) return;
+  els.statusMsg.textContent = message || '';
+  els.statusMsg.classList.toggle('is-error', isError);
+}
+
+function showToast(message) {
+  if (!els.toast) return;
+  els.toast.textContent = message;
+  els.toast.classList.remove('hidden');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => {
+    els.toast?.classList.add('hidden');
+  }, 4200);
+}
+
+function showLobby() {
+  els.lobby?.classList.remove('hidden');
+  els.roomPanel?.classList.add('hidden');
+  updateRecoveryBar();
+  enableLobbyControls(true);
+}
+
+function showRoomPanel() {
+  els.lobby?.classList.add('hidden');
+  els.roomPanel?.classList.remove('hidden');
+  els.recoveryBar?.classList.add('hidden');
+  enableLobbyControls(true);
+}
+
+function enableLobbyControls(enabled) {
+  if (els.createBtn) els.createBtn.disabled = !enabled;
+  if (els.joinBtn) els.joinBtn.disabled = !enabled;
+  if (els.resetBtn) els.resetBtn.disabled = !enabled;
+  if (els.rejoinBtn) els.rejoinBtn.disabled = !enabled;
+}
+
+function updateRecoveryBar() {
+  if (!els.recoveryBar || !els.recoveryText || !els.rejoinBtn) return;
+  const saved = CloudManager.getSavedRoomCode?.();
+  if (CloudManager.getCurrentRoom() || !saved) {
+    els.recoveryBar.classList.add('hidden');
+    return;
+  }
+  els.recoveryText.textContent = `¿Volviste? Tu sala era ${saved}. Pulsa reconectar o escribe el código abajo.`;
+  els.rejoinBtn.textContent = `Reconectar a ${saved}`;
+  els.recoveryBar.classList.remove('hidden');
+  if (els.joinCode && !els.joinCode.value) els.joinCode.value = saved;
+}
+
+function getPlayerPayload() {
+  const name = PlayerIdentity.getPreferredDisplayName();
+  if (els.nameInput) els.nameInput.value = name.startsWith('@') ? name.slice(1) : name;
+  PlayerIdentity.setPlayerName(name);
+  return {
+    id: PlayerIdentity.getOrCreatePlayerId(),
+    name,
+    joinedAt: Date.now(),
+  };
+}
+
+function formatUpdatedAt(ts) {
+  if (!ts) return '—';
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'Ahora';
+  const min = Math.floor(diff / 60000);
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `hace ${h} h`;
+  return new Date(ts).toLocaleString('es');
+}
+
+function formatChatTimestamp(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function isPartyRoom(room) {
+  if (!room) return false;
+  return room.roomKind === 'party' || (room.maxPlayers ?? 2) > 2;
+}
+
+function renderPlayers(players, room) {
+  if (!els.playersList) return;
+  els.playersList.innerHTML = '';
+
+  const maxPlayers = room?.maxPlayers ?? 2;
+  const showList = isPartyRoom(room) || (players?.length ?? 0) > 0;
+
+  els.playersList.classList.toggle('visually-hidden', !showList);
+  els.playersList.setAttribute('aria-hidden', showList ? 'false' : 'true');
+
+  if (!players || !players.length) {
+    if (showList && isPartyRoom(room)) {
+      els.playersList.innerHTML = `<li class="couple-empty">Esperando jugadores… (0/${maxPlayers})</li>`;
+    }
+    return;
+  }
+
+  if (isPartyRoom(room)) {
+    const head = document.createElement('li');
+    head.className = 'couple-players-head';
+    head.textContent = `Jugadores (${players.length}/${maxPlayers})`;
+    els.playersList.appendChild(head);
+  }
+
+  players.forEach((player) => {
+    const li = document.createElement('li');
+    const online = CloudManager.isPresenceOnline?.(player.presence) === true;
+    const icon = online ? '🟢' : '🔴';
+    const status = online ? 'online' : CloudManager.formatLastSeen(player.presence?.lastSeen || 0);
+    li.className = 'couple-player-item';
+    li.innerHTML = `<span class="couple-player-icon">${icon}</span><span class="couple-player-name">${escapeHtml(player.name || player.id)}</span><span class="couple-player-status">${escapeHtml(status)}</span>`;
+    els.playersList.appendChild(li);
+  });
+}
+
+function getLocalPlayerId() {
+  return CloudManager.getLocalPlayer()?.id || PlayerIdentity.getOrCreatePlayerId();
+}
+
+function getPartnerFromRoom(room) {
+  if (!room) return null;
+  const localId = getLocalPlayerId();
+  return room.players.find((p) => p.id !== localId) || null;
+}
+
+function getWalletBalance() {
+  if (typeof globalThis.GameShop?.getWallet === 'function') {
+    return globalThis.GameShop.getWallet();
+  }
+  return 0;
+}
+
+function setGiftStatus(message, kind = '') {
+  if (!els.giftStatus) return;
+  els.giftStatus.textContent = message || '';
+  els.giftStatus.classList.remove('is-error', 'is-success');
+  if (kind) els.giftStatus.classList.add(kind);
+}
+
+function renderGiftPanel(room) {
+  const partner = getPartnerFromRoom(room);
+  const show = !!(room && partner && !isPartyRoom(room));
+
+  els.giftPanel?.classList.toggle('hidden', !show);
+  els.giftDivider?.classList.toggle('hidden', !show);
+
+  if (!show) {
+    setGiftStatus('');
+    if (els.giftSend) els.giftSend.disabled = true;
+    els.giftPresets?.querySelectorAll('.couple-gift-preset').forEach((btn) => {
+      btn.disabled = true;
+    });
+    return;
+  }
+
+  const wallet = getWalletBalance();
+  if (els.giftWallet) els.giftWallet.textContent = wallet.toLocaleString('es');
+  if (els.giftPartner) els.giftPartner.textContent = partner.name || 'Tu pareja';
+  if (els.giftSend) els.giftSend.disabled = wallet < 1;
+  els.giftPresets?.querySelectorAll('.couple-gift-preset').forEach((btn) => {
+    btn.disabled = wallet < 1;
+  });
+}
+
+async function onSendGift() {
+  const room = CloudManager.getCurrentRoom();
+  const partner = getPartnerFromRoom(room);
+  if (!partner) {
+    setGiftStatus('Espera a que tu pareja entre en la sala.', 'is-error');
+    return;
+  }
+
+  const raw = els.giftAmount?.value;
+  const amount = raw === '' || raw == null ? NaN : Number(raw);
+  if (!Number.isFinite(amount) || amount < 1) {
+    setGiftStatus('Indica una cantidad válida.', 'is-error');
+    return;
+  }
+
+  if (els.giftSend) els.giftSend.disabled = true;
+  setGiftStatus('Enviando regalo…');
+
+  try {
+    const result = await CloudManager.sendChocolateGift(amount);
+    if (!result.success) {
+      setGiftStatus(result.message || 'No se pudo enviar.', 'is-error');
+      return;
+    }
+
+    if (els.giftAmount) els.giftAmount.value = '';
+    setGiftStatus(`¡Enviaste ${result.amount.toLocaleString('es')} 🍫 a ${result.partnerName || partner.name}!`, 'is-success');
+    showToast(`🎁 Enviaste ${result.amount.toLocaleString('es')} 🍫 a ${result.partnerName || partner.name}`);
+    playGuardianAnim(els.guardians, resolveMascotType(partner.name, partner.id, room.players), 'wave');
+    renderGiftPanel(room);
+  } catch (err) {
+    setGiftStatus(err instanceof Error ? err.message : String(err), 'is-error');
+  } finally {
+    if (els.giftSend) els.giftSend.disabled = getWalletBalance() < 1;
+  }
+}
+
+function onGiftPresetClick(event) {
+  const btn = event.target.closest('.couple-gift-preset');
+  if (!btn || btn.disabled) return;
+
+  const preset = btn.dataset.gift;
+  const wallet = getWalletBalance();
+  if (preset === 'all') {
+    if (els.giftAmount) els.giftAmount.value = String(Math.max(0, wallet));
+  } else {
+    const n = Number(preset);
+    if (Number.isFinite(n) && els.giftAmount) els.giftAmount.value = String(n);
+  }
+}
+
+function onGiftReceived(event) {
+  const detail = event.detail || {};
+  const amount = detail.amount || 0;
+  const fromName = detail.fromName || 'Tu pareja';
+  if (!amount) return;
+
+  showToast(`🎁 ${fromName} te envió ${amount.toLocaleString('es')} 🍫`);
+  setGiftStatus(`Recibiste ${amount.toLocaleString('es')} 🍫 de ${fromName}`, 'is-success');
+  renderGiftPanel(CloudManager.getCurrentRoom());
+
+  const room = CloudManager.getCurrentRoom();
+  const fromPlayer = room?.players?.find((p) => p.name === fromName);
+  const fromType = resolveMascotType(fromName, fromPlayer?.id, room?.players);
+  playGuardianAnim(els.guardians, fromType, 'blink');
+  triggerMascotFx('fx-join', 900);
+}
+
+function onWalletChanged() {
+  renderGiftPanel(CloudManager.getCurrentRoom());
+}
+
+function triggerMascotFx(fxClass, durationMs = 1200) {
+  if (!els.mascotScene) return;
+  els.mascotScene.classList.remove('fx-record', 'fx-crown', 'fx-join');
+  els.mascotScene.classList.add(fxClass);
+  clearTimeout(triggerMascotFx._timer);
+  triggerMascotFx._timer = setTimeout(() => {
+    els.mascotScene?.classList.remove(fxClass);
+  }, durationMs);
+
+  if (fxClass === 'fx-join') {
+    playGuardianAnim(els.guardians, 'chocolate', 'wave');
+    playGuardianAnim(els.guardians, 'cereza', 'blink');
+  }
+}
+
+function initGuardians() {
+  if (els.guardians) {
+    els.guardians.innerHTML = renderGuardianPair({ size: 48 });
+  }
+  if (els.footerMascots) {
+    els.footerMascots.innerHTML = renderFooterGuardians();
+  }
+}
+
+function renderCoupleScoreHud(ranking, coupleStats) {
+  if (!els.scoreHud) return;
+
+  const room = CloudManager.getCurrentRoom();
+  if (!room || !ranking || ranking.length < 1) {
+    els.scoreHud.classList.add('hidden');
+    els.scoreHud.setAttribute('aria-hidden', 'true');
+    return;
+  }
+
+  const leaderId = coupleStats?.bestPlayerId;
+  const players = room.players || [];
+  const rows = ranking.slice(0, isPartyRoom(room) ? 4 : 2).map((entry) => {
+    const type = resolveMascotType(entry.name, entry.id, players);
+    const isLeader = leaderId === entry.id && entry.bestScore > 0;
+    return renderScoreHudRow(type, entry.bestScore, isLeader);
+  });
+
+  els.scoreHud.innerHTML = rows.join('');
+  els.scoreHud.classList.remove('hidden');
+  els.scoreHud.setAttribute('aria-hidden', 'false');
+}
+
+function hideCoupleScoreHud() {
+  if (!els.scoreHud) return;
+  els.scoreHud.classList.add('hidden');
+  els.scoreHud.setAttribute('aria-hidden', 'true');
+  els.scoreHud.innerHTML = '';
+}
+
+function scheduleHugScene(partnerName) {
+  forcedSceneMode = 'hugging';
+  triggerMascotFx('fx-join');
+  clearTimeout(hugTimer);
+  hugTimer = setTimeout(() => {
+    forcedSceneMode = null;
+    refreshMascotScene();
+  }, 3200);
+}
+
+function renderMascotScene(room, couple, overrideMode) {
+  if (!els.mascotStage || !els.mascotScene) return;
+
+  const localId = getLocalPlayerId();
+  const localPlayer = room.players.find((p) => p.id === localId) || CloudManager.getLocalPlayer();
+  const localName = localPlayer?.name || 'Jugador';
+  const localType = resolveMascotType(localName, localId, room.players);
+  const partner = getPartnerFromRoom(room);
+  const partnerName = partner?.name || '';
+  const partnerType = partner ? resolveMascotType(partner.name, partner.id, room.players) : localType === 'chocolate' ? 'cereza' : 'chocolate';
+
+  const mode = overrideMode || forcedSceneMode || detectSceneMode(room, localId);
+
+  const scene = buildMascotScene(mode, {
+    localType,
+    partnerType,
+    localName,
+    partnerName,
+    localOnline: CloudManager.isPresenceOnline?.(localPlayer?.presence) === true,
+    partnerOnline: CloudManager.isPresenceOnline?.(partner?.presence) === true,
+  });
+
+  els.mascotStage.innerHTML = scene.html;
+  if (els.mascotCaption) {
+    if (isPartyRoom(room)) {
+      const online = room.players.filter(
+        (p) => CloudManager.isPresenceOnline?.(p.presence) === true
+      ).length;
+      els.mascotCaption.textContent = `👥 ${room.players.length}/${room.maxPlayers} jugadores · ${online} en línea`;
+    } else {
+      els.mascotCaption.textContent = scene.caption;
+    }
+  }
+  els.mascotScene.className = `couple-mascot-scene ${scene.className}`;
+
+  if (els.streakWrap) {
+    const streakHtml = couple?.playStreak >= 2 ? renderStreakBadge(couple.playStreak) : '';
+    els.streakWrap.innerHTML = streakHtml;
+  }
+}
+
+async function refreshMascotScene(overrideMode) {
+  const room = CloudManager.getCurrentRoom();
+  if (!room) return;
+
+  let couple = null;
+  const coupleRes = await CloudManager.getCoupleStats();
+  if (coupleRes.success) couple = coupleRes.couple;
+
+  renderMascotScene(room, couple, overrideMode);
+}
+
+function renderChatMessages(messages) {
+  if (!els.chatMessages) return;
+
+  els.chatMessages.innerHTML = '';
+  if (!messages || !messages.length) return;
+
+  const room = CloudManager.getCurrentRoom();
+  const players = room?.players || [];
+
+  messages.forEach((msg) => {
+    const timeLabel = formatChatTimestamp(msg.createdAt);
+    const timeIso = msg.createdAt ? new Date(msg.createdAt).toISOString() : '';
+
+    if (msg.type === 'system') {
+      const div = document.createElement('div');
+      div.className = 'couple-chat-msg is-system';
+      div.innerHTML = `
+        <span class="couple-chat-system-text">${escapeHtml(msg.message)}</span>
+        ${timeLabel ? `<time class="couple-chat-time" datetime="${timeIso}">${escapeHtml(timeLabel)}</time>` : ''}
+      `;
+      els.chatMessages.appendChild(div);
+      return;
+    }
+
+    const type = resolveMascotType(msg.playerName, msg.playerId, players);
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderChatRow(type, msg.playerName || 'Jugador', msg.message, timeLabel, timeIso);
+    els.chatMessages.appendChild(wrap.firstElementChild);
+  });
+
+  if (chatStickToBottom) {
+    els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+  }
+}
+
+function handleChatEvent(event) {
+  if (event.type === 'chat_updated') {
+    renderChatMessages(event.messages);
+  }
+}
+
+function bindChatListener() {
+  if (unsubscribeChat) unsubscribeChat();
+  unsubscribeChat = CloudManager.subscribeToChat(handleChatEvent);
+}
+
+function cleanupChatSubscriptions() {
+  if (unsubscribeChat) {
+    unsubscribeChat();
+    unsubscribeChat = null;
+  }
+  renderChatMessages([]);
+  setChatEnabled(false);
+}
+
+function setChatEnabled(enabled) {
+  if (els.chatInput) els.chatInput.disabled = !enabled;
+  if (els.chatSend) els.chatSend.disabled = !enabled;
+  els.chatEmojis?.querySelectorAll('.couple-chat-emoji').forEach((btn) => {
+    btn.disabled = !enabled;
+  });
+}
+
+async function sendChat(text) {
+  const message = (text || '').trim();
+  if (!message) return;
+
+  setChatEnabled(false);
+  try {
+    const result = await CloudManager.sendChatMessage(message);
+    if (!result.success) {
+      setStatus(result.message || 'No se pudo enviar.', true);
+      return;
+    }
+    if (els.chatInput) els.chatInput.value = '';
+    setStatus('');
+  } finally {
+    setChatEnabled(true);
+    els.chatInput?.focus({ preventScroll: true });
+  }
+}
+
+async function onChatSubmit(event) {
+  event.preventDefault();
+  const text = els.chatInput?.value || '';
+  await sendChat(text);
+}
+
+async function onEmojiClick(event) {
+  const btn = event.target.closest('.couple-chat-emoji');
+  if (!btn || btn.disabled) return;
+  const emoji = btn.dataset.emoji;
+  if (emoji) await sendChat(emoji);
+}
+
+function renderRanking(ranking, coupleStats) {
+  if (!els.rankingList) return;
+  els.rankingList.innerHTML = '';
+
+  if (!ranking || !ranking.length) {
+    els.rankingList.innerHTML = '<li class="couple-empty">Sin partidas aún</li>';
+    return;
+  }
+
+  const room = CloudManager.getCurrentRoom();
+  const players = room?.players || [];
+  const leaderId = coupleStats?.bestPlayerId;
+
+  ranking.forEach((entry, index) => {
+    const type = resolveMascotType(entry.name, entry.id, players);
+    const isLeader = leaderId === entry.id && entry.bestScore > 0;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderRankingRow(type, entry.name, entry.bestScore, {
+      isLeader,
+      rank: index + 1,
+    });
+    if (wrap.firstElementChild) {
+      els.rankingList.appendChild(wrap.firstElementChild);
+    }
+  });
+}
+
+function renderCoupleSummary(couple) {
+  if (!els.statsSummary || !couple) return;
+  const streakLine =
+    couple.playStreak >= 2 ?
+      `<p><span>🔥 Racha</span><strong>${couple.playStreak} días</strong></p>`
+    : '';
+  els.statsSummary.innerHTML = `
+    <p><span>🎮 Partidas</span><strong>${couple.totalGames}</strong></p>
+    <p><span>🍫 Chocolates juntos</span><strong>${couple.totalChocolate.toLocaleString('es')}</strong></p>
+    ${streakLine}
+    <p><span>🕒 Última actividad</span><strong>${formatUpdatedAt(couple.updatedAt)}</strong></p>
+  `;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+async function refreshRoomPanel() {
+  const room = CloudManager.getCurrentRoom();
+  if (!room) {
+    showLobby();
+    return;
+  }
+
+  showRoomPanel();
+  if (els.roomCode) els.roomCode.textContent = room.code;
+
+  await CloudManager.syncLocalRoomDisplayName?.().catch(() => {});
+
+  const freshRoom = CloudManager.getCurrentRoom();
+  const activeRoom = freshRoom || room;
+  renderPlayers(activeRoom.players, activeRoom);
+
+  const panelTitle = els.roomPanel?.querySelector('.couple-title');
+  if (panelTitle) {
+    panelTitle.textContent = isPartyRoom(activeRoom)
+      ? '👥 Sala de amigos'
+      : '❤️ Chocolate & La Cereza';
+  }
+
+  const [coupleRes, rankRes] = await Promise.all([
+    CloudManager.getCoupleStats(),
+    CloudManager.getCoupleRanking(),
+  ]);
+
+  if (coupleRes.success) {
+    renderCoupleSummary(coupleRes.couple);
+    renderMascotScene(room, coupleRes.couple);
+  } else {
+    renderMascotScene(room, null);
+  }
+
+  if (rankRes.success) {
+    renderRanking(rankRes.ranking, coupleRes.success ? coupleRes.couple : null);
+    renderCoupleScoreHud(rankRes.ranking, coupleRes.success ? coupleRes.couple : null);
+  }
+
+  renderGiftPanel(room);
+}
+
+function handleCoupleUpdated(couple) {
+  if (!couple) return;
+
+  const newLeader = couple.bestPlayerId;
+  if (lastBestPlayerId && newLeader && lastBestPlayerId !== newLeader) {
+    triggerMascotFx('fx-crown');
+    const room = CloudManager.getCurrentRoom();
+    const leaderType = resolveMascotType(couple.bestPlayerName, newLeader, room?.players);
+    playGuardianAnim(els.guardians, leaderType, 'crown');
+  }
+  lastBestPlayerId = newLeader;
+}
+
+async function handleRoomEvent(event) {
+  if (event.type === 'room_removed') {
+    cleanupChatSubscriptions();
+    lastPlayerCount = 0;
+    lastBestPlayerId = null;
+    forcedSceneMode = null;
+    hideCoupleScoreHud();
+    renderGiftPanel(null);
+    showLobby();
+    notifyHubRoomChanged();
+    setStatus('La sala se cerró. Crea una nueva o entra con otro código.');
+    return;
+  }
+
+  if (event.type === 'couple_updated') {
+    handleCoupleUpdated(event.couple);
+    if (isGameplayActive()) return;
+    scheduleRefreshRoomPanel();
+    return;
+  }
+
+  if (event.type === 'presence_updated') {
+    const room = CloudManager.getCurrentRoom();
+    if (room) renderPlayers(room.players, room);
+    return;
+  }
+
+  if (event.type === 'room_updated') {
+    const room = event.room || CloudManager.getCurrentRoom();
+    const count = room?.players?.length || 0;
+
+    if (lastPlayerCount === 1 && count >= 2) {
+      const localId = getLocalPlayerId();
+      const partner = room?.players?.find((p) => p.id !== localId);
+      scheduleHugScene(partner?.name || 'Tu pareja');
+    }
+
+    lastPlayerCount = count;
+    scheduleRefreshRoomPanel();
+  }
+}
+
+function bindRoomListener() {
+  if (unsubscribeRoom) unsubscribeRoom();
+  unsubscribeRoom = CloudManager.subscribeToRoom(handleRoomEvent);
+  bindChatListener();
+  setChatEnabled(true);
+}
+
+function notifyHubRoomChanged() {
+  window.dispatchEvent(new CustomEvent('couple:roomChanged'));
+}
+
+async function tryCreateRoom() {
+  const player = getPlayerPayload();
+  let result = await CloudManager.createRoom(player);
+  if (!result.success && (result.error === 'ALREADY_IN_ROOM' || result.error === 'RESTORE_CANCELLED')) {
+    CloudManager.forceClearRoomSession();
+    result = await CloudManager.createRoom(player);
+  }
+  return result;
+}
+
+async function tryJoinRoom(code) {
+  const player = getPlayerPayload();
+  let result = await CloudManager.joinRoom(code, player);
+  if (!result.success && (result.error === 'ALREADY_IN_ROOM' || result.error === 'ROOM_CLOSED')) {
+    CloudManager.forceClearRoomSession();
+    result = await CloudManager.joinRoom(code, player);
+  }
+  return result;
+}
+
+async function onCreateRoom() {
+  setStatus('Creando sala…');
+  enableLobbyControls(false);
+
+  try {
+    await CloudManager.whenSessionReady();
+    await CloudManager.ensureCleanRoomState();
+    const result = await tryCreateRoom();
+
+    if (!result.success) {
+      console.error('[CoupleUI] createRoom failed:', result.error, result.message);
+      setStatus(result.message || 'No se pudo crear la sala.', true);
+      showLobby();
+      return;
+    }
+
+    setStatus('');
+    bindRoomListener();
+    lastPlayerCount = result.room?.players?.length || 1;
+    await refreshRoomPanel();
+    notifyHubRoomChanged();
+    showToast(`Sala ${result.room.code} creada — comparte el código`);
+  } catch (err) {
+    console.error('[CoupleUI] createRoom error:', err);
+    if (err instanceof Error) console.error(err.stack);
+    setStatus(err instanceof Error ? err.message : String(err), true);
+    showLobby();
+  } finally {
+    enableLobbyControls(true);
+  }
+}
+
+async function connectToRoom(code, { viaRejoin = false } = {}) {
+  const roomCode = (code || '').trim().toUpperCase();
+  if (roomCode.length !== 6) {
+    setStatus('Introduce un código de 6 caracteres.', true);
+    return false;
+  }
+
+  setStatus(viaRejoin ? `Reconectando a ${roomCode}…` : 'Entrando en la sala…');
+  enableLobbyControls(false);
+
+  try {
+    await CloudManager.whenSessionReady();
+    await CloudManager.ensureCleanRoomState();
+    const player = getPlayerPayload();
+    const result = viaRejoin
+      ? await CloudManager.rejoinRoom(roomCode, player)
+      : await tryJoinRoom(roomCode);
+
+    if (!result.success) {
+      console.error('[CoupleUI] connect failed:', result.error, result.message);
+      setStatus(result.message || 'No se pudo entrar.', true);
+      showLobby();
+      return false;
+    }
+
+    setStatus('');
+    bindRoomListener();
+    lastPlayerCount = result.room?.players?.length || 0;
+    await refreshRoomPanel();
+    if ((result.room?.players?.length || 0) >= 2) {
+      const localId = getLocalPlayerId();
+      const partner = result.room.players.find((p) => p.id !== localId);
+      scheduleHugScene(partner?.name || 'Tu pareja');
+    }
+    notifyHubRoomChanged();
+    showToast(viaRejoin ? `Reconectado a ${roomCode}` : `Conectado a la sala ${roomCode}`);
+    return true;
+  } catch (err) {
+    console.error('[CoupleUI] connect error:', err);
+    if (err instanceof Error) console.error(err.stack);
+    setStatus(err instanceof Error ? err.message : String(err), true);
+    showLobby();
+    return false;
+  } finally {
+    enableLobbyControls(true);
+  }
+}
+
+async function onRejoinSavedRoom() {
+  const saved = CloudManager.getSavedRoomCode?.()
+    || (els.joinCode?.value || '').trim().toUpperCase();
+  if (saved.length !== 6) {
+    setStatus('No hay código guardado — escribe ATGVMV (o tu código) abajo.', true);
+    showLobby();
+    return;
+  }
+  await connectToRoom(saved, { viaRejoin: true });
+}
+
+async function onJoinRoom() {
+  const code = (els.joinCode?.value || '').trim().toUpperCase();
+  await connectToRoom(code);
+}
+
+async function validateRoomMembership() {
+  const room = CloudManager.getCurrentRoom();
+  if (!room) return;
+  const localId = getLocalPlayerId();
+  const listed = room.players.some((p) => p.id === localId);
+  if (listed) return;
+  const saved = room.code || CloudManager.getSavedRoomCode?.();
+  CloudManager.forceClearRoomSession();
+  showLobby();
+  if (saved && els.joinCode) els.joinCode.value = saved;
+  setStatus('Desconectado de la sala — pulsa Reconectar o Entrar.', true);
+}
+
+async function runStartupRecovery() {
+  if (CloudManager.getCurrentRoom()) {
+    await validateRoomMembership();
+    if (CloudManager.getCurrentRoom()) return;
+  }
+
+  const saved = CloudManager.getSavedRoomCode?.();
+  if (!saved) {
+    updateRecoveryBar();
+    return;
+  }
+
+  if (els.joinCode) els.joinCode.value = saved;
+  updateRecoveryBar();
+  await connectToRoom(saved, { viaRejoin: true });
+}
+
+async function onResetSession() {
+  CloudManager.forceClearRoomSession();
+  if (unsubscribeRoom) {
+    unsubscribeRoom();
+    unsubscribeRoom = null;
+  }
+  cleanupChatSubscriptions();
+  lastPlayerCount = 0;
+  lastBestPlayerId = null;
+  forcedSceneMode = null;
+  hideCoupleScoreHud();
+  renderGiftPanel(null);
+  showLobby();
+  notifyHubRoomChanged();
+  setStatus('Sesión reiniciada — ya puedes crear o entrar en una sala.');
+  showToast('Sesión de sala reiniciada');
+}
+
+async function onLeaveRoom() {
+  els.leaveBtn.disabled = true;
+  try {
+    const result = await CloudManager.leaveRoom();
+
+    if (unsubscribeRoom) {
+      unsubscribeRoom();
+      unsubscribeRoom = null;
+    }
+    cleanupChatSubscriptions();
+    lastPlayerCount = 0;
+    lastBestPlayerId = null;
+    forcedSceneMode = null;
+    hideCoupleScoreHud();
+    renderGiftPanel(null);
+    showLobby();
+    notifyHubRoomChanged();
+    setStatus(
+      result.success
+        ? ''
+        : 'Saliste localmente; la sincronización con la nube puede tardar.'
+    );
+  } finally {
+    els.leaveBtn.disabled = false;
+  }
+}
+
+async function onCopyCode() {
+  const code = CloudManager.getCurrentRoom()?.code || els.roomCode?.textContent;
+  if (!code) return;
+
+  try {
+    await navigator.clipboard.writeText(code);
+    showToast('Código copiado');
+  } catch (_) {
+    showToast(`Código: ${code}`);
+  }
+}
+
+function onScoreSubmitted(event) {
+  const detail = event.detail;
+  if (!detail?.success) return;
+
+  if (detail.isNewBest) {
+    const name = detail.couple?.bestPlayerName || 'Alguien';
+    const score = detail.couple?.bestScore || 0;
+    const leaderType = resolveMascotType(name, detail.couple?.bestPlayerId, CloudManager.getCurrentRoom()?.players);
+    showToast(`🏆 ¡Nuevo récord! ${name} — ${score} 🍫`);
+    triggerMascotFx('fx-record');
+    playGuardianAnim(els.guardians, leaderType, 'record');
+    refreshMascotScene();
+  }
+
+  if (detail.couple?.playStreak >= 7 && detail.couple.playStreak % 7 === 0) {
+    showToast(`🔥 ¡${detail.couple.playStreak} días juntos! 🧸❤️🧸`);
+  }
+}
+
+function cacheElements() {
+  els.lobby = $('couple-lobby');
+  els.roomPanel = $('couple-room-panel');
+  els.nameInput = $('couple-player-name');
+  els.joinCode = $('couple-join-code');
+  els.createBtn = $('couple-create-btn');
+  els.joinBtn = $('couple-join-btn');
+  els.resetBtn = $('couple-reset-session');
+  els.rejoinBtn = $('couple-rejoin-btn');
+  els.recoveryBar = $('couple-recovery-bar');
+  els.recoveryText = $('couple-recovery-text');
+  els.leaveBtn = $('couple-leave-room');
+  els.copyBtn = $('couple-copy-code');
+  els.roomCode = $('couple-room-code');
+  els.playersList = $('couple-players-list');
+  els.rankingList = $('couple-ranking-list');
+  els.statsSummary = $('couple-stats-summary');
+  els.statusMsg = $('couple-status-msg');
+  els.toast = $('couple-toast');
+  els.chatMessages = $('couple-chat-messages');
+  els.chatForm = $('couple-chat-form');
+  els.chatInput = $('couple-chat-input');
+  els.chatSend = $('couple-chat-send');
+  els.chatEmojis = $('couple-chat-emojis');
+  els.mascotScene = $('couple-mascot-scene');
+  els.mascotStage = $('couple-mascot-stage');
+  els.mascotCaption = $('couple-mascot-caption');
+  els.streakWrap = $('couple-streak-wrap');
+  els.guardians = $('couple-guardians');
+  els.scoreHud = $('couple-score-hud');
+  els.footerMascots = $('site-footer-mascots');
+  els.giftPanel = $('couple-gift-panel');
+  els.giftDivider = $('couple-gift-divider');
+  els.giftWallet = $('couple-gift-wallet');
+  els.giftPartner = $('couple-gift-partner');
+  els.giftAmount = $('couple-gift-amount');
+  els.giftSend = $('couple-gift-send');
+  els.giftPresets = $('couple-gift-presets');
+  els.giftStatus = $('couple-gift-status');
+}
+
+async function init() {
+  cacheElements();
+  if (!els.lobby) return;
+
+  bindGameplayRefreshGuard();
+  initGuardians();
+
+  const identity = PlayerIdentity.getIdentity();
+  if (els.nameInput) {
+    const display = PlayerIdentity.getPreferredDisplayName();
+    if (identity.username) els.nameInput.value = identity.username;
+    else if (identity.name) els.nameInput.value = identity.name;
+    else if (display !== 'Jugador') els.nameInput.value = display.replace(/^@/, '');
+  }
+
+  els.createBtn?.addEventListener('click', onCreateRoom);
+  els.joinBtn?.addEventListener('click', onJoinRoom);
+  els.resetBtn?.addEventListener('click', onResetSession);
+  els.rejoinBtn?.addEventListener('click', onRejoinSavedRoom);
+  els.leaveBtn?.addEventListener('click', onLeaveRoom);
+  enableLobbyControls(true);
+  els.copyBtn?.addEventListener('click', onCopyCode);
+  els.chatForm?.addEventListener('submit', onChatSubmit);
+  els.chatEmojis?.addEventListener('click', onEmojiClick);
+  els.giftSend?.addEventListener('click', onSendGift);
+  els.giftPresets?.addEventListener('click', onGiftPresetClick);
+  els.giftAmount?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSendGift();
+    }
+  });
+
+  els.chatMessages?.addEventListener('scroll', () => {
+    if (!els.chatMessages) return;
+    const el = els.chatMessages;
+    chatStickToBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+  });
+
+  window.addEventListener('social:join-room', (event) => {
+    const code = event.detail?.roomCode;
+    if (code) connectToRoom(code);
+  });
+
+  window.addEventListener('couple:roomChanged', () => {
+    if (CloudManager.getCurrentRoom()) {
+      refreshRoomPanel().catch(() => {});
+    } else {
+      updateRecoveryBar();
+    }
+  });
+
+  els.joinCode?.addEventListener('input', () => {
+    if (els.joinCode) {
+      els.joinCode.value = els.joinCode.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    }
+  });
+
+  window.addEventListener('couple:score-submitted', onScoreSubmitted);
+  window.addEventListener('couple:gift-received', onGiftReceived);
+  window.addEventListener('gameshop:wallet-changed', onWalletChanged);
+
+  try {
+    await CloudManager.whenSessionReady();
+    await CloudManager.ensureCleanRoomState();
+  } catch (err) {
+    console.error('[CoupleUI] whenSessionReady error:', err);
+    CloudManager.forceClearRoomSession();
+    setStatus('Sesión bloqueada — pulsa Reconectar o Reiniciar sesión.', true);
+    showLobby();
+  }
+
+  if (CloudManager.getCurrentRoom()) {
+    await validateRoomMembership();
+  }
+
+  if (CloudManager.getCurrentRoom()) {
+    bindRoomListener();
+    const room = CloudManager.getCurrentRoom();
+    lastPlayerCount = room?.players?.length || 0;
+    await refreshRoomPanel();
+    const coupleRes = await CloudManager.getCoupleStats();
+    if (coupleRes.success) {
+      lastBestPlayerId = coupleRes.couple?.bestPlayerId ?? null;
+    }
+    notifyHubRoomChanged();
+  } else {
+    showLobby();
+    const params = new URLSearchParams(window.location.search);
+    const sala = params.get('sala')?.trim().toUpperCase();
+    if (sala && sala.length === 6) {
+      if (els.joinCode) els.joinCode.value = sala;
+      await connectToRoom(sala);
+    }
+  }
+
+  await runStartupRecovery();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+export default { init };

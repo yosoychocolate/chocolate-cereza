@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>El Chocolate & La Cereza 🍫🍒</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/app-icon-192.png?v=1">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/app-icon-192.png?v=1">
+  <link rel="shortcut icon" type="image/png" href="assets/app-icon-192.png?v=1">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/app-icon-512.png?v=1">
+  <link rel="manifest" href="manifest.json?v=7cbf9eb">
+  <meta name="theme-color" content="#ff4fa3">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="🍫🍒">
+  <link rel="preload" as="image" href="assets/cannon-bg.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=7cbf9eb">
+  <script>
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    document.documentElement.classList.add('intro-lock');
+    window.scrollTo(0, 0);
+    window.__FILE_PROTOCOL__ = location.protocol === 'file:';
+    if (window.__FILE_PROTOCOL__) {
+      document.documentElement.classList.add('file-protocol-active');
+    }
+    window.__SITE_ROOT__ = '';
+  </script>
+</head>
+<body>
+  <div id="file-protocol-warning" class="file-protocol-warning">
+    <div class="file-protocol-warning-inner">
+      <button type="button" id="file-protocol-dismiss" class="file-protocol-dismiss" aria-label="Cerrar aviso">✕</button>
+      <strong>⚠️ Este enlace no funciona directo desde la carpeta</strong>
+      <p>Cierra esta pestaña. En la carpeta del sitio, haz <strong>doble clic en <code>ABRIR-SITE.bat</code></strong> (o <code>serve.bat</code>).</p>
+      <p>El navegador abrirá solo en <code>http://localhost:8765</code>.</p>
+    </div>
+  </div>
+  <!-- Chuva de pétalas e corações -->
+  <div id="petal-rain" aria-hidden="true"></div>
+  <div id="ambient-bg" aria-hidden="true"></div>
+
+  <!-- INTRO -->
+  <section id="intro" class="screen active">
+    <div class="intro-glow"></div>
+    <div class="intro-content glass">
+      <h1 class="intro-title">
+        <span class="char-icon">🍫</span>
+        El Chocolate & La Cereza
+        <span class="char-icon">🍒</span>
+      </h1>
+      <p id="intro-daily-greeting" class="intro-daily-greeting" aria-live="polite"></p>
+      <p class="intro-quote">"Hay historias que comienzan con una mirada... la nuestra empezó con un chocolate y una cereza."</p>
+      <div class="intro-actions">
+        <button id="btn-enter" class="btn-glow">
+          <span>❤️ Entrar en nuestra historia</span>
+        </button>
+        <button type="button" id="btn-intro-notifications" class="btn-notif-pink">
+          <span>🔔 Notificaciones</span>
+        </button>
+        <p id="intro-notif-hint" class="intro-notif-hint hidden" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Guía iPhone — añadir a pantalla de inicio -->
+  <div id="ios-install-overlay" class="ios-install-overlay hidden" aria-hidden="true" role="dialog" aria-labelledby="ios-install-title">
+    <div class="ios-install-card glass">
+      <button type="button" class="ios-install-close" data-ios-install-close aria-label="Cerrar">✕</button>
+      <h2 id="ios-install-title" class="ios-install-title">📲 iPhone — notificaciones</h2>
+      <p class="ios-install-lead">En iPhone, Safari <strong>no avisa</strong> si solo abres el enlace. Instala la app en la pantalla de inicio para mensajes y avisos con la app cerrada:</p>
+      <ol class="ios-install-steps">
+        <li>Abre este sitio en <strong>Safari</strong> (no en Instagram/WhatsApp).</li>
+        <li>Toca el botón <strong>Compartir</strong> <span class="ios-share-icon" aria-hidden="true">⎙</span> abajo en el centro.</li>
+        <li>Elige <strong>«Añadir a pantalla de inicio»</strong>.</li>
+        <li>Toca <strong>«Añadir»</strong> — aparecerá el icono 🍒</li>
+        <li><strong>Cierra Safari</strong> y abre la app desde ese icono.</li>
+        <li>Allí toca <strong>🔔 Notificaciones</strong> y acepta.</li>
+      </ol>
+      <p class="ios-install-note">Así te llegará el aviso de las 8:30 PM (hora de Nueva York) aunque no tengas Safari abierto. ❤️</p>
+    </div>
+  </div>
+
+  <!-- ANIMAÇÃO ENCONTRO -->
+  <section id="meeting" class="screen">
+    <div class="meeting-wrap">
+      <div class="meeting-scene">
+        <img id="chocolate-walk" class="meeting-sprite" src="assets/chocolate.png" alt="">
+        <img id="cherry-wait" class="meeting-sprite" src="assets/cherry.png" alt="">
+        <div id="meeting-heart" class="big-heart hidden" aria-hidden="true">❤️</div>
+      </div>
+      <p id="meeting-message" class="meeting-message hidden">"Desde ese día, mi corazón encontró su lugar favorito."</p>
+    </div>
+    <div id="meeting-particles" class="particles" aria-hidden="true"></div>
+  </section>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main id="main-content" class="hidden">
+    <header class="main-header glass">
+      <span class="header-title">🍫 El Chocolate & La Cereza 🍒</span>
+    </header>
+
+    <nav class="site-hub-nav glass" aria-label="Menú de la pareja">
+      <button type="button" class="site-hub-nav-btn" data-scroll="section-couple-hub">🏡 Nuestro Hogar</button>
+      <button type="button" class="site-hub-nav-btn" data-scroll="section-timeline">📖 Historia</button>
+      <a href="jugar/" class="site-hub-nav-btn site-hub-nav-link">🎮 Juegos</a>
+    </nav>
+
+    <!-- Nuestra canción -->
+    <section class="section glass" id="section-music">
+      <h2>🎵 Nuestras canciones</h2>
+      <p id="music-subtitle" class="music-subtitle">♪ Nuestra canción</p>
+      <p class="music-tagline">Te queda bonito ❤️</p>
+      <div class="music-player">
+        <div class="music-track-nav">
+          <button type="button" id="music-prev" class="music-nav-btn" aria-label="Canción anterior">⏮</button>
+          <p id="music-track-title" class="music-track-title">Nuestra canción</p>
+          <button type="button" id="music-next" class="music-nav-btn" aria-label="Siguiente canción">⏭</button>
+          <button type="button" id="music-repeat-btn" class="music-nav-btn music-repeat-btn" aria-label="Repetir canción" aria-pressed="false" title="Repetir canción">🔁</button>
+        </div>
+        <p class="music-playlist-hint">Elige una canción de la lista 👇</p>
+        <ul id="music-playlist" class="music-playlist" aria-label="Lista de canciones"></ul>
+        <div class="music-player-top">
+          <button type="button" id="music-play-btn" class="music-play-btn">▶︎ Reproducir</button>
+          <button type="button" id="music-pause-btn" class="music-pause-btn hidden">⏸︎ Pausar</button>
+          <span id="music-status" class="music-status hidden">♫ Tocando...</span>
+        </div>
+        <div class="music-progress-wrap">
+          <div class="music-progress-track" id="music-progress-track" role="slider" aria-label="Progreso de la canción" tabindex="0">
+            <div id="music-progress-fill" class="music-progress-fill"></div>
+          </div>
+          <div class="music-time">
+            <span id="music-current">00:00</span>
+            <span id="music-duration">00:00</span>
+          </div>
+        </div>
+        <div class="music-volume" aria-label="Volumen de la música del sitio">
+          <span class="music-vol-heading">Volumen música</span>
+          <button type="button" class="music-vol-btn" data-music-vol-down aria-label="Bajar volumen de música">🔉</button>
+          <span class="music-vol-label" aria-live="polite">75%</span>
+          <button type="button" class="music-vol-btn" data-music-vol-up aria-label="Subir volumen de música">🔊</button>
+        </div>
+      </div>
+      <p id="music-quote" class="music-quote">"Cada vez que esta canción suena, me recuerda a ti." 🍫🍒❤️</p>
+    </section>
+
+    <!-- Cliques de Amor -->
+    <section class="section glass" id="section-clicks">
+      <h2>❤️ Clicks de Amor</h2>
+      <button id="love-click-btn" class="love-click-area" aria-label="Hoy pensé en ti">
+        <span id="love-count" class="love-count">0</span>
+      </button>
+      <p class="click-meaning">Cada clic significa: <em>"Hoy pensé en ti."</em></p>
+    </section>
+
+    <!-- Mensagens aleatórias -->
+    <section class="section glass" id="section-surprise">
+      <button id="btn-surprise" class="btn-neon">🍒 Sorpréndeme</button>
+      <div id="surprise-message" class="surprise-message"></div>
+    </section>
+
+    <!-- Generador de poemas -->
+    <section class="section glass" id="section-poem">
+      <h2>📜 Poema para ti</h2>
+      <p class="poem-hint">100 poemas únicos — sin repetir hasta completar la colección.</p>
+      <p id="poem-counter" class="poem-counter"></p>
+      <button type="button" id="btn-poem" class="btn-neon">✨ Crear poema</button>
+      <div id="poem-output" class="poem-output" aria-live="polite"></div>
+    </section>
+
+    <!-- Medidor del Amor -->
+    <section class="section glass" id="section-meter">
+      <h2>Medidor del Amor</h2>
+      <div class="meter-labels">
+        <span>🤎</span>
+        <span>❤️</span>
+      </div>
+      <div class="meter-track">
+        <div id="meter-fill" class="meter-fill"></div>
+        <button id="meter-heart" class="meter-heart-btn" aria-label="Mantén presionado para llenar el amor">❤️</button>
+      </div>
+      <p class="meter-hint">Mantén presionado el corazón ❤️</p>
+      <div class="meter-percent-row">
+        <span>0%</span>
+        <span id="meter-percent">0%</span>
+        <span>100%</span>
+      </div>
+      <p class="meter-label">Amor Actual</p>
+      <p id="meter-value" class="meter-value">0</p>
+      <div id="meter-error" class="meter-error hidden">
+        <p class="error-code">Error 404</p>
+        <p>El amor ha superado el límite permitido.</p>
+      </div>
+    </section>
+
+    <!-- Timeline -->
+    <section class="section glass" id="section-timeline">
+      <h2>Nuestra historia</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <span class="timeline-icon">🍫</span>
+          <p>Primer "Hola"</p>
+        </div>
+        <div class="timeline-arrow">↓</div>
+        <div class="timeline-item">
+          <span class="timeline-icon">😊</span>
+          <p>Las conversaciones se volvieron rutina</p>
+        </div>
+        <div class="timeline-arrow">↓</div>
+        <div class="timeline-item highlight">
+          <span class="timeline-icon">❤️</span>
+          <p>El chocolate encontró a su cereza</p>
+        </div>
+        <div class="timeline-arrow">↓</div>
+        <div class="timeline-item">
+          <span class="timeline-icon">📖</span>
+          <p>Aún seguimos escribiendo nuestra historia...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Hogar del casal / Nuestro Hogar -->
+    <section class="section glass" id="section-couple-hub">
+      <h2>🏡 Nuestro Hogar</h2>
+      <p id="hub-sync-badge" class="hub-sync-badge">Cargando…</p>
+
+      <div class="hub-tabs visually-hidden" aria-hidden="true">
+        <button type="button" class="hub-tab is-active" data-hub-tab="nossa-casa" role="tab" aria-selected="true">🏡 Hogar</button>
+        <button type="button" class="hub-tab" data-hub-tab="agenda" role="tab" aria-selected="false">📝 Agenda</button>
+        <button type="button" class="hub-tab" data-hub-tab="calendario" role="tab" aria-selected="false">📅 Calendario</button>
+        <button type="button" class="hub-tab" data-hub-tab="cartinhas" role="tab" aria-selected="false">💌 Cartitas</button>
+        <button type="button" class="hub-tab" data-hub-tab="memorias" role="tab" aria-selected="false">📸 Recuerdos</button>
+        <button type="button" class="hub-tab" data-hub-tab="contador" role="tab" aria-selected="false">❤️ Contador</button>
+        <button type="button" class="hub-tab" data-hub-tab="missoes" role="tab" aria-selected="false">🎯 Misiones</button>
+        <button type="button" class="hub-tab" data-hub-tab="lembretes" role="tab" aria-selected="false">🔔 Recordatorios</button>
+      </div>
+
+      <div class="hub-panel" data-hub-panel="nossa-casa">
+        <div id="nossa-casa-scene" class="nossa-casa-scene" aria-label="Nuestro hogar"></div>
+      </div>
+
+      <div class="hub-panel visually-hidden" aria-hidden="true" data-hub-panel="agenda">
+        <p class="hub-panel-desc">Lista simple — marca cuando completes.</p>
+        <ul id="hub-task-list" class="hub-task-list"></ul>
+        <form id="hub-task-form" class="hub-inline-form">
+          <input id="hub-task-emoji" class="hub-input hub-input-emoji" type="text" maxlength="4" placeholder="🔋" aria-label="Emoji">
+          <input id="hub-task-input" class="hub-input" type="text" maxlength="80" placeholder="Nueva tarea…" required>
+          <button type="submit" class="couple-btn couple-btn-small couple-btn-primary">Añadir</button>
+        </form>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="calendario">
+        <div class="hub-cal-head">
+          <button type="button" id="hub-cal-prev" class="hub-cal-nav" aria-label="Mes anterior">◀</button>
+          <h3 id="hub-cal-title" class="hub-cal-title"></h3>
+          <button type="button" id="hub-cal-next" class="hub-cal-nav" aria-label="Mes siguiente">▶</button>
+        </div>
+        <div class="hub-cal-weekdays" aria-hidden="true">
+          <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+        </div>
+        <div id="hub-cal-grid" class="hub-cal-grid"></div>
+        <div id="hub-day-panel" class="hub-day-panel"></div>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="cartinhas">
+        <div id="hub-letter-list" class="hub-letter-list"></div>
+        <form id="hub-letter-form" class="hub-stack-form hub-compose-form">
+          <label class="casa-compose-label" for="hub-letter-to">Para</label>
+          <input id="hub-letter-to" class="hub-input" type="text" maxlength="20" placeholder="@usuario (ej: cherry)" autocomplete="off">
+          <textarea id="hub-letter-input" class="hub-textarea" rows="4" maxlength="500" placeholder="Escribe una cartita…"></textarea>
+          <p id="hub-letter-route" class="hub-letter-route" aria-live="polite"></p>
+          <div class="hub-compose-photo">
+            <input id="hub-letter-file" type="file" class="casa-file-hidden" accept="image/*">
+            <button type="button" class="casa-photo-pick-btn" data-hub-pick-photo>📷 Elegir foto</button>
+            <span class="casa-photo-name" id="hub-letter-file-name">Sin foto</span>
+          </div>
+          <img id="hub-letter-photo-preview" class="hub-photo-preview hidden" alt="Vista previa">
+          <button type="submit" class="couple-btn couple-btn-primary hub-compose-send">Enviar 💌</button>
+        </form>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="memorias">
+        <div id="hub-memory-grid" class="hub-memory-grid"></div>
+        <form id="hub-memory-form" class="hub-stack-form hub-compose-form">
+          <input id="hub-memory-title" class="hub-input" type="text" maxlength="60" placeholder="Título (ej: Playa)">
+          <input id="hub-memory-url" class="hub-input" type="url" placeholder="URL en internet (opcional)">
+          <div class="hub-compose-photo">
+            <input id="hub-memory-file" type="file" class="casa-file-hidden" accept="image/*">
+            <button type="button" class="casa-photo-pick-btn" data-hub-pick-memory>📷 Elegir foto</button>
+            <span class="casa-photo-name" id="hub-memory-file-name">Sin foto</span>
+          </div>
+          <img id="hub-memory-preview" class="hub-photo-preview hidden" alt="Vista previa">
+          <button type="submit" class="couple-btn couple-btn-primary">Guardar recuerdo 📸</button>
+        </form>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="contador">
+        <div class="hub-counter-cards">
+          <div class="hub-counter-card">
+            <p class="hub-counter-heading">Juntos hace</p>
+            <div id="hub-counter-together"></div>
+          </div>
+          <div class="hub-counter-card">
+            <p class="hub-counter-heading">Próximo encuentro</p>
+            <div id="hub-counter-meeting"></div>
+          </div>
+        </div>
+        <form id="hub-counter-form" class="hub-stack-form">
+          <label class="hub-field">Inicio de la relación<input id="hub-relationship-start" class="hub-input" type="date"></label>
+          <label class="hub-field">Próximo encuentro<input id="hub-next-meeting" class="hub-input" type="date"></label>
+          <button type="submit" class="couple-btn couple-btn-primary">Guardar fechas</button>
+        </form>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="missoes">
+        <p class="hub-panel-desc">Cada día misiones diferentes — cada una da 🍫.</p>
+        <ul id="hub-mission-list" class="hub-mission-list"></ul>
+      </div>
+
+      <div class="hub-panel hidden" data-hub-panel="lembretes">
+        <p class="hub-panel-desc">El calendario alimenta los recordatorios automáticamente.</p>
+        <section class="hub-today-reminders">
+          <h4 class="hub-today-title">🔔 Hoy</h4>
+          <ul id="hub-today-reminders" class="hub-today-reminder-list"></ul>
+        </section>
+        <hr class="hub-divider">
+        <p class="hub-panel-desc">Sophie puede elegir la hora en EE.UU. 🇺🇸 — tú ves el mismo evento en Brasil 🇧🇷.</p>
+        <form id="hub-reminder-form" class="hub-stack-form">
+          <label class="hub-check-row">
+            <input id="hub-reminder-enabled" type="checkbox">
+            <span>🔋 Cargar el auto — activar recordatorio</span>
+          </label>
+          <label class="hub-field">Hora<input id="hub-reminder-time" class="hub-input" type="time" value="20:30"></label>
+          <label class="hub-field">Zona horaria
+            <select id="hub-reminder-tz" class="hub-input">
+              <option value="America/New_York">EE.UU. — Nueva York (Sophie)</option>
+              <option value="America/Sao_Paulo">Brasil — São Paulo</option>
+              <option value="America/Chicago">EE.UU. — Chicago</option>
+              <option value="America/Los_Angeles">EE.UU. — Los Angeles</option>
+            </select>
+          </label>
+          <button type="submit" class="couple-btn couple-btn-primary">Guardar recordatorio</button>
+        </form>
+      </div>
+
+      <div id="hub-toast" class="hub-toast hidden" role="status" aria-live="polite"></div>
+
+      <div id="hub-event-modal" class="hub-event-modal hidden" aria-hidden="true" role="dialog" aria-labelledby="hub-event-modal-title">
+        <div class="hub-event-modal-backdrop" data-event-modal-close></div>
+        <div class="hub-event-modal-card glass">
+          <button type="button" class="hub-event-modal-close" data-event-modal-close aria-label="Cerrar">✕</button>
+          <h3 id="hub-event-modal-title" class="hub-event-modal-title">➕ Nuevo evento</h3>
+          <form id="hub-event-form" class="hub-event-form">
+            <input type="hidden" id="hub-event-id" value="">
+            <label class="hub-field">📝 Título<input id="hub-event-title" class="hub-input" type="text" maxlength="80" required placeholder="Ej: Cargar el auto"></label>
+            <label class="hub-field">📅 Fecha<input id="hub-event-date" class="hub-input" type="date" required></label>
+            <label class="hub-field">🕒 Hora<input id="hub-event-time" class="hub-input" type="time" value="20:30"></label>
+            <fieldset class="hub-event-types">
+              <legend>Tipo</legend>
+              <div id="hub-event-type-grid" class="hub-event-type-grid"></div>
+            </fieldset>
+            <label class="hub-check-row">
+              <input id="hub-event-remind" type="checkbox" checked>
+              <span>🔔 Recordar</span>
+            </label>
+            <fieldset class="hub-event-repeat">
+              <legend>Repetir</legend>
+              <label class="hub-radio-row"><input type="radio" name="hub-event-repeat" value="never" checked> Nunca</label>
+              <label class="hub-radio-row"><input type="radio" name="hub-event-repeat" value="daily"> Todo día</label>
+              <label class="hub-radio-row"><input type="radio" name="hub-event-repeat" value="weekly"> Toda semana</label>
+              <label class="hub-radio-row"><input type="radio" name="hub-event-repeat" value="monthly"> Todo mes</label>
+            </fieldset>
+            <label class="hub-field">Nota (opcional)<textarea id="hub-event-note" class="hub-textarea" rows="2" maxlength="200"></textarea></label>
+            <div id="hub-event-comments-wrap" class="hub-event-comments-wrap hidden">
+              <h4>💬 Comentarios</h4>
+              <ul id="hub-event-comments" class="hub-event-comments"></ul>
+              <div class="hub-inline-form">
+                <input id="hub-event-comment-input" class="hub-input" type="text" maxlength="120" placeholder="Escribe un comentario…">
+                <button type="button" id="hub-event-comment-btn" class="couple-btn couple-btn-small">Enviar</button>
+              </div>
+            </div>
+            <div class="hub-event-form-actions">
+              <button type="button" id="hub-event-accept-btn" class="couple-btn couple-btn-small hidden">✓ Aceptar</button>
+              <button type="submit" class="couple-btn couple-btn-primary">Guardar ❤️</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mini Games — portal para /jugar/ -->
+    <section class="section glass" id="section-game-portal">
+      <h2>🎮 Mini Games</h2>
+      <p class="portal-game-lead">El juego en pareja vive en su propia pantalla — más limpio y a pantalla completa.</p>
+      <div class="portal-game-actions">
+        <a href="jugar/" class="couple-btn couple-btn-primary portal-jugar-btn">Abrir juegos →</a>
+      </div>
+      <p class="portal-game-hint">👥 Amigos, @usuario y convites de sala siguen aquí abajo. Cuando llegue un convite, pulsa <strong>Entrar</strong> y irás al juego.</p>
+    </section>
+
+    <!-- Carta -->
+    <section class="section glass" id="section-letter">
+      <h2>Carta</h2>
+      <div id="envelope" class="envelope" role="button" tabindex="0" aria-label="Abrir carta">
+        <img id="envelope-img" class="envelope-img" src="assets/envelope.png" alt="Sobre con corazón">
+      </div>
+      <div id="letter-content" class="letter-content hidden">
+        <p>No sé cuánto tiempo pase.</p>
+        <p>Solo sé que, desde que llegaste,<br>las conversaciones dejaron de ser simples mensajes.</p>
+        <p>Se convirtieron en el momento favorito de mi día.</p>
+        <p class="letter-sign">Gracias por ser mi cereza. 🍒</p>
+      </div>
+    </section>
+
+    <!-- Final -->
+    <section class="section" id="section-final">
+      <div id="stars-bg" class="stars-bg" aria-hidden="true"></div>
+      <div class="final-scene">
+        <div id="final-meeting" class="final-meeting-scene">
+          <img id="final-chocolate" class="final-meeting-sprite" src="assets/chocolate.png" alt="">
+          <img id="final-cherry" class="final-meeting-sprite" src="assets/cherry.png" alt="">
+          <div id="final-meeting-heart" class="final-meeting-heart hidden">❤️</div>
+        </div>
+        <p id="final-message" class="final-message">"Si algún día me preguntas dónde vive mi corazón… solo tendré que señalar hacia ti."</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" id="site-footer">
+    <div class="site-footer-divider" aria-hidden="true"></div>
+    <div id="site-footer-mascots"></div>
+  </footer>
+
+  <!-- Animação secreta -->
+  <div id="secret-overlay" class="secret-overlay hidden">
+    <div id="secret-rain" aria-hidden="true"></div>
+    <div class="secret-scene">
+      <img id="secret-chocolate" class="secret-sprite" src="assets/chocolate.png" alt="">
+      <img id="secret-cherry" class="secret-sprite" src="assets/cherry.png" alt="">
+    </div>
+    <p id="secret-message" class="secret-message hidden">Lo lograste... desbloqueaste el corazón del chocolate. ❤️🍒</p>
+    <button id="secret-close" class="btn-neon hidden">Cerrar</button>
+  </div>
+
+  <!-- Música -->
+  <audio id="song-audio" preload="metadata"></audio>
+
+  <div id="site-achievement-toast" class="site-achievement-toast hidden" role="status" aria-live="polite"></div>
+
+  <div id="music-toast" class="music-toast hidden" role="status" aria-live="polite">
+    Esta página se disfruta mejor con música. 🎵❤️
+  </div>
+
+  <div id="letter-toast" class="letter-toast hidden" role="status" aria-live="polite">
+    <span id="letter-toast-text">💌 Nueva cartita</span>
+  </div>
+
+  <div id="music-autoplay-prompt" class="music-autoplay-prompt hidden">
+    <button type="button" id="music-autoplay-btn" class="music-autoplay-btn">🎵 Reproducir nuestra canción</button>
+  </div>
+
+  <!-- Missão diária — 20:30 (horário EUA) 🔋🐻 -->
+  <div id="daily-charge-overlay" class="daily-charge-overlay hidden" aria-hidden="true" role="dialog" aria-labelledby="daily-charge-label">
+    <div id="daily-charge-rain" class="daily-charge-rain" aria-hidden="true"></div>
+    <div class="daily-charge-card">
+      <div id="daily-charge-bear" class="daily-charge-bear"></div>
+      <p id="daily-charge-label" class="daily-charge-label">🐻 Teddy:</p>
+      <div id="daily-charge-message" class="daily-charge-message"></div>
+      <div id="daily-charge-rewards" class="daily-charge-rewards hidden" aria-live="polite"></div>
+      <button type="button" id="daily-charge-action" class="btn-neon daily-charge-btn">🔌 Lo conecté a cargar</button>
+      <button type="button" id="daily-charge-notif-btn" class="btn-notif-pink daily-charge-notif-btn hidden">
+        <span>🔔 Notificaciones</span>
+      </button>
+      <button type="button" id="daily-charge-dismiss" class="daily-charge-dismiss hidden">Cerrar</button>
+    </div>
+  </div>
+
+  <div id="music-float-wrap" class="music-float-wrap">
+    <div id="music-notes" class="music-notes" aria-hidden="true"></div>
+    <div class="music-float-controls">
+      <button type="button" class="music-float-vol-btn" data-music-vol-down aria-label="Bajar volumen">−</button>
+      <button type="button" id="music-toggle" class="music-toggle" aria-label="Reproducir música">
+        <span id="music-icon" class="music-icon">🎵</span>
+      </button>
+      <button type="button" class="music-float-vol-btn" data-music-vol-up aria-label="Subir volumen">+</button>
+    </div>
+  </div>
+
+  <div id="casa-mascot-widget" class="casa-mascot-widget hidden" role="complementary" aria-label="Mascota de la pareja">
+    <div class="casa-mascot-inner">
+      <span id="casa-mascot-emoji" class="casa-mascot-emoji" aria-hidden="true">🐻</span>
+      <p id="casa-mascot-bubble" class="casa-mascot-bubble">¡Hola!</p>
+    </div>
+  </div>
+  <div id="casa-toast" class="casa-toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- Amigos + mini chat flutuante (site inteiro) -->
+  <div id="social-dock" class="social-dock hidden" aria-label="Amigos y mensajes">
+    <div id="social-chat-window" class="social-chat-window hidden" role="dialog" aria-labelledby="social-chat-title">
+      <header class="social-chat-header">
+        <div id="social-chat-title" class="social-chat-title">💬 Chat</div>
+        <div class="social-chat-header-actions">
+          <button type="button" id="social-chat-minimize" class="social-header-btn" aria-label="Minimizar">—</button>
+          <button type="button" id="social-chat-close" class="social-header-btn" aria-label="Cerrar">✕</button>
+        </div>
+      </header>
+      <div id="social-chat-messages" class="social-chat-messages" role="log" aria-live="polite"></div>
+      <form id="social-chat-form" class="social-chat-form">
+        <div id="social-chat-reply" class="social-chat-reply hidden"></div>
+        <div class="social-chat-form-row">
+          <input id="social-chat-input" class="social-chat-input" type="text" maxlength="200" placeholder="Escribe un mensaje…" autocomplete="off">
+          <button type="submit" class="social-chat-send" aria-label="Enviar mensaje"><span aria-hidden="true">➤</span></button>
+        </div>
+      </form>
+    </div>
+
+    <div id="social-friends-panel" class="social-friends-panel hidden" role="dialog" aria-label="Lista de amigos">
+      <header class="social-panel-header">
+        <h3>👥 Amigos</h3>
+        <div class="social-chat-lang-wrap">
+          <label class="social-chat-lang-label" for="social-chat-lang">Mi idioma en el chat</label>
+          <select id="social-chat-lang" class="couple-input social-chat-lang-select" aria-label="Idioma del chat"></select>
+        </div>
+        <form id="social-username-form" class="social-username-form">
+          <label class="social-username-label" for="social-username-input">Elige tu usuario corto</label>
+          <div class="social-username-row">
+            <span class="social-username-prefix" aria-hidden="true">@</span>
+            <input id="social-username-input" class="couple-input social-username-input" type="text" maxlength="16" placeholder="sophie" autocomplete="username" autocapitalize="off" spellcheck="false">
+            <button type="submit" class="couple-btn couple-btn-small couple-btn-primary">Guardar</button>
+          </div>
+        </form>
+        <p id="social-username-display" class="social-my-id-row hidden">
+          <span class="social-my-profile">
+            <button type="button" id="social-profile-photo-btn" class="social-profile-photo-btn" title="Cambiar foto de perfil">
+              <span id="social-my-photo-preview" class="social-chat-avatar social-chat-avatar--sm" aria-hidden="true">?</span>
+            </button>
+            <span class="social-my-profile-text">
+              Tu usuario: <code><span id="social-my-username">…</span></code>
+              <button type="button" id="social-copy-username" class="couple-btn couple-btn-small" title="Copiar">📋</button>
+            </span>
+          </span>
+          <button type="button" id="social-switch-profile-btn" class="couple-btn couple-btn-small couple-btn-ghost social-switch-profile-btn">↩ Salir del perfil</button>
+        </p>
+        <input type="file" id="social-profile-photo-input" class="hidden" accept="image/*">
+      </header>
+      <div id="social-friend-requests-wrap" class="social-friend-requests-wrap hidden"></div>
+      <div id="social-invites-wrap" class="social-invites-wrap hidden"></div>
+      <form id="social-add-friend-form" class="social-add-friend-form">
+        <input id="social-add-friend-user" class="couple-input" type="text" maxlength="16" placeholder="Usuario del amigo/a (ej: sophie)" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button type="submit" class="couple-btn couple-btn-small couple-btn-primary">📨 Enviar solicitud</button>
+      </form>
+      <p id="social-friends-status" class="social-friends-status" role="status"></p>
+      <ul id="social-friends-list" class="social-friends-list"></ul>
+    </div>
+
+    <button type="button" id="social-friends-toggle" class="social-friends-toggle" aria-expanded="false" aria-controls="social-friends-panel" title="Toca para abrir · arrastra para mover">
+      <span class="social-friends-toggle-grip" aria-hidden="true">⠿</span>
+      <span class="social-toggle-icon">👥</span>
+      <span class="social-toggle-label">Amigos</span>
+      <span id="social-friends-badge" class="social-friends-badge hidden">0</span>
+    </button>
+    <div id="social-toast" class="social-toast hidden" role="status"></div>
+  </div>
+
+  <script src="firebase-config.js?v=7cbf9eb"></script>
+  <script src="site-assets.js?v=7cbf9eb"></script>
+  <script src="background-pwa.js?v=7cbf9eb"></script>
+  <script src="image-upload.js?v=7cbf9eb"></script>
+  <script src="ios-push-guide.js?v=7cbf9eb"></script>
+  <script src="music-playlist.js?v=7cbf9eb"></script>
+  <script src="update-check.js?v=7cbf9eb"></script>
+  <script src="save-manager.js?v=7cbf9eb"></script>
+  <script src="daily-charge-mission.js?v=7cbf9eb"></script>
+  <script src="audio-manager.js?v=7cbf9eb"></script>
+  <script src="daily-greetings.js?v=7cbf9eb"></script>
+  <script src="script.js?v=7cbf9eb"></script>
+  <script src="hub-shared.js?v=7cbf9eb"></script>
+  <script src="couple-hub.js?v=7cbf9eb"></script>
+  <script src="casa-experiences.js?v=7cbf9eb"></script>
+  <script src="teddy-experiences.js?v=7cbf9eb"></script>
+  <script src="teddy-room.js?v=7cbf9eb"></script>
+  <script src="nossa-casa.js?v=7cbf9eb"></script>
+  <script type="module" src="friends-chat-ui.js?v=7cbf9eb"></script>
+  <script type="module" src="push-notifications.js?v=7cbf9eb"></script>
+  <script>
+    if (window.__FILE_PROTOCOL__) {
+      document.documentElement.classList.add('file-protocol-active');
+      const warn = document.getElementById('file-protocol-warning');
+      const dismiss = document.getElementById('file-protocol-dismiss');
+      if (sessionStorage.getItem('fileProtocolWarnDismissed')) {
+        if (warn) warn.hidden = true;
+        document.documentElement.classList.remove('file-protocol-active');
+      }
+      dismiss?.addEventListener('click', () => {
+        sessionStorage.setItem('fileProtocolWarnDismissed', '1');
+        if (warn) warn.hidden = true;
+        document.documentElement.classList.remove('file-protocol-active');
+      });
+    } else {
+      const warn = document.getElementById('file-protocol-warning');
+      if (warn) warn.hidden = true;
+    }
+  </script>
+</body>
+</html>
