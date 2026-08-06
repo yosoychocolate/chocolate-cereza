@@ -12,10 +12,10 @@ permissions:
   pages: write
   id-token: write
 
-# Não cancelar deploy em andamento — evita "Deployment cancelled" na fila do Pages.
+# Só um workflow por vez — evita 2 deploys simultâneos no Pages.
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -67,6 +67,37 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Wait for Pages deployment slot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Verificando se há deploy anterior do Pages ainda em andamento..."
+          for attempt in $(seq 1 45); do
+            json=$(gh api "repos/${GITHUB_REPOSITORY}/pages/deployments?per_page=1" 2>/dev/null || echo '[]')
+            status=$(echo "$json" | jq -r '.[0].status // "none"')
+            deploy_id=$(echo "$json" | jq -r '.[0].id // ""')
+            echo "Tentativa ${attempt}/45 — último deploy: ${deploy_id:-n/a} status=${status}"
+
+            if [ "$status" = "none" ] || [ "$status" = "success" ] || [ "$status" = "failure" ]; then
+              echo "Slot livre — pode publicar."
+              exit 0
+            fi
+
+            # Deploy preso na fila por muito tempo — cancela para liberar.
+            if [ "$status" = "queued" ] && [ "$attempt" -ge 8 ]; then
+              echo "Cancelando deploy enfileirado preso: ${deploy_id}"
+              gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${deploy_id}/cancel" || true
+              sleep 15
+              continue
+            fi
+
+            sleep 20
+          done
+
+          echo "::error::Pages ainda ocupado após 15 min. Cancele manualmente em Settings → Pages ou aguarde."
+          exit 1
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        timeout-minutes: 15
