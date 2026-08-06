@@ -6937,6 +6937,13 @@ body.game-meta-panel-open .game-achievements-gallery {
   margin-top: 0.25rem;
 }
 
+.hub-event-phone-hint {
+  font-size: 0.78rem;
+  opacity: 0.8;
+  margin: 0;
+  line-height: 1.4;
+}
+
 .hub-event-comments-wrap h4 {
   margin: 0.5rem 0 0.35rem;
   font-size: 0.9rem;

@@ -259,6 +259,43 @@ async function detectMode() {
   hubState = readLocalHub();
 }
 
+function hasCloudHubRoom() {
+  try {
+    return !!(CloudManager?.getCurrentRoom?.());
+  } catch (_) {
+    return false;
+  }
+}
+
+function shouldPersistHubToCloud() {
+  return mode === 'cloud' && CloudManager && hasCloudHubRoom();
+}
+
+async function installEventOnPhone(event) {
+  if (!event || event.remind === false || !global.CalendarDevice) return null;
+  const tz = getReminderTimezone();
+  try {
+    const res = await global.CalendarDevice.installReminder(event, tz);
+    if (res?.calendar && res?.notification) {
+      showHubToast('📱 Calendario del teléfono + alarma configurados ❤️');
+    } else if (res?.calendar) {
+      showHubToast(isIOSDevice()
+        ? '📱 Abre el archivo .ics → Añadir al Calendario (con alarma)'
+        : '📱 Evento añadido al calendario del teléfono ❤️');
+    } else if (res?.notification) {
+      showHubToast('🔔 Alarma del app programada en el teléfono');
+    }
+    return res;
+  } catch (err) {
+    console.warn('[CoupleHub] installEventOnPhone:', err);
+    return null;
+  }
+}
+
+function isIOSDevice() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+}
+
 function setSyncBadge() {
   if (!els.syncBadge) return;
   if (mode === 'cloud') {
@@ -782,18 +819,40 @@ async function addEvent(data) {
     ...data,
     createdBy: data.createdBy || getPlayerName(),
     createdByPlayerId: data.createdByPlayerId || getPlayerId(),
-    status: data.status || (mode === 'cloud' ? 'pending' : 'accepted'),
+    status: data.status || 'accepted',
   });
-  if (mode === 'cloud' && CloudManager) {
-    await CloudManager.createHubEvent(payload, getPlayerName(), getPlayerId());
-    showHubToast(`Evento guardado — ${payload.emoji} ${payload.title} ❤️`);
-    return;
+
+  if (shouldPersistHubToCloud()) {
+    const res = await CloudManager.createHubEvent(payload, getPlayerName(), getPlayerId());
+    if (res?.success) {
+      const cloudEvent = { ...payload, id: res.id || localId('ev'), createdAt: Date.now(), status: 'accepted' };
+      hubState.events.push(cloudEvent);
+      writeLocalHub(hubState);
+      renderCalendar();
+      renderTodayReminders();
+      if (payload.remind !== false) await installEventOnPhone(cloudEvent);
+      else showHubToast(`Evento guardado — ${payload.emoji} ${payload.title} ❤️`);
+      return;
+    }
+    showHubToast('Sin sala — guardado en este teléfono 📱');
   }
-  hubState.events.push({ id: localId('ev'), createdAt: Date.now(), ...payload, status: 'accepted' });
+
+  const event = {
+    id: localId('ev'),
+    createdAt: Date.now(),
+    ...payload,
+    status: 'accepted',
+  };
+  hubState.events.push(event);
   writeLocalHub(hubState);
   renderCalendar();
   renderTodayReminders();
-  showHubToast(`Evento guardado — ${payload.emoji} ${payload.title} ❤️`);
+
+  if (payload.remind !== false) {
+    await installEventOnPhone(event);
+  } else {
+    showHubToast(`Evento guardado — ${payload.emoji} ${payload.title} ❤️`);
+  }
 }
 
 async function acceptEvent(eventId) {
@@ -833,26 +892,43 @@ async function addEventComment(eventId, text) {
 }
 
 async function patchEvent(eventId, partial) {
-  if (mode === 'cloud' && CloudManager) {
-    await CloudManager.patchHubEvent(eventId, partial);
-    return;
-  }
   const ev = hubState.events.find((e) => e.id === eventId);
+  const merged = normalizeHubEvent({ ...(ev || {}), ...partial, id: eventId });
+
+  if (shouldPersistHubToCloud()) {
+    const res = await CloudManager.patchHubEvent(eventId, partial);
+    if (res?.success) {
+      if (merged.remind !== false) await installEventOnPhone(merged);
+      return;
+    }
+  }
+
   if (ev) Object.assign(ev, partial);
   writeLocalHub(hubState);
   renderCalendar();
   renderTodayReminders();
+
+  if (merged.remind !== false) {
+    await global.CalendarDevice?.cancelSwReminder?.(eventId);
+    await installEventOnPhone(merged);
+  } else {
+    await global.CalendarDevice?.cancelSwReminder?.(eventId);
+  }
 }
 
 async function removeEvent(eventId) {
-  if (mode === 'cloud' && CloudManager) {
-    await CloudManager.removeHubEvent(eventId);
-    return;
+  if (shouldPersistHubToCloud()) {
+    const res = await CloudManager.removeHubEvent(eventId);
+    if (res?.success) {
+      await global.CalendarDevice?.cancelSwReminder?.(eventId);
+      return;
+    }
   }
   hubState.events = hubState.events.filter((e) => e.id !== eventId);
   writeLocalHub(hubState);
   renderCalendar();
   renderTodayReminders();
+  await global.CalendarDevice?.cancelSwReminder?.(eventId);
 }
 
 async function addLetter(text) {
@@ -1288,6 +1364,9 @@ function bindEvents() {
     e.preventDefault();
     const data = readEventForm();
     if (!data.title || !data.date) return;
+    if (data.remind !== false) {
+      await global.CalendarDevice?.ensureNotificationPermission?.();
+    }
     if (editingEventId) {
       await patchEvent(editingEventId, data);
       showHubToast('Evento actualizado ❤️');
@@ -1471,6 +1550,7 @@ async function setupSync() {
   lettersInboxReady = false;
   knownLetterIds = new Set();
   await detectMode();
+  hubState = readLocalHub();
   setSyncBadge();
   if (mode === 'cloud' && CloudManager) {
     const room = CloudManager.getCurrentRoom?.();
@@ -1479,16 +1559,17 @@ async function setupSync() {
         if (!payload || payload.type !== 'hub_updated') return;
         hubState.settings = payload.settings || hubState.settings;
         hubState.tasks = payload.tasks || [];
-        hubState.events = payload.events || [];
+        hubState.events = (payload.events || []).map((ev) => normalizeHubEvent(ev)).filter(Boolean);
         hubState.memories = payload.memories || [];
         writeLocalHub(hubState);
         renderAll();
+        global.CalendarDevice?.syncAllReminders?.(hubState.events, getReminderTimezone());
       });
     }
     await startPersonalLettersSync();
-  } else {
-    hubState = readLocalHub();
   }
+
+  global.CalendarDevice?.syncAllReminders?.(hubState.events, getReminderTimezone());
 }
 
 function cacheElements() {

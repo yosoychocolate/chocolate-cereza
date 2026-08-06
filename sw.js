@@ -139,6 +139,53 @@ self.addEventListener('periodicsync', (event) => {
   );
 });
 
+async function showScheduledNotification(payload) {
+  const { eventId, title, body, timestamp, tag } = payload || {};
+  if (!timestamp || timestamp <= Date.now()) return;
+
+  const options = {
+    body: body || 'Recordatorio del calendario',
+    icon: `${SW_ORIGIN}/assets/app-icon-192.png`,
+    badge: `${SW_ORIGIN}/assets/cherry.png`,
+    tag: tag || `hub-event-${eventId}`,
+    renotify: true,
+    data: { url: SW_ORIGIN + '/', type: 'hub-event', eventId: eventId || '' },
+  };
+
+  try {
+    if (typeof TimestampTrigger !== 'undefined') {
+      options.showTrigger = new TimestampTrigger(timestamp);
+      await self.registration.showNotification(title || 'El Chocolate & La Cereza ❤️', options);
+      return;
+    }
+  } catch (err) {
+    console.warn('[SW] TimestampTrigger no disponible:', err);
+  }
+
+  await self.registration.showNotification(title || 'El Chocolate & La Cereza ❤️', options);
+}
+
+async function cancelHubReminder(eventId) {
+  const tag = `hub-event-${eventId}`;
+  const list = await self.registration.getNotifications({ tag });
+  list.forEach((n) => n.close());
+}
+
+self.addEventListener('message', (event) => {
+  const data = event.data || {};
+  if (data.type === 'schedule-hub-reminder') {
+    event.waitUntil(showScheduledNotification(data.payload));
+  }
+  if (data.type === 'cancel-hub-reminder') {
+    event.waitUntil(cancelHubReminder(data.eventId));
+  }
+  if (data.type === 'sync-hub-reminders') {
+    event.waitUntil(
+      Promise.all((data.events || []).map((payload) => showScheduledNotification(payload)))
+    );
+  }
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
