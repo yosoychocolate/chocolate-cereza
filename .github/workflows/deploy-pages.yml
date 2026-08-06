@@ -5,35 +5,51 @@ on:
     branches:
       - main
       - master
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# Não cancelar deploy em andamento — evita "Deployment cancelled" na fila do Pages.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
+    name: Build site
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inject build version
+      - name: Prepare site
         run: |
           VERSION=$(git rev-parse --short HEAD)
           BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
           find . -type f \( -name '*.html' -o -name '*.js' -o -name '*.json' \) \
-            ! -path './.git/*' ! -path './.github/*' ! -path './scripts/*' \
+            ! -path './.git/*' \
+            ! -path './.github/*' \
+            ! -path './scripts/*' \
+            ! -path './functions/*' \
+            ! -path './node_modules/*' \
             -exec sed -i "s/__APP_VERSION__/${VERSION}/g" {} +
+
           printf '{"version":"%s","builtAt":"%s"}\n' "$VERSION" "$BUILD_TIME" > version.json
+
+          mkdir -p _site
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'functions' \
+            --exclude 'scripts' \
+            --exclude 'node_modules' \
+            --exclude '.cursor' \
+            --exclude '_site' \
+            ./ _site/
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -41,8 +57,16 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
+  deploy:
+    name: Deploy site
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
