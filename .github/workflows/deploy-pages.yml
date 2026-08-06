@@ -11,9 +11,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
-  actions: read
 
-# Só um workflow por vez — evita 2 deploys simultâneos no Pages.
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -64,85 +62,16 @@ jobs:
     name: Deploy site
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Clear stuck Pages deployments
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          # Status reais da API do GitHub Pages (não confundir com queued/success).
-          is_active_status() {
-            case "$1" in
-              deployment_queued|deployment_in_progress|syncing_files|finished_file_sync|updating_pages|purging_cdn)
-                return 0
-                ;;
-              *)
-                return 1
-                ;;
-            esac
-          }
-
-          is_done_status() {
-            case "$1" in
-              succeed|deployment_failed|deployment_cancelled|deployment_content_failed|deployment_timeout)
-                return 0
-                ;;
-              *)
-                return 1
-                ;;
-            esac
-          }
-
-          echo "Verificando deploys do Pages antes de publicar..."
-          for attempt in $(seq 1 30); do
-            if ! json=$(gh api "repos/${GITHUB_REPOSITORY}/pages/deployments?per_page=10"); then
-              echo "Falha ao consultar deploys (tentativa ${attempt}/30)."
-              sleep 10
-              continue
-            fi
-
-            count=$(echo "$json" | jq 'length')
-            if [ "$count" -eq 0 ]; then
-              echo "Nenhum deploy anterior — slot livre."
-              exit 0
-            fi
-
-            echo "$json" | jq -r '.[] | "  id=\(.id) status=\(.status)"'
-
-            active_ids=""
-            while IFS= read -r line; do
-              id="${line%% *}"
-              status="${line#* status=}"
-              if is_active_status "$status"; then
-                active_ids="${active_ids} ${id}"
-              fi
-            done < <(echo "$json" | jq -r '.[] | "\(.id) status=\(.status)"')
-
-            if [ -z "${active_ids// /}" ]; then
-              latest=$(echo "$json" | jq -r '.[0].status // "unknown"')
-              if is_done_status "$latest" || [ "$latest" = "unknown" ]; then
-                echo "Slot livre (último status: ${latest})."
-                exit 0
-              fi
-              echo "Status inesperado: ${latest} — aguardando..."
-            else
-              echo "Cancelando deploy(s) ativo(s):${active_ids}"
-              for id in $active_ids; do
-                gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${id}/cancel" || true
-              done
-            fi
-
-            sleep 15
-          done
-
-          echo "::error::Não foi possível liberar o slot do Pages após 7,5 min."
-          exit 1
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        timeout-minutes: 20
+        with:
+          timeout: 900000
+          error_count: 15
