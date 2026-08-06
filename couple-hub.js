@@ -7,6 +7,14 @@
 
   const HS = global.HubShared || {};
   const DAILY_MISSION_DEFS = HS.DAILY_MISSION_DEFS || [];
+  const EVENT_TYPES = HS.EVENT_TYPES || [];
+  const normalizeHubEvent = HS.normalizeHubEvent || function (ev) { return ev; };
+  const eventOccursOnDate = HS.eventOccursOnDate || function () { return false; };
+  const formatEventTime = HS.formatEventTime || function (t) { return t; };
+  const eventMinutesOnDate = HS.eventMinutesOnDate || function () { return null; };
+  const getEventsForDate = HS.getEventsForDate || function (events, dateKey) {
+    return (events || []).filter((ev) => ev.date === dateKey);
+  };
   const todayDateKeyInTz = HS.todayDateKeyInTz || function () { return ''; };
   const daysBetween = HS.daysBetween || function () { return null; };
   const daysUntil = HS.daysUntil || function () { return null; };
@@ -46,6 +54,8 @@ let calendarYear = new Date().getFullYear();
 let selectedDate = null;
 let activeTab = 'nossa-casa';
 let reminderTimer = null;
+let editingEventId = null;
+let selectedEventType = 'date';
 
 function $(id) {
   return document.getElementById(id);
@@ -210,7 +220,7 @@ function applyHubPayload(payload) {
   hubState = {
     settings: payload.settings || createDefaultHubData(),
     tasks: payload.tasks || [],
-    events: payload.events || [],
+    events: (payload.events || []).map((ev) => normalizeHubEvent(ev)).filter(Boolean),
     letters: payload.letters || [],
     memories: payload.memories || [],
   };
@@ -469,11 +479,156 @@ function renderMissions() {
   }).join('');
 }
 
+function getReminderTimezone() {
+  return hubState.settings?.chargeReminder?.timezone || 'America/New_York';
+}
+
+function sortEventsByTime(events) {
+  return events.slice().sort((a, b) => {
+    const ta = (a.time || '99:99').slice(0, 5);
+    const tb = (b.time || '99:99').slice(0, 5);
+    return ta.localeCompare(tb);
+  });
+}
+
+function weekdayLabel(dateKey) {
+  return new Date(dateKey + 'T12:00:00').toLocaleDateString('es', { weekday: 'long' });
+}
+
+function renderTodayReminders() {
+  if (!els.todayReminders) return;
+  const tz = getReminderTimezone();
+  const todayKey = todayDateKeyInTz(tz);
+  const todayEvents = sortEventsByTime(
+    getEventsForDate(hubState.events, todayKey).filter((ev) => ev.remind !== false)
+  );
+
+  if (!todayEvents.length) {
+    els.todayReminders.innerHTML = '<li class="hub-empty">Sin recordatorios para hoy</li>';
+    return;
+  }
+
+  els.todayReminders.innerHTML = todayEvents.map((ev) => {
+    const timeLabel = ev.time ? formatEventTime(ev.time) : 'Todo el día';
+    const pending = ev.status === 'pending' ? ' · pendiente' : '';
+    const remindBadge = ev.remind !== false ? '🔔' : '';
+    return `<li class="hub-today-reminder-item">
+      <span class="hub-reminder-time">${escapeHtml(timeLabel)}</span>
+      <span>${escapeHtml(ev.emoji || '❤️')} ${escapeHtml(ev.title)}${escapeHtml(pending)} ${remindBadge}</span>
+    </li>`;
+  }).join('');
+}
+
+function buildEventTypeGrid() {
+  if (!els.eventTypeGrid) return;
+  els.eventTypeGrid.innerHTML = EVENT_TYPES.map((t) =>
+    `<button type="button" class="hub-event-type-btn${selectedEventType === t.id ? ' is-selected' : ''}" data-event-type="${t.id}" title="${escapeHtml(t.label)}">${t.emoji}<br>${escapeHtml(t.label)}</button>`
+  ).join('');
+}
+
+function openEventModal(existing, dateOverride) {
+  if (!els.eventModal) return;
+  editingEventId = existing?.id || null;
+  const ev = existing ? normalizeHubEvent(existing) : null;
+  selectedEventType = ev?.eventType || 'car';
+  if (els.eventModalTitle) {
+    els.eventModalTitle.textContent = editingEventId ? '📝 Editar evento' : '➕ Nuevo evento';
+  }
+  if (els.eventId) els.eventId.value = editingEventId || '';
+  if (els.eventTitle) els.eventTitle.value = ev?.title || '';
+  if (els.eventDate) els.eventDate.value = ev?.date || dateOverride || selectedDate || todayDateKeyInTz(getReminderTimezone());
+  if (els.eventTime) els.eventTime.value = ev?.time || '20:30';
+  if (els.eventRemind) els.eventRemind.checked = ev ? ev.remind !== false : true;
+  if (els.eventNote) els.eventNote.value = ev?.note || '';
+  const repeat = ev?.repeat || 'never';
+  els.eventModal?.querySelectorAll('input[name="hub-event-repeat"]').forEach((r) => {
+    r.checked = r.value === repeat;
+  });
+  buildEventTypeGrid();
+
+  const isPending = ev?.status === 'pending';
+  const isOwner = ev?.createdByPlayerId && ev.createdByPlayerId === getPlayerId();
+  if (els.eventAcceptBtn) {
+    els.eventAcceptBtn.classList.toggle('hidden', !isPending || isOwner);
+  }
+  if (els.eventCommentsWrap) {
+    els.eventCommentsWrap.classList.toggle('hidden', !editingEventId);
+  }
+  renderEventComments(ev?.comments || []);
+
+  els.eventModal.classList.remove('hidden');
+  els.eventModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeEventModal() {
+  editingEventId = null;
+  if (!els.eventModal) return;
+  els.eventModal.classList.add('hidden');
+  els.eventModal.setAttribute('aria-hidden', 'true');
+}
+
+function renderEventComments(comments) {
+  if (!els.eventComments) return;
+  if (!comments?.length) {
+    els.eventComments.innerHTML = '<li class="hub-empty">Sin comentarios aún</li>';
+    return;
+  }
+  els.eventComments.innerHTML = comments.map((c) =>
+    `<li><strong>${escapeHtml(c.author || 'Alguien')}:</strong> ${escapeHtml(c.text || '')}</li>`
+  ).join('');
+}
+
+function readEventForm() {
+  const typeDef = EVENT_TYPES.find((t) => t.id === selectedEventType) || EVENT_TYPES[0];
+  const repeatInput = els.eventModal?.querySelector('input[name="hub-event-repeat"]:checked');
+  const playerId = getPlayerId();
+  const hasPartner = !!(global.CloudManager?.getPartnerPlayer?.()?.id);
+  const existing = editingEventId ? hubState.events.find((e) => e.id === editingEventId) : null;
+  return {
+    title: els.eventTitle?.value?.trim() || '',
+    date: els.eventDate?.value || '',
+    time: els.eventTime?.value?.slice(0, 5) || '',
+    emoji: typeDef.emoji,
+    eventType: typeDef.id,
+    remind: !!els.eventRemind?.checked,
+    repeat: repeatInput?.value || 'never',
+    note: els.eventNote?.value?.trim() || '',
+    status: existing?.status || (hasPartner && mode === 'cloud' ? 'pending' : 'accepted'),
+    createdByPlayerId: existing?.createdByPlayerId || playerId,
+  };
+}
+
+function getTodayEvents() {
+  const tz = getReminderTimezone();
+  const todayKey = todayDateKeyInTz(tz);
+  return sortEventsByTime(getEventsForDate(hubState.events, todayKey));
+}
+
+function getUpcomingTeddyHint() {
+  const tz = getReminderTimezone();
+  const todayKey = todayDateKeyInTz(tz);
+  const soon = sortEventsByTime(
+    getEventsForDate(hubState.events, todayKey).filter((ev) => ev.remind !== false && ev.time)
+  ).find((ev) => {
+    const mins = eventMinutesOnDate(ev, todayKey, tz);
+    return mins && mins.delta > 0 && mins.delta <= 10;
+  });
+  if (!soon) return null;
+  const mins = eventMinutesOnDate(soon, todayKey, tz);
+  const partner = getPartnerName();
+  return {
+    event: soon,
+    minutes: mins?.delta || 10,
+    message: `${partner || 'Sophie'}...\nDentro de ${mins?.delta || 10} minutos\nes hora de ${soon.title.toLowerCase()}. ❤️`,
+  };
+}
+
 function renderReminder() {
   const cr = hubState.settings.chargeReminder || createDefaultHubData().chargeReminder;
   if (els.reminderEnabled) els.reminderEnabled.checked = cr.enabled !== false;
   if (els.reminderTime) els.reminderTime.value = cr.time || '20:30';
   if (els.reminderTz) els.reminderTz.value = cr.timezone || 'America/New_York';
+  renderTodayReminders();
   scheduleReminderCheck();
 }
 
@@ -516,26 +671,35 @@ function renderDayPanel() {
     els.dayPanel.innerHTML = '<p class="hub-empty">Toca un día para ver o añadir eventos.</p>';
     return;
   }
-  const events = hubState.events.filter((e) => e.date === selectedDate);
+  const events = sortEventsByTime(getEventsForDate(hubState.events, selectedDate));
   const dateLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('es', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
   });
   const list = events.length
-    ? events.map((ev) => `<div class="hub-day-event" data-event-id="${escapeHtml(ev.id)}">
-        <span>${escapeHtml(ev.emoji)} ${escapeHtml(ev.title)}</span>
+    ? events.map((ev) => {
+        const pending = ev.status === 'pending' ? ' is-pending' : '';
+        const timeMeta = ev.time ? `🕒 ${formatEventTime(ev.time)}` : '';
+        const remindMeta = ev.remind !== false ? ' · 🔔 Lembrete ativo' : '';
+        const repeatMeta = ev.repeat && ev.repeat !== 'never' ? ` · ↻ ${ev.repeat}` : '';
+        return `<div class="hub-day-event${pending}" data-event-id="${escapeHtml(ev.id)}">
+        <div>
+          <span>${escapeHtml(ev.emoji)} ${escapeHtml(ev.title)}</span>
+          <span class="hub-day-event-meta">${escapeHtml(timeMeta)}${escapeHtml(remindMeta)}${escapeHtml(repeatMeta)}</span>
+        </div>
         <div class="hub-day-event-actions">
           <button type="button" class="hub-icon-btn hub-event-edit" data-event-id="${escapeHtml(ev.id)}">📝</button>
           <button type="button" class="hub-icon-btn hub-event-del" data-event-id="${escapeHtml(ev.id)}">🗑</button>
         </div>
-      </div>`).join('')
+      </div>`;
+      }).join('')
     : '<p class="hub-empty">Ningún evento en este día.</p>';
 
   els.dayPanel.innerHTML = `
     <h4 class="hub-day-title">${escapeHtml(dateLabel)}</h4>
     ${list}
-    <button type="button" class="couple-btn couple-btn-small couple-btn-primary hub-add-event-btn">➕ Añadir evento</button>
+    <button type="button" class="couple-btn couple-btn-small couple-btn-primary hub-add-event-btn">➕ Nuevo evento</button>
   `;
 }
 
@@ -614,13 +778,58 @@ async function removeTask(taskId) {
 }
 
 async function addEvent(data) {
+  const payload = normalizeHubEvent({
+    ...data,
+    createdBy: data.createdBy || getPlayerName(),
+    createdByPlayerId: data.createdByPlayerId || getPlayerId(),
+    status: data.status || (mode === 'cloud' ? 'pending' : 'accepted'),
+  });
   if (mode === 'cloud' && CloudManager) {
-    await CloudManager.createHubEvent(data, getPlayerName());
+    await CloudManager.createHubEvent(payload, getPlayerName(), getPlayerId());
+    showHubToast(`Evento guardado — ${payload.emoji} ${payload.title} ❤️`);
     return;
   }
-  hubState.events.push({ id: localId('ev'), createdAt: Date.now(), createdBy: getPlayerName(), ...data });
+  hubState.events.push({ id: localId('ev'), createdAt: Date.now(), ...payload, status: 'accepted' });
   writeLocalHub(hubState);
   renderCalendar();
+  renderTodayReminders();
+  showHubToast(`Evento guardado — ${payload.emoji} ${payload.title} ❤️`);
+}
+
+async function acceptEvent(eventId) {
+  const partial = { status: 'accepted', acceptedBy: getPlayerName() };
+  if (mode === 'cloud' && CloudManager) {
+    await CloudManager.patchHubEvent(eventId, partial);
+  } else {
+    const ev = hubState.events.find((e) => e.id === eventId);
+    if (ev) Object.assign(ev, partial);
+    writeLocalHub(hubState);
+    renderCalendar();
+  }
+  showHubToast('Evento aceptado ✓');
+  closeEventModal();
+}
+
+async function addEventComment(eventId, text) {
+  const trimmed = (text || '').trim();
+  if (!trimmed) return;
+  const comment = {
+    author: getPlayerName(),
+    playerId: getPlayerId(),
+    text: trimmed,
+    at: Date.now(),
+  };
+  const ev = hubState.events.find((e) => e.id === eventId);
+  const comments = [...(ev?.comments || []), comment];
+  if (mode === 'cloud' && CloudManager) {
+    await CloudManager.patchHubEvent(eventId, { comments });
+  } else if (ev) {
+    ev.comments = comments;
+    writeLocalHub(hubState);
+    renderCalendar();
+  }
+  renderEventComments(comments);
+  if (els.eventCommentInput) els.eventCommentInput.value = '';
 }
 
 async function patchEvent(eventId, partial) {
@@ -632,6 +841,7 @@ async function patchEvent(eventId, partial) {
   if (ev) Object.assign(ev, partial);
   writeLocalHub(hubState);
   renderCalendar();
+  renderTodayReminders();
 }
 
 async function removeEvent(eventId) {
@@ -642,6 +852,7 @@ async function removeEvent(eventId) {
   hubState.events = hubState.events.filter((e) => e.id !== eventId);
   writeLocalHub(hubState);
   renderCalendar();
+  renderTodayReminders();
 }
 
 async function addLetter(text) {
@@ -912,18 +1123,54 @@ function showHubToast(msg) {
   showHubToast._t = setTimeout(() => els.toast?.classList.add('hidden'), 3500);
 }
 
-function promptEvent(existing) {
-  const title = window.prompt('Título del evento:', existing?.title || '');
-  if (title === null) return null;
-  const emoji = window.prompt('Emoji (opcional):', existing?.emoji || '❤️') || '❤️';
-  const note = window.prompt('Nota (opcional):', existing?.note || '') || '';
-  return { title: title.trim(), emoji, note };
+function eventNotifyBody(ev) {
+  if (ev.eventType === 'car' || /cargar|carro|coche|auto/i.test(ev.title)) {
+    return 'No olvides poner el coche a cargar. 🔋🐻';
+  }
+  return `${ev.emoji || '❤️'} ${ev.title}`;
+}
+
+function checkEventReminders() {
+  const tz = getReminderTimezone();
+  const todayKey = todayDateKeyInTz(tz);
+  const events = getEventsForDate(hubState.events, todayKey).filter((ev) => ev.remind !== false && ev.time);
+
+  events.forEach((ev) => {
+    const mins = eventMinutesOnDate(ev, todayKey, tz);
+    if (!mins) return;
+
+    const soonKey = `hubEventSoon_${ev.id}_${todayKey}`;
+    if (mins.delta > 0 && mins.delta <= 10 && !sessionStorage.getItem(soonKey)) {
+      sessionStorage.setItem(soonKey, '1');
+      global.dispatchEvent(new CustomEvent('hub:event-soon', { detail: { event: ev, minutes: mins.delta } }));
+    }
+
+    const fireKey = `hubEventFire_${ev.id}_${todayKey}_${ev.time}`;
+    if (mins.delta <= 0 && mins.delta >= -2 && !sessionStorage.getItem(fireKey)) {
+      sessionStorage.setItem(fireKey, '1');
+      const body = eventNotifyBody(ev);
+      showHubToast(`❤️ El Chocolate & La Cereza — ${body}`);
+      if (Notification?.permission === 'granted') {
+        try {
+          new Notification('El Chocolate & La Cereza ❤️', {
+            body,
+            icon: 'assets/cherry.png',
+            tag: `hub-event-${ev.id}`,
+          });
+        } catch (_) { /* ignore */ }
+      }
+    }
+  });
 }
 
 function scheduleReminderCheck() {
   if (reminderTimer) clearInterval(reminderTimer);
-  reminderTimer = setInterval(checkReminder, 10000);
+  reminderTimer = setInterval(() => {
+    checkReminder();
+    checkEventReminders();
+  }, 10000);
   checkReminder();
+  checkEventReminders();
 }
 
 function checkReminder() {
@@ -1015,29 +1262,60 @@ function bindEvents() {
     const cell = e.target.closest('[data-cal-date]');
     if (!cell) return;
     selectedDate = cell.dataset.calDate;
-    renderDayPanel();
+    renderCalendar();
+    openEventModal(null, selectedDate);
   });
 
   els.dayPanel?.addEventListener('click', async (e) => {
     if (e.target.closest('.hub-add-event-btn')) {
       if (!selectedDate) return;
-      const data = promptEvent(null);
-      if (!data?.title) return;
-      await addEvent({ ...data, date: selectedDate });
+      openEventModal(null, selectedDate);
       return;
     }
     const editBtn = e.target.closest('.hub-event-edit');
     if (editBtn) {
       const ev = hubState.events.find((x) => x.id === editBtn.dataset.eventId);
-      const data = promptEvent(ev);
-      if (!data?.title) return;
-      await patchEvent(editBtn.dataset.eventId, data);
+      openEventModal(ev);
       return;
     }
     const delBtn = e.target.closest('.hub-event-del');
     if (delBtn) {
       await removeEvent(delBtn.dataset.eventId);
     }
+  });
+
+  els.eventForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = readEventForm();
+    if (!data.title || !data.date) return;
+    if (editingEventId) {
+      await patchEvent(editingEventId, data);
+      showHubToast('Evento actualizado ❤️');
+    } else {
+      await addEvent(data);
+    }
+    closeEventModal();
+    renderTodayReminders();
+  });
+
+  els.eventTypeGrid?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-event-type]');
+    if (!btn) return;
+    selectedEventType = btn.dataset.eventType || 'date';
+    buildEventTypeGrid();
+  });
+
+  els.eventModal?.querySelectorAll('[data-event-modal-close]').forEach((btn) => {
+    btn.addEventListener('click', closeEventModal);
+  });
+
+  els.eventAcceptBtn?.addEventListener('click', async () => {
+    if (editingEventId) await acceptEvent(editingEventId);
+  });
+
+  els.eventCommentBtn?.addEventListener('click', async () => {
+    if (!editingEventId) return;
+    await addEventComment(editingEventId, els.eventCommentInput?.value);
   });
 
   els.letterForm?.addEventListener('submit', async (e) => {
@@ -1255,7 +1533,24 @@ function cacheElements() {
   els.reminderEnabled = $('hub-reminder-enabled');
   els.reminderTime = $('hub-reminder-time');
   els.reminderTz = $('hub-reminder-tz');
+  els.todayReminders = $('hub-today-reminders');
+  els.eventModal = $('hub-event-modal');
+  els.eventModalTitle = $('hub-event-modal-title');
+  els.eventForm = $('hub-event-form');
+  els.eventId = $('hub-event-id');
+  els.eventTitle = $('hub-event-title');
+  els.eventDate = $('hub-event-date');
+  els.eventTime = $('hub-event-time');
+  els.eventRemind = $('hub-event-remind');
+  els.eventNote = $('hub-event-note');
+  els.eventTypeGrid = $('hub-event-type-grid');
+  els.eventAcceptBtn = $('hub-event-accept-btn');
+  els.eventCommentsWrap = $('hub-event-comments-wrap');
+  els.eventComments = $('hub-event-comments');
+  els.eventCommentInput = $('hub-event-comment-input');
+  els.eventCommentBtn = $('hub-event-comment-btn');
   els.toast = $('hub-toast');
+  buildEventTypeGrid();
 }
 
   function getChargeReminderSettings() {
@@ -1282,7 +1577,21 @@ function cacheElements() {
   global.CoupleHub = {
     getChargeReminderSettings,
     openTab: openHubTab,
+    openCalendar: (dateKey) => {
+      openHubTab('calendario');
+      if (dateKey) {
+        selectedDate = dateKey;
+        const d = new Date(dateKey + 'T12:00:00');
+        if (!Number.isNaN(d.getTime())) {
+          calendarMonth = d.getMonth();
+          calendarYear = d.getFullYear();
+        }
+        renderCalendar();
+      }
+    },
     getState: getHubState,
+    getTodayEvents,
+    getUpcomingTeddyHint,
     getMeta: getNossaCasaMeta,
     getVisibleLetters,
     getInboxLetters,
@@ -1305,6 +1614,10 @@ function cacheElements() {
     addMemory,
     removeMemory,
     addEvent,
+    patchEvent,
+    acceptEvent,
+    addEventComment,
+    removeEvent,
     persistSettings,
     showToast: showHubToast,
   };

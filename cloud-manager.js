@@ -2327,11 +2327,11 @@ export async function removeHubTask(taskId) {
   }
 }
 
-export async function createHubEvent(event, playerName) {
+export async function createHubEvent(event, playerName, playerId) {
   try {
     const code = requireRoomCode();
     const db = requireDb();
-    const id = await addHubEvent(db, code, event, playerName);
+    const id = await addHubEvent(db, code, event, playerName, playerId);
     return ok({ id });
   } catch (err) {
     return fail('HUB_EVENT_FAILED', err instanceof Error ? err.message : String(err));

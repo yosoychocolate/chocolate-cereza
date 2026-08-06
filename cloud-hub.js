@@ -136,13 +136,22 @@ function mapTaskDoc(id, data) {
 }
 
 function mapEventDoc(id, data) {
+  const repeat = ['never', 'daily', 'weekly', 'monthly'].includes(data.repeat) ? data.repeat : 'never';
   return {
     id,
     title: typeof data.title === 'string' ? data.title : '',
     date: typeof data.date === 'string' ? data.date : '',
     emoji: typeof data.emoji === 'string' ? data.emoji : '❤️',
+    eventType: typeof data.eventType === 'string' ? data.eventType : 'date',
     note: typeof data.note === 'string' ? data.note : '',
+    time: typeof data.time === 'string' ? data.time.slice(0, 5) : '',
+    remind: data.remind !== false,
+    repeat,
+    status: data.status === 'pending' ? 'pending' : 'accepted',
     createdBy: typeof data.createdBy === 'string' ? data.createdBy : '',
+    createdByPlayerId: typeof data.createdByPlayerId === 'string' ? data.createdByPlayerId : '',
+    acceptedBy: typeof data.acceptedBy === 'string' ? data.acceptedBy : '',
+    comments: Array.isArray(data.comments) ? data.comments : [],
     createdAt: data.createdAt?.toMillis?.() ?? Date.now(),
   };
 }
@@ -278,13 +287,22 @@ export async function deleteHubTask(db, roomCode, taskId) {
   await deleteDoc(doc(db, ROOMS, roomCode, TASKS, taskId));
 }
 
-export async function addHubEvent(db, roomCode, event, playerName) {
+export async function addHubEvent(db, roomCode, event, playerName, playerId) {
+  const repeat = ['never', 'daily', 'weekly', 'monthly'].includes(event.repeat) ? event.repeat : 'never';
   const ref = await addDoc(hubEventsRef(db, roomCode), {
     title: event.title || '',
     date: event.date || '',
     emoji: event.emoji || '❤️',
+    eventType: event.eventType || 'date',
     note: event.note || '',
+    time: event.time ? String(event.time).slice(0, 5) : '',
+    remind: event.remind !== false,
+    repeat,
+    status: event.status === 'pending' ? 'pending' : 'accepted',
     createdBy: playerName || '',
+    createdByPlayerId: playerId || '',
+    acceptedBy: event.acceptedBy || '',
+    comments: Array.isArray(event.comments) ? event.comments : [],
     createdAt: serverTimestamp(),
   });
   return ref.id;

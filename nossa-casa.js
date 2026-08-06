@@ -454,6 +454,7 @@
 
   function roomAgenda(body) {
     const tasks = [...(state().tasks || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const todayEvents = hub()?.getTodayEvents?.() || [];
     const today = new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
     const list = tasks.map((t) => {
       const pri = t.priority === 'high' ? '🔴' : t.priority === 'low' ? '🟢' : '🟡';
@@ -462,16 +463,35 @@
       </li>`;
     }).join('') || '<li class="casa-empty">Ninguna tarea hoy</li>';
 
+    const formatTime = global.HubShared?.formatEventTime || ((t) => t);
+    const eventsHtml = todayEvents.length
+      ? todayEvents.map((ev) => {
+          const time = ev.time ? formatTime(ev.time) : '';
+          const pending = ev.status === 'pending' ? ' is-pending' : '';
+          return `<div class="casa-agenda-event${pending}">${ev.remind !== false ? '☑' : '○'} ${esc(ev.emoji || '❤️')} ${time ? esc(time) + ' — ' : ''}${esc(ev.title)}</div>`;
+        }).join('')
+      : '<div class="casa-empty">Sin eventos en el calendario hoy</div>';
+
     body.innerHTML = `<div class="casa-room-theme theme-agenda">
       <div class="casa-agenda-art">📅</div>
       <h4>Hoy — ${esc(today)}</h4>
+      <div class="casa-agenda-events">
+        <h5>📅 Del calendario</h5>
+        ${eventsHtml}
+      </div>
       <ul class="casa-task-list">${list}</ul>
       <form id="casa-task-form" class="casa-inline-form">
         <select name="priority"><option value="normal">🟡 Normal</option><option value="high">🔴 Urgente</option><option value="low">🟢 Después</option></select>
         <input name="text" placeholder="Nueva tarea…" maxlength="80" required>
         <button type="submit" class="couple-btn couple-btn-small">+</button>
       </form>
+      <button type="button" class="couple-btn couple-btn-small couple-btn-primary" id="casa-open-calendar" style="margin-top:0.65rem">📅 Abrir calendario</button>
     </div>`;
+
+    body.querySelector('#casa-open-calendar')?.addEventListener('click', () => {
+      hub()?.openCalendar?.(global.HubShared?.todayDateKeyInTz?.(state().settings?.chargeReminder?.timezone) || '');
+      exitRoom();
+    });
 
     body.querySelector('.casa-task-list')?.addEventListener('change', async (e) => {
       if (e.target.type !== 'checkbox') return;

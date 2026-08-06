@@ -324,6 +324,12 @@
       </div>
 
       <div class="hub-panel hidden" data-hub-panel="lembretes">
+        <p class="hub-panel-desc">El calendario alimenta los recordatorios automáticamente.</p>
+        <section class="hub-today-reminders">
+          <h4 class="hub-today-title">🔔 Hoy</h4>
+          <ul id="hub-today-reminders" class="hub-today-reminder-list"></ul>
+        </section>
+        <hr class="hub-divider">
         <p class="hub-panel-desc">Sophie puede elegir la hora en EE.UU. 🇺🇸 — tú ves el mismo evento en Brasil 🇧🇷.</p>
         <form id="hub-reminder-form" class="hub-stack-form">
           <label class="hub-check-row">
@@ -344,6 +350,48 @@
       </div>
 
       <div id="hub-toast" class="hub-toast hidden" role="status" aria-live="polite"></div>
+
+      <div id="hub-event-modal" class="hub-event-modal hidden" aria-hidden="true" role="dialog" aria-labelledby="hub-event-modal-title">
+        <div class="hub-event-modal-backdrop" data-event-modal-close></div>
+        <div class="hub-event-modal-card glass">
+          <button type="button" class="hub-event-modal-close" data-event-modal-close aria-label="Cerrar">✕</button>
+          <h3 id="hub-event-modal-title" class="hub-event-modal-title">➕ Nuevo evento</h3>
+          <form id="hub-event-form" class="hub-event-form">
+            <input type="hidden" id="hub-event-id" value="">
+            <label class="hub-field">📝 Título<input id="hub-event-title" class="hub-input" type="text" maxlength="80" required placeholder="Ej: Cargar el auto"></label>
+            <label class="hub-field">📅 Fecha<input id="hub-event-date" class="hub-input" type="date" required></label>
+            <label class="hub-field">🕒 Hora<input id="hub-event-time" class="hub-input" type="time" value="20:30"></label>
+            <fieldset class="hub-event-types">
+              <legend>Tipo</legend>
+              <div id="hub-event-type-grid" class="hub-event-type-grid"></div>
+            </fieldset>
+            <label class="hub-check-row">
+              <input id="hub-event-remind" type="checkbox" checked>
+              <span>🔔 Recordar</span>
+            </label>
+            <fieldset class="hub-event-repeat">
+              <legend>Repetir</legend>
+              <label class="hub-radio-row"><input type="radio" name="hub-event-repeat" value="never" checked> Nunca</label>
+              <label class="hub-radio-row"><input type="radio" name="hub-event-repeat" value="daily"> Todo día</label>
+              <label class="hub-radio-row"><input type="radio" name="hub-event-repeat" value="weekly"> Toda semana</label>
+              <label class="hub-radio-row"><input type="radio" name="hub-event-repeat" value="monthly"> Todo mes</label>
+            </fieldset>
+            <label class="hub-field">Nota (opcional)<textarea id="hub-event-note" class="hub-textarea" rows="2" maxlength="200"></textarea></label>
+            <div id="hub-event-comments-wrap" class="hub-event-comments-wrap hidden">
+              <h4>💬 Comentarios</h4>
+              <ul id="hub-event-comments" class="hub-event-comments"></ul>
+              <div class="hub-inline-form">
+                <input id="hub-event-comment-input" class="hub-input" type="text" maxlength="120" placeholder="Escribe un comentario…">
+                <button type="button" id="hub-event-comment-btn" class="couple-btn couple-btn-small">Enviar</button>
+              </div>
+            </div>
+            <div class="hub-event-form-actions">
+              <button type="button" id="hub-event-accept-btn" class="couple-btn couple-btn-small hidden">✓ Aceptar</button>
+              <button type="submit" class="couple-btn couple-btn-primary">Guardar ❤️</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </section>
 
     <!-- Mini Games — portal para /jugar/ -->

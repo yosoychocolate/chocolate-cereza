@@ -6788,6 +6788,209 @@ body.game-meta-panel-open .game-achievements-gallery {
   gap: 0.25rem;
 }
 
+.hub-day-event-meta {
+  display: block;
+  font-size: 0.78rem;
+  opacity: 0.75;
+  margin-top: 0.15rem;
+}
+
+.hub-day-event.is-pending {
+  border-left: 3px solid #ffb347;
+}
+
+.hub-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 120, 180, 0.15);
+  margin: 1rem 0;
+}
+
+.hub-today-reminders {
+  margin-bottom: 0.75rem;
+}
+
+.hub-today-title {
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+.hub-today-reminder-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.hub-today-reminder-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 120, 180, 0.1);
+  border: 1px solid rgba(255, 120, 180, 0.2);
+  font-size: 0.88rem;
+}
+
+.hub-today-reminder-item .hub-reminder-time {
+  font-weight: 700;
+  min-width: 4.5rem;
+}
+
+.hub-event-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.hub-event-modal.hidden {
+  display: none;
+}
+
+.hub-event-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 4, 12, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.hub-event-modal-card {
+  position: relative;
+  width: min(100%, 420px);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.1rem 1rem 1rem;
+  z-index: 1;
+}
+
+.hub-event-modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-body);
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.hub-event-modal-title {
+  margin: 0 0 0.85rem;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.15rem;
+}
+
+.hub-event-form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.hub-event-types legend,
+.hub-event-repeat legend {
+  font-size: 0.82rem;
+  opacity: 0.85;
+  margin-bottom: 0.35rem;
+}
+
+.hub-event-type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+}
+
+.hub-event-type-btn {
+  border: 1px solid rgba(255, 120, 180, 0.2);
+  background: rgba(255, 120, 180, 0.06);
+  color: var(--text-body);
+  border-radius: 10px;
+  padding: 0.35rem 0.2rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.hub-event-type-btn.is-selected {
+  border-color: var(--pink);
+  background: rgba(255, 79, 163, 0.2);
+  box-shadow: 0 0 12px rgba(255, 79, 163, 0.25);
+}
+
+.hub-radio-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  margin-bottom: 0.25rem;
+}
+
+.hub-event-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.hub-event-comments-wrap h4 {
+  margin: 0.5rem 0 0.35rem;
+  font-size: 0.9rem;
+}
+
+.hub-event-comments {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  max-height: 6rem;
+  overflow-y: auto;
+}
+
+.hub-event-comments li {
+  font-size: 0.82rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255, 120, 180, 0.1);
+}
+
+.casa-agenda-events {
+  margin: 0.75rem 0;
+  padding: 0.65rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 120, 180, 0.08);
+  border: 1px solid rgba(255, 120, 180, 0.15);
+}
+
+.casa-agenda-events h5 {
+  margin: 0 0 0.45rem;
+  font-size: 0.88rem;
+}
+
+.casa-agenda-event {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  padding: 0.25rem 0;
+}
+
+.casa-agenda-event.is-pending {
+  opacity: 0.85;
+}
+
+.teddy-event-soon {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 180, 120, 0.15);
+  border: 1px solid rgba(255, 180, 120, 0.35);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .hub-letter-list {
   display: grid;
   gap: 0.65rem;

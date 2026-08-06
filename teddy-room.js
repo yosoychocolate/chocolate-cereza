@@ -526,6 +526,10 @@
     const sceneExtras = global.TeddyExperiences?.sceneExtrasHtml?.(teddy, { together, watchingGames: watching, sleeping }) || '';
     const belowExtras = global.TeddyExperiences?.belowSceneHtml?.(teddy) || '';
     const showWake = sleeping && !softAwake;
+    const teddyHint = global.CoupleHub?.getUpcomingTeddyHint?.();
+    const teddySoonHtml = teddyHint
+      ? `<div class="teddy-event-soon">🐻 ${teddyHint.message.split('\n').map(esc).join('<br>')}</div>`
+      : '';
 
     return `<div class="casa-room-theme theme-teddy teddy-live-room">
       <header class="teddy-room-header">
@@ -536,6 +540,7 @@
         ${moodBarHtml(mood, phase)}
         <p class="teddy-wallet">🍫 <strong>${walletStr}</strong> chocolates</p>
       </header>
+      ${teddySoonHtml}
 
       <div class="teddy-room-scene ${sleeping ? 'is-night-room' : ''} ${season ? 'is-season-' + season : ''} ${coupleBday || teddyBday ? 'is-birthday' : ''} ${together ? 'is-together-warm' : ''} is-weather-${weather.kind}" id="teddy-scene">
         ${(coupleBday || teddyBday) ? '<div class="teddy-confetti" aria-hidden="true">🎉✨🎂</div>' : ''}
