@@ -22,8 +22,15 @@ const els = {};
 let CloudManager = null;
 /** @type {(() => void) | null} */
 let unsubscribeHub = null;
+/** @type {(() => void) | null} */
+let unsubscribePersonalLetters = null;
 /** @type {'local' | 'cloud'} */
 let mode = 'local';
+
+/** @type {Set<string>} */
+let knownLetterIds = new Set();
+/** @type {boolean} */
+let lettersInboxReady = false;
 
 /** @type {{ settings: object, tasks: object[], events: object[], letters: object[], memories: object[] }} */
 let hubState = {
@@ -99,6 +106,43 @@ function getPlayerId() {
   } catch (_) { /* ignore */ }
 
   return 'local_player';
+}
+
+function normalizeUsernameInput(input) {
+  return String(input || '').trim().toLowerCase().replace(/^@+/, '').replace(/[^a-z0-9_]/g, '').slice(0, 16);
+}
+
+async function resolvePartnerTarget(toNameOverride = '') {
+  const cm = CloudManager || global.CloudManager;
+  if (!cm) return null;
+
+  const tryResolve = async (raw) => {
+    const u = normalizeUsernameInput(raw);
+    if (!u || u.length < 3) return null;
+    try {
+      const res = await cm.resolveUsernameToPlayerId?.(u);
+      const playerId = res?.playerId || res?.room?.playerId;
+      if (res?.success && playerId) return { id: playerId, name: `@${u}` };
+    } catch (_) { /* ignore */ }
+    return null;
+  };
+
+  const override = await tryResolve(toNameOverride);
+  if (override) return override;
+
+  try {
+    const partner = cm.getPartnerPlayer?.();
+    if (partner?.id) return { id: partner.id, name: partner.name || getPartnerName() };
+  } catch (_) { /* ignore */ }
+
+  const saved = hubState.settings?.partnerUsername;
+  const fromSaved = await tryResolve(saved);
+  if (fromSaved) return fromSaved;
+
+  const pn = getPartnerName();
+  if (pn.startsWith('@')) return tryResolve(pn.slice(1));
+
+  return null;
 }
 
 function getPartnerName() {
@@ -183,7 +227,9 @@ async function loadCloudManager() {
 
 async function detectMode() {
   const cm = await loadCloudManager();
-  if (cm?.getCurrentRoom?.()) {
+  const playerId = getPlayerId();
+  const hasCloudIdentity = playerId && playerId !== 'local_player' && cm?.isConnected?.();
+  if (hasCloudIdentity || cm?.getCurrentRoom?.()) {
     mode = 'cloud';
     return;
   }
@@ -195,10 +241,12 @@ function setSyncBadge() {
   if (!els.syncBadge) return;
   if (mode === 'cloud') {
     const room = CloudManager?.getCurrentRoom?.();
-    els.syncBadge.textContent = room ? `☁️ Sincronizado · Sala ${room.code}` : '☁️ Sincronizado';
+    els.syncBadge.textContent = room
+      ? `📬 Buzón directo · sala ${room.code} (solo juego)`
+      : '📬 Buzón directo · sin sala';
     els.syncBadge.classList.add('is-cloud');
   } else {
-    els.syncBadge.textContent = '📱 Solo en este dispositivo — entra en la sala para sincronizar BR ↔ EE.UU.';
+    els.syncBadge.textContent = '📱 Solo en este dispositivo — conecta tu cuenta para cartas directas';
     els.syncBadge.classList.remove('is-cloud');
   }
 }
@@ -242,9 +290,82 @@ function renderTasks() {
 }
 
 function updateLetterRouteHint() {
-  const el = document.getElementById('hub-letter-route');
-  if (!el) return;
-  el.textContent = `${getPlayerName()} para ${getPartnerName()}`;
+  const from = getPlayerName();
+  const toField = els.letterToInput?.value?.trim() || hubState.settings?.partnerUsername || '';
+  const to = toField ? (toField.startsWith('@') ? toField : `@${toField}`) : getPartnerName();
+  if (els.letterRoute) {
+    els.letterRoute.textContent = `${from} para ${to}`;
+  }
+}
+
+function showLetterToast(letter) {
+  const toast = document.getElementById('letter-toast');
+  const textEl = document.getElementById('letter-toast-text');
+  if (!toast || !textEl) return;
+  const from = (letter.fromName || 'Alguien').replace(/^@+/, '@');
+  const preview = (letter.text || '').trim();
+  const body = preview.length > 64 ? `${preview.slice(0, 61)}…` : preview;
+  textEl.textContent = body ? `💌 ${from}: ${body}` : `💌 Nueva cartita de ${from}`;
+  toast.classList.remove('hidden');
+  toast.classList.add('show');
+  clearTimeout(showLetterToast._t);
+  showLetterToast._t = setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.classList.add('hidden'), 450);
+  }, 5200);
+  toast.onclick = () => {
+    document.getElementById('section-couple-hub')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    openHubTab('nossa-casa');
+    global.NossaCasa?.enterRoom?.('correio');
+    toast.classList.remove('show');
+    toast.classList.add('hidden');
+  };
+}
+
+function notifyIncomingLetters(incoming) {
+  const myId = getPlayerId();
+  (incoming || []).forEach((letter) => {
+    if (letter.toPlayerId && letter.toPlayerId !== myId) return;
+    if (knownLetterIds.has(letter.id)) return;
+    knownLetterIds.add(letter.id);
+    if (!lettersInboxReady) return;
+    showLetterToast(letter);
+    try {
+      if (navigator.vibrate) navigator.vibrate(35);
+    } catch (_) { /* ignore */ }
+  });
+}
+
+async function refreshPersonalLetters() {
+  if (mode !== 'cloud' || !CloudManager) return;
+  try {
+    const res = await CloudManager.fetchPersonalLetters();
+    if (res?.success) {
+      hubState.letters = res.letters || res.room?.letters || [];
+      writeLocalHub(hubState);
+      renderLetters();
+      global.NossaCasa?.refresh?.();
+    }
+  } catch (err) {
+    console.warn('[CoupleHub] fetchPersonalLetters:', err);
+  }
+}
+
+async function startPersonalLettersSync() {
+  if (unsubscribePersonalLetters) {
+    unsubscribePersonalLetters();
+    unsubscribePersonalLetters = null;
+  }
+  if (mode !== 'cloud' || !CloudManager) return;
+
+  await refreshPersonalLetters();
+  (hubState.letters || []).forEach((l) => knownLetterIds.add(l.id));
+  lettersInboxReady = true;
+
+  unsubscribePersonalLetters = CloudManager.subscribePersonalLetters(async (incoming) => {
+    notifyIncomingLetters(incoming);
+    await refreshPersonalLetters();
+  });
 }
 
 function renderLetters() {
@@ -416,6 +537,10 @@ function renderAll() {
   renderMissions();
   renderReminder();
   updateLetterRouteHint();
+  if (els.letterToInput && hubState.settings?.partnerUsername && !els.letterToInput.value.trim()) {
+    els.letterToInput.value = `@${hubState.settings.partnerUsername}`;
+    updateLetterRouteHint();
+  }
   global.dispatchEvent(new CustomEvent('hub:updated', { detail: { state: hubState, mode } }));
   global.NossaCasa?.refresh?.();
 }
@@ -512,10 +637,11 @@ async function addLetter(text) {
 }
 
 async function addLetterExtended(opts) {
+  const toField = (opts.toName || els.letterToInput?.value || '').trim();
   const letter = {
     fromPlayerId: getPlayerId(),
     fromName: getPlayerName(),
-    toName: (opts.toName || getPartnerName()).trim(),
+    toName: toField || getPartnerName(),
     text: (opts.text || '').trim(),
     type: opts.type || 'inbox',
     deliverDate: opts.deliverDate || null,
@@ -531,19 +657,33 @@ async function addLetterExtended(opts) {
   }
 
   if (mode === 'cloud' && CloudManager) {
+    const target = await resolvePartnerTarget(toField || letter.toName);
+    if (!target?.id) {
+      showHubToast('Indica el @usuario de la persona (ej: cherry) 💌');
+      return false;
+    }
+    letter.toName = target.name || letter.toName;
+    if (target.name?.startsWith('@')) {
+      hubState.settings.partnerUsername = target.name.replace(/^@+/, '');
+      await persistSettings({ partnerUsername: hubState.settings.partnerUsername });
+    }
     try {
-      const res = await CloudManager.createHubLetter(letter);
+      const res = await CloudManager.sendPersonalLetter(target.id, letter);
       if (res?.success) {
         logGardenAction('letter');
         global.AudioManager?.playUi?.('letter');
         global.NossaCasa?.logActivity?.('letter', getPlayerName());
+        await refreshPersonalLetters();
         global.NossaCasa?.refresh?.();
         return true;
       }
-      console.warn('[CoupleHub] createHubLetter:', res?.error, res?.message);
+      console.warn('[CoupleHub] sendPersonalLetter:', res?.error, res?.message);
+      showHubToast(res?.message || 'No se pudo enviar la carta.');
     } catch (err) {
-      console.warn('[CoupleHub] createHubLetter failed:', err);
+      console.warn('[CoupleHub] sendPersonalLetter failed:', err);
+      showHubToast('Error al enviar la carta.');
     }
+    return false;
   }
 
   hubState.letters.unshift({ id: localId('letter'), createdAt: Date.now(), ...letter });
@@ -562,7 +702,7 @@ async function removeLetter(letterId) {
 
   if (mode === 'cloud' && CloudManager) {
     try {
-      const res = await CloudManager.removeHubLetter(letterId);
+      const res = await CloudManager.removePersonalLetter(letterId);
       if (res?.success) {
         hubState.letters = hubState.letters.filter((l) => l.id !== letterId);
         writeLocalHub(hubState);
@@ -571,7 +711,7 @@ async function removeLetter(letterId) {
         return true;
       }
     } catch (err) {
-      console.warn('[CoupleHub] removeHubLetter failed:', err);
+      console.warn('[CoupleHub] removePersonalLetter failed:', err);
     }
   }
 
@@ -609,6 +749,16 @@ function getVisibleLetters(letters) {
     }
     if (l.type === 'scheduled' || l.type === 'capsule') {
       return false;
+    }
+    return true;
+  });
+}
+
+function getInboxLetters(letters) {
+  const myId = getPlayerId();
+  return getVisibleLetters(letters).filter((l) => {
+    if (myId && myId !== 'local_player' && l.toPlayerId) {
+      return l.toPlayerId === myId;
     }
     return true;
   });
@@ -1000,6 +1150,11 @@ function bindEvents() {
     await setupSync();
     renderAll();
   });
+
+  window.addEventListener('couple:profileChanged', async () => {
+    await setupSync();
+    renderAll();
+  });
 }
 
 async function setupSync() {
@@ -1007,9 +1162,28 @@ async function setupSync() {
     unsubscribeHub();
     unsubscribeHub = null;
   }
+  if (unsubscribePersonalLetters) {
+    unsubscribePersonalLetters();
+    unsubscribePersonalLetters = null;
+  }
+  lettersInboxReady = false;
+  knownLetterIds = new Set();
   await detectMode();
+  setSyncBadge();
   if (mode === 'cloud' && CloudManager) {
-    unsubscribeHub = CloudManager.subscribeToHub(applyHubPayload);
+    const room = CloudManager.getCurrentRoom?.();
+    if (room) {
+      unsubscribeHub = CloudManager.subscribeToHub((payload) => {
+        if (!payload || payload.type !== 'hub_updated') return;
+        hubState.settings = payload.settings || hubState.settings;
+        hubState.tasks = payload.tasks || [];
+        hubState.events = payload.events || [];
+        hubState.memories = payload.memories || [];
+        writeLocalHub(hubState);
+        renderAll();
+      });
+    }
+    await startPersonalLettersSync();
   } else {
     hubState = readLocalHub();
   }
@@ -1032,10 +1206,13 @@ function cacheElements() {
   els.letterList = $('hub-letter-list');
   els.letterForm = $('hub-letter-form');
   els.letterInput = $('hub-letter-input');
+  els.letterToInput = $('hub-letter-to');
+  els.letterRoute = $('hub-letter-route');
   els.letterFile = $('hub-letter-file');
   els.letterFileName = $('hub-letter-file-name');
   els.letterPhotoPreview = $('hub-letter-photo-preview');
   els.letterPickBtn = document.querySelector('[data-hub-pick-photo]');
+  els.letterToInput?.addEventListener('input', updateLetterRouteHint);
   els.memoryGrid = $('hub-memory-grid');
   els.memoryForm = $('hub-memory-form');
   els.memoryTitle = $('hub-memory-title');
@@ -1084,9 +1261,12 @@ function cacheElements() {
     getState: getHubState,
     getMeta: getNossaCasaMeta,
     getVisibleLetters,
+    getInboxLetters,
     formatLetterHeading,
     getPlayerName,
     getPartnerName,
+    resolvePartnerTarget,
+    updateLetterRouteHint,
     recordVisit,
     logGardenAction,
     getFireplaceLevel,

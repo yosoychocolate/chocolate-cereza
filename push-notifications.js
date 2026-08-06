@@ -217,6 +217,14 @@ document.addEventListener('visibilitychange', () => {
 
 globalThis.addEventListener('focus', () => autoSubscribeIfGranted());
 
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'push:resubscribe') {
+      autoSubscribeIfGranted();
+    }
+  });
+}
+
 globalThis.PushNotifications = {
   subscribe: subscribePush,
   unsubscribe: unsubscribePush,

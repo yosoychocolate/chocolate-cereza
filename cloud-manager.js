@@ -76,6 +76,14 @@ import {
   subscribePeerDmTyping,
 } from './cloud-dm-typing.js?v=__APP_VERSION__';
 import {
+  sendGlobalLetter,
+  deleteGlobalLetter,
+  subscribeIncomingGlobalLetters,
+  subscribeGlobalLettersThread,
+  buildLetterThreadId,
+  fetchLettersForPlayer,
+} from './cloud-global-letters.js?v=__APP_VERSION__';
+import {
   sendRoomInvite,
   subscribePendingInvites,
   subscribePendingInvitesByName,
@@ -87,8 +95,10 @@ import {
   resolvePlayerId,
   fetchPlayerProfile,
   setPlayerPhotoUrl as persistPlayerPhotoUrl,
+  setPlayerChatLang as persistPlayerChatLang,
   normalizeUsername,
 } from './cloud-usernames.js?v=__APP_VERSION__';
+import PlayerIdentity from './player-identity.js?v=__APP_VERSION__';
 import { onSnapshot } from './firebase-manager.js?v=__APP_VERSION__';
 import {
   coupleRef,
@@ -223,6 +233,9 @@ let unsubscribeInvitesByName = null;
 
 /** @type {(() => void) | null} */
 let unsubscribeIncomingDms = null;
+
+/** @type {(() => void) | null} */
+let unsubscribePersonalLetters = null;
 
 /** @type {Set<string>} */
 const processedGiftIds = new Set();
@@ -365,8 +378,20 @@ function fail(code, message) {
   return { success: false, error: code, message };
 }
 
-function ok(room) {
-  return { success: true, room };
+function ok(payload) {
+  if (
+    payload
+    && typeof payload === 'object'
+    && !Array.isArray(payload)
+    && typeof payload.code === 'string'
+    && Array.isArray(payload.players)
+  ) {
+    return { success: true, room: payload };
+  }
+  if (payload !== null && typeof payload === 'object' && !Array.isArray(payload)) {
+    return { success: true, ...payload };
+  }
+  return { success: true, value: payload };
 }
 
 /**
@@ -1523,6 +1548,44 @@ export function stopSocialLayer() {
 }
 
 /**
+ * Sai do perfil atual neste dispositivo e cria identidade nova (novo @usuario).
+ */
+export async function resetPlayerProfile() {
+  try {
+    if (currentRoom && currentPlayerId) {
+      try {
+        await leaveRoom();
+      } catch (err) {
+        console.warn('[CloudManager] leaveRoom on reset:', err);
+        forceClearRoomSession();
+      }
+    } else {
+      forceClearRoomSession();
+    }
+
+    stopSocialLayer();
+
+    if (unsubscribePersonalLetters) {
+      unsubscribePersonalLetters();
+      unsubscribePersonalLetters = null;
+    }
+
+    currentPlayerId = null;
+    clearSession();
+
+    const newId = PlayerIdentity.resetIdentity();
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('couple:profileChanged', { detail: { playerId: newId } }));
+    }
+
+    return ok({ playerId: newId });
+  } catch (err) {
+    return fail('RESET_PROFILE_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
  * Envia pedido de amizade por @usuario (ou UUID legado).
  * @param {string} friendIdentifier @usuario ou UUID
  * @param {string} [friendName]
@@ -1614,6 +1677,7 @@ export async function loadPlayerUsername() {
       success: true,
       username: profile.username || '',
       photoUrl: profile.photoUrl || '',
+      chatLang: profile.chatLang || '',
     };
   } catch (err) {
     return fail('USERNAME_LOAD_FAILED', err instanceof Error ? err.message : String(err));
@@ -1648,6 +1712,20 @@ export async function setPlayerPhotoUrl(photoUrl) {
     return { success: true, photoUrl: url };
   } catch (err) {
     return fail('PHOTO_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {string} chatLang pt | es | en
+ */
+export async function setPlayerChatLang(chatLang) {
+  try {
+    const db = requireDb();
+    const playerId = requireSocialPlayerId();
+    const lang = await persistPlayerChatLang(db, playerId, chatLang);
+    return { success: true, chatLang: lang };
+  } catch (err) {
+    return fail('CHAT_LANG_FAILED', err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -1776,8 +1854,9 @@ export function subscribeFriendPresence(friendId, callback) {
 /**
  * @param {string} friendId
  * @param {string} message
+ * @param {{ id?: string, text?: string, fromName?: string, fromPlayerId?: string } | null} [replyTo]
  */
-export async function sendFriendMessage(friendId, message) {
+export async function sendFriendMessage(friendId, message, replyTo = null) {
   try {
     const db = requireDb();
     const fromId = requirePlayerId();
@@ -1785,7 +1864,7 @@ export async function sendFriendMessage(friendId, message) {
     const fromName = player?.name || getSocialPlayerPayload().name || 'Jugador';
     const threadId = buildDmThreadId(fromId, friendId);
     await setDmTyping(db, threadId, fromId, false);
-    await sendGlobalDm(db, fromId, friendId, fromName, message);
+    await sendGlobalDm(db, fromId, friendId, fromName, message, replyTo);
     return { success: true };
   } catch (err) {
     return fail('DM_FAILED', err instanceof Error ? err.message : String(err));
@@ -2281,6 +2360,94 @@ export async function removeHubEvent(eventId) {
   }
 }
 
+/**
+ * @param {string} username
+ */
+export async function resolveUsernameToPlayerId(username) {
+  try {
+    const db = requireDb();
+    const playerId = await resolvePlayerId(db, normalizeUsername(username));
+    return ok({ playerId });
+  } catch (err) {
+    return fail('NOT_FOUND', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * Envía carta directa a una persona (sin sala).
+ * @param {string} toPlayerId
+ * @param {object} letter
+ */
+export async function sendPersonalLetter(toPlayerId, letter) {
+  try {
+    const db = requireDb();
+    const fromId = requirePlayerId();
+    const player = getLocalPlayer();
+    const fromName = letter.fromName || player?.name || getSocialPlayerPayload().name || 'Jugador';
+    const id = await sendGlobalLetter(db, fromId, toPlayerId, {
+      fromPlayerId: fromId,
+      fromName,
+      toName: letter.toName || '',
+      text: letter.text || '',
+      type: letter.type || 'inbox',
+      deliverDate: letter.deliverDate || null,
+      openAfter: letter.openAfter || null,
+      photoUrl: letter.photoUrl || '',
+      audioUrl: letter.audioUrl || '',
+      reactions: letter.reactions || {},
+    });
+    return ok({ id });
+  } catch (err) {
+    return fail('LETTER_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function fetchPersonalLetters() {
+  try {
+    const db = requireDb();
+    const myId = requirePlayerId();
+    const letters = await fetchLettersForPlayer(db, myId);
+    return ok({ letters });
+  } catch (err) {
+    return fail('LETTER_FETCH_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function removePersonalLetter(letterId) {
+  try {
+    const db = requireDb();
+    await deleteGlobalLetter(db, letterId);
+    return ok(true);
+  } catch (err) {
+    return fail('LETTER_FAILED', err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * @param {(letters: import('./cloud-global-letters.js').GlobalLetter[]) => void} callback
+ * @param {(err: Error) => void} [onError]
+ */
+export function subscribePersonalLetters(callback, onError) {
+  if (typeof callback !== 'function') return () => {};
+  try {
+    const db = requireDb();
+    const myId = requirePlayerId();
+    if (unsubscribePersonalLetters) unsubscribePersonalLetters();
+    unsubscribePersonalLetters = subscribeIncomingGlobalLetters(db, myId, callback, onError);
+    return () => {
+      if (unsubscribePersonalLetters) {
+        unsubscribePersonalLetters();
+        unsubscribePersonalLetters = null;
+      }
+    };
+  } catch (err) {
+    if (typeof onError === 'function') {
+      onError(err instanceof Error ? err : new Error(String(err)));
+    }
+    return () => {};
+  }
+}
+
 export async function createHubLetter(letter) {
   try {
     const code = requireRoomCode();
@@ -2360,11 +2527,13 @@ export const CloudManager = {
   sendChatMessage,
   initSocialLayer,
   stopSocialLayer,
+  resetPlayerProfile,
   addFriend,
   setPlayerUsername,
   loadPlayerUsername,
   getPlayerProfile,
   setPlayerPhotoUrl,
+  setPlayerChatLang,
   syncLocalRoomDisplayName,
   acceptFriendRequestFrom,
   declineFriendRequestFrom,
@@ -2406,6 +2575,11 @@ export const CloudManager = {
   createHubMemory,
   removeHubMemory,
   removeHubLetter,
+  resolveUsernameToPlayerId,
+  sendPersonalLetter,
+  fetchPersonalLetters,
+  removePersonalLetter,
+  subscribePersonalLetters,
   completeHubMission,
 };
 

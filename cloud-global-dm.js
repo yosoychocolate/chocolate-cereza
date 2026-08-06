@@ -27,6 +27,10 @@ export { MAX_CHAT_LENGTH };
  * @property {string} fromName
  * @property {string} message
  * @property {number|null} createdAt
+ * @property {string} [replyToId]
+ * @property {string} [replyToText]
+ * @property {string} [replyToFromName]
+ * @property {string} [replyToFromPlayerId]
  */
 
 /**
@@ -55,6 +59,10 @@ export function globalDmFromDoc(docSnap) {
     fromName: typeof data.fromName === 'string' ? data.fromName : '',
     message: typeof data.message === 'string' ? data.message : '',
     createdAt: data.createdAt?.toMillis?.() ?? null,
+    replyToId: typeof data.replyToId === 'string' ? data.replyToId : '',
+    replyToText: typeof data.replyToText === 'string' ? data.replyToText : '',
+    replyToFromName: typeof data.replyToFromName === 'string' ? data.replyToFromName : '',
+    replyToFromPlayerId: typeof data.replyToFromPlayerId === 'string' ? data.replyToFromPlayerId : '',
   };
 }
 
@@ -79,8 +87,9 @@ async function trimMessages(db, threadId) {
  * @param {string} toPlayerId
  * @param {string} fromName
  * @param {string} message
+ * @param {{ id?: string, text?: string, fromName?: string, fromPlayerId?: string } | null} [replyTo]
  */
-export async function sendGlobalDm(db, fromPlayerId, toPlayerId, fromName, message) {
+export async function sendGlobalDm(db, fromPlayerId, toPlayerId, fromName, message, replyTo = null) {
   const text = normalizeChatText(message);
   if (!text) throw new Error('Mensaje vacío.');
   if (!fromPlayerId || !toPlayerId || fromPlayerId === toPlayerId) {
@@ -88,7 +97,8 @@ export async function sendGlobalDm(db, fromPlayerId, toPlayerId, fromName, messa
   }
 
   const threadId = buildDmThreadId(fromPlayerId, toPlayerId);
-  const docRef = await addDoc(globalDmCollectionRef(db), {
+  /** @type {Record<string, unknown>} */
+  const payload = {
     threadId,
     fromPlayerId,
     toPlayerId,
@@ -96,7 +106,18 @@ export async function sendGlobalDm(db, fromPlayerId, toPlayerId, fromName, messa
     message: text,
     pushNotified: false,
     createdAt: serverTimestamp(),
-  });
+  };
+
+  const replyId = typeof replyTo?.id === 'string' ? replyTo.id.trim() : '';
+  if (replyId) {
+    const quote = normalizeChatText(replyTo?.text || '');
+    payload.replyToId = replyId;
+    payload.replyToText = quote.length > 160 ? `${quote.slice(0, 157)}…` : quote;
+    payload.replyToFromName = typeof replyTo?.fromName === 'string' ? replyTo.fromName : 'Jugador';
+    payload.replyToFromPlayerId = typeof replyTo?.fromPlayerId === 'string' ? replyTo.fromPlayerId : '';
+  }
+
+  const docRef = await addDoc(globalDmCollectionRef(db), payload);
 
   trimMessages(db, threadId).catch(() => {});
   return docRef.id;

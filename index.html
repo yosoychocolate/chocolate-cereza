@@ -74,7 +74,7 @@
     <div class="ios-install-card glass">
       <button type="button" class="ios-install-close" data-ios-install-close aria-label="Cerrar">✕</button>
       <h2 id="ios-install-title" class="ios-install-title">📲 iPhone — notificaciones</h2>
-      <p class="ios-install-lead">En iPhone, Safari <strong>no avisa</strong> si solo abres el enlace. Hay que instalar la app en la pantalla de inicio:</p>
+      <p class="ios-install-lead">En iPhone, Safari <strong>no avisa</strong> si solo abres el enlace. Instala la app en la pantalla de inicio para mensajes y avisos con la app cerrada:</p>
       <ol class="ios-install-steps">
         <li>Abre este sitio en <strong>Safari</strong> (no en Instagram/WhatsApp).</li>
         <li>Toca el botón <strong>Compartir</strong> <span class="ios-share-icon" aria-hidden="true">⎙</span> abajo en el centro.</li>
@@ -271,6 +271,8 @@
       <div class="hub-panel hidden" data-hub-panel="cartinhas">
         <div id="hub-letter-list" class="hub-letter-list"></div>
         <form id="hub-letter-form" class="hub-stack-form hub-compose-form">
+          <label class="casa-compose-label" for="hub-letter-to">Para</label>
+          <input id="hub-letter-to" class="hub-input" type="text" maxlength="20" placeholder="@usuario (ej: cherry)" autocomplete="off">
           <textarea id="hub-letter-input" class="hub-textarea" rows="4" maxlength="500" placeholder="Escribe una cartita…"></textarea>
           <p id="hub-letter-route" class="hub-letter-route" aria-live="polite"></p>
           <div class="hub-compose-photo">
@@ -407,6 +409,10 @@
     Esta página se disfruta mejor con música. 🎵❤️
   </div>
 
+  <div id="letter-toast" class="letter-toast hidden" role="status" aria-live="polite">
+    <span id="letter-toast-text">💌 Nueva cartita</span>
+  </div>
+
   <div id="music-autoplay-prompt" class="music-autoplay-prompt hidden">
     <button type="button" id="music-autoplay-btn" class="music-autoplay-btn">🎵 Reproducir nuestra canción</button>
   </div>
@@ -458,14 +464,21 @@
       </header>
       <div id="social-chat-messages" class="social-chat-messages" role="log" aria-live="polite"></div>
       <form id="social-chat-form" class="social-chat-form">
-        <input id="social-chat-input" class="social-chat-input" type="text" maxlength="200" placeholder="Escribe un mensaje…" autocomplete="off">
-        <button type="submit" class="social-chat-send" aria-label="Enviar mensaje"><span aria-hidden="true">➤</span></button>
+        <div id="social-chat-reply" class="social-chat-reply hidden"></div>
+        <div class="social-chat-form-row">
+          <input id="social-chat-input" class="social-chat-input" type="text" maxlength="200" placeholder="Escribe un mensaje…" autocomplete="off">
+          <button type="submit" class="social-chat-send" aria-label="Enviar mensaje"><span aria-hidden="true">➤</span></button>
+        </div>
       </form>
     </div>
 
     <div id="social-friends-panel" class="social-friends-panel hidden" role="dialog" aria-label="Lista de amigos">
       <header class="social-panel-header">
         <h3>👥 Amigos</h3>
+        <div class="social-chat-lang-wrap">
+          <label class="social-chat-lang-label" for="social-chat-lang">Mi idioma en el chat</label>
+          <select id="social-chat-lang" class="couple-input social-chat-lang-select" aria-label="Idioma del chat"></select>
+        </div>
         <form id="social-username-form" class="social-username-form">
           <label class="social-username-label" for="social-username-input">Elige tu usuario corto</label>
           <div class="social-username-row">
@@ -484,6 +497,7 @@
               <button type="button" id="social-copy-username" class="couple-btn couple-btn-small" title="Copiar">📋</button>
             </span>
           </span>
+          <button type="button" id="social-switch-profile-btn" class="couple-btn couple-btn-small couple-btn-ghost social-switch-profile-btn">↩ Salir del perfil</button>
         </p>
         <input type="file" id="social-profile-photo-input" class="hidden" accept="image/*">
       </header>
@@ -507,9 +521,10 @@
   </div>
 
   <script src="firebase-config.js?v=__APP_VERSION__"></script>
+  <script src="site-assets.js?v=__APP_VERSION__"></script>
+  <script src="background-pwa.js?v=__APP_VERSION__"></script>
   <script src="image-upload.js?v=__APP_VERSION__"></script>
   <script src="ios-push-guide.js?v=__APP_VERSION__"></script>
-  <script src="site-assets.js?v=__APP_VERSION__"></script>
   <script src="music-playlist.js?v=__APP_VERSION__"></script>
   <script src="update-check.js?v=__APP_VERSION__"></script>
   <script src="save-manager.js?v=__APP_VERSION__"></script>

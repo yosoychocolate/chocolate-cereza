@@ -140,7 +140,7 @@
   }
 
   function countUnread() {
-    const letters = hub()?.getVisibleLetters?.(state().letters) || [];
+    const letters = hub()?.getInboxLetters?.(state().letters) || hub()?.getVisibleLetters?.(state().letters) || [];
     const readAt = meta().lettersReadAt || 0;
     return letters.filter((l) => (l.createdAt || 0) > readAt).length;
   }
@@ -222,7 +222,7 @@
   function roomCorreio(body) {
     markRead();
     const st = state();
-    const visible = hub()?.getVisibleLetters?.(st.letters) || [];
+    const visible = hub()?.getInboxLetters?.(st.letters) || hub()?.getVisibleLetters?.(st.letters) || [];
     const pending = (st.letters || []).filter((l) => {
       if (l.type === 'scheduled' && l.deliverDate) {
         return new Date(l.deliverDate + 'T08:00:00').getTime() > Date.now();
@@ -271,6 +271,8 @@
       </div>
       <form class="casa-mail-panel casa-mail-compose hidden" data-mail-panel="write">
         <div class="casa-compose-card glass">
+          <label class="casa-compose-label" for="casa-mail-to">Para</label>
+          <input id="casa-mail-to" name="to" class="hub-input casa-compose-to" type="text" maxlength="20" placeholder="@usuario" autocomplete="off">
           <label class="casa-compose-label" for="casa-mail-text">Tu cartita</label>
           <p class="casa-compose-route" data-casa-compose-route aria-live="polite"></p>
           <textarea id="casa-mail-text" name="text" class="casa-compose-text" rows="5" maxlength="500" placeholder="Escribe con el corazón…"></textarea>
@@ -313,11 +315,22 @@
     bindMailCompose(body);
 
     const routeHint = body.querySelector('[data-casa-compose-route]');
-    if (routeHint) {
+    const toInput = body.querySelector('#casa-mail-to');
+    const updateComposeRoute = () => {
+      if (!routeHint) return;
       const from = hub()?.getPlayerName?.() || 'Tú';
-      const to = hub()?.getPartnerName?.() || 'Mi amor';
+      const raw = toInput?.value?.trim() || hub()?.getState?.()?.settings?.partnerUsername || '';
+      const to = raw
+        ? (raw.startsWith('@') ? raw : `@${raw.replace(/^@+/, '')}`)
+        : (hub()?.getPartnerName?.() || 'Mi amor');
       routeHint.textContent = `${from} para ${to}`;
+    };
+    if (toInput) {
+      const saved = hub()?.getState?.()?.settings?.partnerUsername;
+      if (saved && !toInput.value.trim()) toInput.value = `@${saved}`;
+      toInput.addEventListener('input', updateComposeRoute);
     }
+    updateComposeRoute();
 
     body.querySelector('[data-mail-panel="write"]')?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -746,12 +759,14 @@
     }
 
     try {
-      const ok = await hub()?.addLetterExtended?.({ text, type: 'inbox', photoUrl });
+      const toName = form.querySelector('[name="to"]')?.value?.trim() || '';
+      const ok = await hub()?.addLetterExtended?.({ text, type: 'inbox', photoUrl, toName });
       if (ok === false) {
-        hub()?.showToast?.('No se pudo enviar — intenta otra vez.');
         return;
       }
       hub()?.showToast?.('Carta enviada 💌');
+      const textInput = form.querySelector('[name="text"]');
+      if (textInput) textInput.value = '';
       renderRoom('correio');
     } catch (err) {
       console.warn('[NossaCasa] send letter', err);

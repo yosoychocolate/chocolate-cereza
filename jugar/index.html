@@ -58,7 +58,9 @@
     window.__JUGAR_PAGE__ = true;
     window.__FILE_PROTOCOL__ = location.protocol === 'file:';
   </script>
+  <script src="../firebase-config.js?v=__APP_VERSION__"></script>
   <script src="../site-assets.js?v=__APP_VERSION__"></script>
+  <script src="../background-pwa.js?v=__APP_VERSION__"></script>
 </head>
 <body class="jugar-body">
   <div id="ambient-bg" aria-hidden="true"></div>
@@ -476,14 +478,21 @@
       </header>
       <div id="social-chat-messages" class="social-chat-messages" role="log" aria-live="polite"></div>
       <form id="social-chat-form" class="social-chat-form">
-        <input id="social-chat-input" class="social-chat-input" type="text" maxlength="200" placeholder="Escribe un mensaje…" autocomplete="off">
-        <button type="submit" class="social-chat-send" aria-label="Enviar mensaje"><span aria-hidden="true">➤</span></button>
+        <div id="social-chat-reply" class="social-chat-reply hidden"></div>
+        <div class="social-chat-form-row">
+          <input id="social-chat-input" class="social-chat-input" type="text" maxlength="200" placeholder="Escribe un mensaje…" autocomplete="off">
+          <button type="submit" class="social-chat-send" aria-label="Enviar mensaje"><span aria-hidden="true">➤</span></button>
+        </div>
       </form>
     </div>
 
     <div id="social-friends-panel" class="social-friends-panel hidden" role="dialog" aria-label="Lista de amigos">
       <header class="social-panel-header">
         <h3>👥 Amigos</h3>
+        <div class="social-chat-lang-wrap">
+          <label class="social-chat-lang-label" for="social-chat-lang">Mi idioma en el chat</label>
+          <select id="social-chat-lang" class="couple-input social-chat-lang-select" aria-label="Idioma del chat"></select>
+        </div>
         <form id="social-username-form" class="social-username-form">
           <label class="social-username-label" for="social-username-input">Elige tu usuario corto</label>
           <div class="social-username-row">
@@ -502,6 +511,7 @@
               <button type="button" id="social-copy-username" class="couple-btn couple-btn-small" title="Copiar">📋</button>
             </span>
           </span>
+          <button type="button" id="social-switch-profile-btn" class="couple-btn couple-btn-small couple-btn-ghost social-switch-profile-btn">↩ Salir del perfil</button>
         </p>
         <input type="file" id="social-profile-photo-input" class="hidden" accept="image/*">
       </header>
@@ -524,7 +534,6 @@
     <div id="social-toast" class="social-toast hidden" role="status"></div>
   </div>
 
-  <script src="../firebase-config.js?v=__APP_VERSION__"></script>
   <script src="../image-upload.js?v=__APP_VERSION__"></script>
   <script src="../ios-push-guide.js?v=__APP_VERSION__"></script>
   <script src="../music-playlist.js?v=__APP_VERSION__"></script>

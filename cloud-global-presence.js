@@ -91,7 +91,10 @@ export function startGlobalPresenceLifecycle(db, playerId, name) {
   }, HEARTBEAT_MS);
 
   const goOffline = () => setGlobalOffline(db, playerId);
-  window.addEventListener('pagehide', goOffline);
+  window.addEventListener('pagehide', (e) => {
+    if (e.persisted) return;
+    goOffline();
+  });
   window.addEventListener('beforeunload', goOffline);
   lifecycleBound = goOffline;
 }

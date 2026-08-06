@@ -4,6 +4,22 @@
 import CloudManager from './cloud-manager.js?v=__APP_VERSION__';
 import PlayerIdentity from './player-identity.js?v=__APP_VERSION__';
 import { goToJugarRoom } from './site-routes.js?v=__APP_VERSION__';
+import {
+  translateChatText,
+  getTranslateTargetLang,
+  getTranslateButtonLabel,
+  getSameLanguageMessage,
+  getTranslateErrorMessage,
+  getChatPlaceholder,
+  getChatEmptyMessage,
+  setChatLanguage,
+  getChatLanguageOptions,
+  clearTranslationCache,
+  getMessageTranslationState,
+  setMessageTranslationState,
+  clearMessageTranslationStates,
+  getAllMessageTranslationStates,
+} from './chat-translate.js?v=__APP_VERSION__';
 
 /** @type {Map<string, () => void>} */
 const presenceUnsubs = new Map();
@@ -80,8 +96,11 @@ let presenceMap = {};
 /** @type {{ friendId: string, friendName: string } | null} */
 let activeChat = null;
 
-/** @type {Array<{ id: string, fromPlayerId: string, message: string, createdAt: number|null }>} */
+/** @type {Array<{ id: string, fromPlayerId: string, message: string, createdAt: number|null, replyToId?: string, replyToText?: string, replyToFromName?: string, replyToFromPlayerId?: string }>} */
 let dmMessages = [];
+
+/** @type {{ id: string, message: string, fromPlayerId: string, fromName: string } | null} */
+let replyTarget = null;
 
 /** @type {boolean} */
 let panelOpen = false;
@@ -140,6 +159,9 @@ async function refreshMyUsername() {
   const cached = PlayerIdentity.getUsername();
   if (cached) myUsername = cached;
   myPhotoUrl = PlayerIdentity.getPhotoUrl() || '';
+  if (PlayerIdentity.getChatLang()) {
+    applyChatLanguage(PlayerIdentity.getChatLang());
+  }
 
   const result = await CloudManager.loadPlayerUsername();
   if (result.success) {
@@ -151,10 +173,66 @@ async function refreshMyUsername() {
       myPhotoUrl = result.photoUrl;
       PlayerIdentity.setPhotoUrl(myPhotoUrl);
     }
+    if (result.chatLang) {
+      applyChatLanguage(result.chatLang);
+    }
+  }
+
+  if (!PlayerIdentity.getChatLang()) {
+    applyChatLanguage(getTranslateTargetLang());
   }
 
   renderUsernameUi();
   updateMyPhotoPreview();
+  syncChatLanguageUi();
+}
+
+function applyChatLanguage(lang) {
+  const code = setChatLanguage(lang || getTranslateTargetLang());
+  PlayerIdentity.setChatLang(code);
+  return code;
+}
+
+function syncChatLanguageUi() {
+  const lang = getTranslateTargetLang();
+  if (els.chatLangSelect && els.chatLangSelect.value !== lang) {
+    els.chatLangSelect.value = lang;
+  }
+  if (els.chatInput) {
+    els.chatInput.placeholder = getChatPlaceholder();
+  }
+  refreshTranslateButtons();
+}
+
+function refreshTranslateButtons() {
+  if (!els.chatMessages) return;
+  const lang = getTranslateTargetLang();
+  const label = getTranslateButtonLabel(lang);
+  els.chatMessages.querySelectorAll('.social-chat-translate-btn').forEach((btn) => {
+    if (btn.textContent === '↩') return;
+    btn.dataset.targetLang = lang;
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+  });
+}
+
+async function onChatLangChange() {
+  const lang = els.chatLangSelect?.value;
+  if (!lang) return;
+
+  applyChatLanguage(lang);
+  clearTranslationCache();
+  clearMessageTranslationStates();
+  syncChatLanguageUi();
+
+  const result = await CloudManager.setPlayerChatLang(lang);
+  if (!result?.success) {
+    showToast(getTranslateErrorMessage());
+  }
+
+  if (activeChat && dmMessages.length) {
+    renderDmMessages(dmMessages);
+  }
 }
 
 async function onClaimUsername(event) {
@@ -1017,6 +1095,153 @@ function handleInvitesUpdate(invites) {
   renderInvites(pendingInvites);
 }
 
+function truncateReplyText(text, max = 72) {
+  const clean = (text || '').trim();
+  if (clean.length <= max) return clean;
+  return `${clean.slice(0, max - 1)}…`;
+}
+
+function getMessageSenderName(msg) {
+  const localId = getPlayerId();
+  if (msg.fromPlayerId === localId) {
+    return myUsername ? `@${myUsername}` : getPlayerName();
+  }
+  return getFriendDisplayName(msg.fromPlayerId, msg.fromName || activeChat?.friendName || 'Amigo');
+}
+
+function buildReplyQuoteHtml(msg) {
+  const quoteText = msg.replyToText || '';
+  if (!msg.replyToId && !quoteText) return '';
+  const name = formatDisplayName(msg.replyToFromName || 'Mensaje');
+  return `<button type="button" class="social-chat-quote" data-scroll-msg="${escapeHtml(msg.replyToId || '')}">
+    <span class="social-chat-quote-name">${escapeHtml(name)}</span>
+    <span class="social-chat-quote-text">${escapeHtml(truncateReplyText(quoteText, 96))}</span>
+  </button>`;
+}
+
+function renderReplyPreview() {
+  if (!els.chatReply) return;
+  if (!replyTarget) {
+    els.chatReply.classList.add('hidden');
+    els.chatReply.innerHTML = '';
+    return;
+  }
+
+  els.chatReply.classList.remove('hidden');
+  els.chatReply.innerHTML = `
+    <div class="social-chat-reply-main">
+      <span class="social-chat-reply-label">Respondiendo a ${escapeHtml(replyTarget.fromName)}</span>
+      <span class="social-chat-reply-text">${escapeHtml(truncateReplyText(replyTarget.message))}</span>
+    </div>
+    <button type="button" class="social-chat-reply-cancel" aria-label="Cancelar respuesta">✕</button>`;
+}
+
+function setReplyTarget(msg) {
+  if (!msg?.id || String(msg.id).startsWith('pending-')) return;
+  replyTarget = {
+    id: msg.id,
+    message: msg.message,
+    fromPlayerId: msg.fromPlayerId,
+    fromName: getMessageSenderName(msg),
+  };
+  renderReplyPreview();
+  els.chatInput?.focus({ preventScroll: true });
+}
+
+function clearReplyTarget() {
+  replyTarget = null;
+  renderReplyPreview();
+}
+
+function scrollToDmMessage(msgId) {
+  if (!msgId || !els.chatMessages) return;
+  const escaped = typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+    ? CSS.escape(String(msgId))
+    : String(msgId).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const row = els.chatMessages.querySelector(`[data-msg-id="${escaped}"]`);
+  if (!row) return;
+  row.classList.add('is-highlight');
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  window.setTimeout(() => row.classList.remove('is-highlight'), 1200);
+}
+
+function buildMessageFooterHtml(msgId, createdAt) {
+  const lang = getTranslateTargetLang();
+  const label = getTranslateButtonLabel(lang);
+  return `<div class="social-chat-bubble-footer">
+      <button type="button" class="social-chat-translate-btn" data-msg-id="${escapeHtml(msgId)}" data-target-lang="${escapeHtml(lang)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">🌐</button>
+      <time class="social-chat-time">${escapeHtml(formatTime(createdAt))}</time>
+    </div>`;
+}
+
+function restoreTranslationStates() {
+  if (!els.chatMessages) return;
+  getAllMessageTranslationStates().forEach((state, msgId) => {
+    if (!state?.showingTranslated || !state.translated) return;
+    const escaped = typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+      ? CSS.escape(String(msgId))
+      : String(msgId).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const row = els.chatMessages.querySelector(`[data-msg-id="${escaped}"]`);
+    if (!row) return;
+    const textEl = row.querySelector('.social-chat-text');
+    const btn = row.querySelector('.social-chat-translate-btn');
+    if (!textEl || !btn) return;
+    if (!textEl.dataset.original) textEl.dataset.original = state.original || textEl.textContent || '';
+    textEl.textContent = state.translated;
+    btn.textContent = '↩';
+    btn.title = 'Ver original';
+    btn.setAttribute('aria-label', 'Ver mensaje original');
+    row.classList.add('is-translated');
+  });
+}
+
+async function onTranslateMessage(msgId, btn) {
+  const row = btn?.closest('.social-chat-msg');
+  const textEl = row?.querySelector('.social-chat-text');
+  if (!textEl || !msgId) return;
+
+  const original = textEl.dataset.original || textEl.textContent || '';
+  textEl.dataset.original = original;
+
+  const prev = getMessageTranslationState(msgId) || { showingTranslated: false };
+  if (prev.showingTranslated) {
+    textEl.textContent = original;
+    setMessageTranslationState(msgId, { ...prev, showingTranslated: false, original });
+    btn.textContent = '🌐';
+    btn.title = getTranslateButtonLabel();
+    btn.setAttribute('aria-label', getTranslateButtonLabel());
+    row?.classList.remove('is-translated');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.classList.add('is-loading');
+  btn.textContent = '…';
+  try {
+    let translated = prev.translated;
+    if (!translated) {
+      translated = await translateChatText(original, btn.dataset.targetLang || getTranslateTargetLang());
+    }
+    textEl.textContent = translated;
+    setMessageTranslationState(msgId, {
+      showingTranslated: true,
+      translated,
+      original,
+    });
+    btn.textContent = '↩';
+    btn.title = getTranslateTargetLang() === 'pt' ? 'Ver original' : (getTranslateTargetLang() === 'en' ? 'See original' : 'Ver original');
+    btn.setAttribute('aria-label', btn.title);
+    row?.classList.add('is-translated');
+  } catch (err) {
+    const code = err instanceof Error ? err.message : String(err || '');
+    showToast(code === 'same' ? getSameLanguageMessage() : getTranslateErrorMessage());
+    btn.textContent = '🌐';
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('is-loading');
+  }
+}
+
 function renderDmMessages(messages) {
   if (!els.chatMessages) return;
   dmMessages = messages || [];
@@ -1024,25 +1249,30 @@ function renderDmMessages(messages) {
   els.chatMessages.innerHTML = '';
 
   if (!dmMessages.length) {
-    els.chatMessages.innerHTML = '<p class="social-chat-empty">Di hola 👋</p>';
+    els.chatMessages.innerHTML = `<p class="social-chat-empty">${escapeHtml(getChatEmptyMessage())}</p>`;
     return;
   }
 
   dmMessages.forEach((msg) => {
     const mine = msg.fromPlayerId === localId;
     const senderId = mine ? localId : (msg.fromPlayerId || activeChat?.friendId || '');
-    const senderName = mine
-      ? (myUsername ? `@${myUsername}` : getPlayerName())
-      : getFriendDisplayName(senderId, activeChat?.friendName || 'Amigo');
+    const senderName = getMessageSenderName(msg);
     const avatar = renderAvatarHtml(senderName, getProfilePhoto(senderId), 'social-chat-avatar--xs');
     const row = document.createElement('div');
     row.className = `social-chat-msg ${mine ? 'is-mine' : 'is-theirs'}${String(msg.id).startsWith('pending-') ? ' is-pending' : ''}`;
-    row.innerHTML = `${avatar}<div class="social-chat-bubble">
-      <span class="social-chat-text">${escapeHtml(msg.message)}</span>
-      <time class="social-chat-time">${escapeHtml(formatTime(msg.createdAt))}</time>
+    row.dataset.msgId = msg.id;
+    row.innerHTML = `${avatar}<div class="social-chat-bubble-wrap">
+      <button type="button" class="social-chat-reply-btn" data-reply-id="${escapeHtml(msg.id)}" title="Responder" aria-label="Responder a este mensaje">↩</button>
+      <div class="social-chat-bubble">
+        ${buildReplyQuoteHtml(msg)}
+        <span class="social-chat-text">${escapeHtml(msg.message)}</span>
+        ${buildMessageFooterHtml(msg.id, msg.createdAt)}
+      </div>
     </div>`;
     els.chatMessages.appendChild(row);
   });
+
+  restoreTranslationStates();
 
   if (stickBottom) {
     els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
@@ -1053,6 +1283,7 @@ function openFloatingChat(friendId, friendName) {
   activeChat = { friendId, friendName };
   chatMinimized = false;
   peerTyping = false;
+  clearReplyTarget();
   delete unreadByFriend[friendId];
   updateOnlineBadge();
   renderFriendsList();
@@ -1073,6 +1304,8 @@ function openFloatingChat(friendId, friendName) {
 
 function closeFloatingChat() {
   stopLocalTyping();
+  clearReplyTarget();
+  clearMessageTranslationStates();
   if (typingUnsub) {
     typingUnsub();
     typingUnsub = null;
@@ -1102,24 +1335,43 @@ async function sendActiveChatMessage(text) {
 
   await stopLocalTyping();
 
+  const savedReply = replyTarget ? { ...replyTarget } : null;
+  const replyPayload = savedReply
+    ? {
+      id: savedReply.id,
+      text: savedReply.message,
+      fromName: savedReply.fromName,
+      fromPlayerId: savedReply.fromPlayerId,
+    }
+    : null;
+
   const pendingId = `pending-${Date.now()}`;
   const optimistic = {
     id: pendingId,
     fromPlayerId: getPlayerId(),
     message: msg,
     createdAt: Date.now(),
+    replyToId: replyPayload?.id || '',
+    replyToText: replyPayload?.text || '',
+    replyToFromName: replyPayload?.fromName || '',
+    replyToFromPlayerId: replyPayload?.fromPlayerId || '',
   };
   renderDmMessages([...dmMessages, optimistic]);
   stickBottom = true;
+  clearReplyTarget();
 
   if (els.chatInput) {
     els.chatInput.value = '';
     els.chatInput.disabled = true;
   }
 
-  const result = await CloudManager.sendFriendMessage(activeChat.friendId, msg);
+  const result = await CloudManager.sendFriendMessage(activeChat.friendId, msg, replyPayload);
   if (!result.success) {
     renderDmMessages(dmMessages.filter((m) => m.id !== pendingId));
+    if (savedReply) {
+      replyTarget = savedReply;
+      renderReplyPreview();
+    }
     showToast(result.message || 'No se pudo enviar.');
   }
 
@@ -1213,6 +1465,113 @@ function revealDock() {
   bindSocialDockDrag();
 }
 
+function stopSocialListeners() {
+  closeFloatingChat();
+
+  if (friendsUnsub) {
+    friendsUnsub();
+    friendsUnsub = null;
+  }
+  if (invitesUnsub) {
+    invitesUnsub();
+    invitesUnsub = null;
+  }
+  if (friendRequestsUnsub) {
+    friendRequestsUnsub();
+    friendRequestsUnsub = null;
+  }
+  if (dmInboxUnsub) {
+    dmInboxUnsub();
+    dmInboxUnsub = null;
+  }
+  if (roomUnsub) {
+    roomUnsub();
+    roomUnsub = null;
+  }
+
+  presenceUnsubs.forEach((unsub) => unsub());
+  presenceUnsubs.clear();
+
+  CloudManager.stopSocialLayer();
+
+  friends = [];
+  friendRequests = [];
+  pendingInvites = [];
+  unreadByFriend = {};
+  profilePhotos = {};
+  fetchedProfilePhotos.clear();
+  knownInboxMessageIds = new Set();
+  knownInviteIds = new Set();
+  knownFriendRequestIds = new Set();
+  dmInboxReady = false;
+  invitesInboxReady = false;
+  friendRequestsInboxReady = false;
+  presenceMap = {};
+
+  renderFriendsList();
+  renderFriendRequests([]);
+  renderInvites([]);
+  updateOnlineBadge();
+}
+
+async function onSwitchProfile() {
+  const label = myUsername ? `@${myUsername}` : 'este perfil';
+  const ok = globalThis.confirm(
+    `¿Salir de ${label} y crear otro usuario?\n\n`
+    + 'Tus amigos y mensajes del perfil anterior siguen en la nube, '
+    + 'pero aquí empezarás con uno nuevo.'
+  );
+  if (!ok) return;
+
+  if (els.switchProfileBtn) {
+    els.switchProfileBtn.disabled = true;
+    els.switchProfileBtn.textContent = 'Saliendo…';
+  }
+  setFriendsStatus('Creando perfil nuevo…');
+
+  stopSocialListeners();
+
+  try {
+    await globalThis.PushNotifications?.unsubscribe?.();
+  } catch (_) { /* ignore */ }
+
+  const result = await CloudManager.resetPlayerProfile();
+  if (!result?.success) {
+    setFriendsStatus(result?.message || 'No se pudo cambiar el perfil.', true);
+    showToast('Error al cambiar perfil — recarga la página.');
+    if (els.switchProfileBtn) {
+      els.switchProfileBtn.disabled = false;
+      els.switchProfileBtn.textContent = '↩ Salir del perfil';
+    }
+    initSocialListeners();
+    return;
+  }
+
+  myUsername = '';
+  myPhotoUrl = '';
+  try {
+    localStorage.removeItem('ChocolateCerezaChatLang');
+  } catch (_) { /* ignore */ }
+  panelOpen = true;
+  els.friendsPanel?.classList.remove('hidden');
+
+  if (els.usernameInput) els.usernameInput.value = '';
+  const nameInput = document.getElementById('couple-player-name');
+  if (nameInput) nameInput.value = '';
+
+  renderUsernameUi();
+  updateMyPhotoPreview();
+  setFriendsStatus('Elige un nuevo @usuario para este perfil.');
+  showToast('Perfil nuevo — elige tu @usuario ✨');
+
+  initSocialListeners();
+
+  if (els.switchProfileBtn) {
+    els.switchProfileBtn.disabled = false;
+    els.switchProfileBtn.textContent = '↩ Salir del perfil';
+  }
+}
+
 function initSocialListeners() {
   const name = getPlayerName();
   if (name && name !== 'Jugador') PlayerIdentity.setPlayerName(name);
@@ -1282,6 +1641,8 @@ function cacheElements() {
   els.profilePhotoBtn = $('social-profile-photo-btn');
   els.profilePhotoInput = $('social-profile-photo-input');
   els.copyUsernameBtn = $('social-copy-username');
+  els.switchProfileBtn = $('social-switch-profile-btn');
+  els.chatLangSelect = $('social-chat-lang');
   els.addFriendForm = $('social-add-friend-form');
   els.addFriendUser = $('social-add-friend-user');
   els.invitesWrap = $('social-invites-wrap');
@@ -1290,6 +1651,7 @@ function cacheElements() {
   els.chatTitle = $('social-chat-title');
   els.chatMessages = $('social-chat-messages');
   els.chatForm = $('social-chat-form');
+  els.chatReply = $('social-chat-reply');
   els.chatInput = $('social-chat-input');
   els.chatMinBtn = $('social-chat-minimize');
   els.chatCloseBtn = $('social-chat-close');
@@ -1312,6 +1674,8 @@ function bindEvents() {
     toggleFriendsPanel();
   });
   els.usernameForm?.addEventListener('submit', onClaimUsername);
+  els.switchProfileBtn?.addEventListener('click', onSwitchProfile);
+  els.chatLangSelect?.addEventListener('change', onChatLangChange);
   els.addFriendForm?.addEventListener('submit', onAddFriend);
 
   els.copyUsernameBtn?.addEventListener('click', async () => {
@@ -1411,6 +1775,28 @@ function bindEvents() {
     stickBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
   });
 
+  els.chatMessages?.addEventListener('click', (e) => {
+    const translateBtn = e.target.closest('.social-chat-translate-btn');
+    if (translateBtn?.dataset.msgId) {
+      onTranslateMessage(translateBtn.dataset.msgId, translateBtn);
+      return;
+    }
+    const replyBtn = e.target.closest('.social-chat-reply-btn');
+    if (replyBtn?.dataset.replyId) {
+      const msg = dmMessages.find((m) => m.id === replyBtn.dataset.replyId);
+      if (msg) setReplyTarget(msg);
+      return;
+    }
+    const quoteBtn = e.target.closest('.social-chat-quote');
+    if (quoteBtn?.dataset.scrollMsg) {
+      scrollToDmMessage(quoteBtn.dataset.scrollMsg);
+    }
+  });
+
+  els.chatReply?.addEventListener('click', (e) => {
+    if (e.target.closest('.social-chat-reply-cancel')) clearReplyTarget();
+  });
+
   document.addEventListener('click', (e) => {
     if (!panelOpen || !els.friendsPanel || !els.dock) return;
     if (els.dock.contains(e.target)) return;
@@ -1422,9 +1808,16 @@ function bindEvents() {
 export function initFriendsChatUi() {
   cacheElements();
   if (!els.dock) return;
+  if (els.chatLangSelect) {
+    const options = getChatLanguageOptions();
+    els.chatLangSelect.innerHTML = options.map((opt) =>
+      `<option value="${escapeHtml(opt.code)}">${escapeHtml(opt.label)}</option>`
+    ).join('');
+  }
   bindEvents();
   bindSocialDockDrag();
   handleDeepLinkHash();
+  syncChatLanguageUi();
 
   document.getElementById('btn-enter')?.addEventListener('click', () => {
     setTimeout(startSocial, 700);

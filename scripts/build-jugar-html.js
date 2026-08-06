@@ -109,7 +109,9 @@ const head = `<!DOCTYPE html>
     window.__JUGAR_PAGE__ = true;
     window.__FILE_PROTOCOL__ = location.protocol === 'file:';
   </script>
+  <script src="../firebase-config.js?v=__APP_VERSION__"></script>
   <script src="../site-assets.js?v=__APP_VERSION__"></script>
+  <script src="../background-pwa.js?v=__APP_VERSION__"></script>
 </head>
 <body class="jugar-body">
   <div id="ambient-bg" aria-hidden="true"></div>
@@ -138,7 +140,6 @@ const overlays = `
 const foot = `
   </main>
 ${overlays}
-  <script src="../firebase-config.js?v=__APP_VERSION__"></script>
   <script src="../image-upload.js?v=__APP_VERSION__"></script>
   <script src="../ios-push-guide.js?v=__APP_VERSION__"></script>
   <script src="../music-playlist.js?v=__APP_VERSION__"></script>

@@ -506,6 +506,55 @@ html.intro-lock body {
   color: #ffb8b8;
 }
 
+/* ===== Banner instalar PWA (Android / segundo plano) ===== */
+.pwa-install-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10040;
+  padding: 0.65rem 0.75rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, rgba(18, 8, 28, 0.2), rgba(18, 8, 28, 0.96));
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.pwa-install-banner.hidden {
+  display: none;
+}
+
+.pwa-install-banner-inner {
+  pointer-events: auto;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 0.75rem 0.85rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 88, 168, 0.35);
+  background: rgba(26, 12, 36, 0.94);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.pwa-install-banner-text {
+  margin: 0 0 0.55rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: rgba(255, 230, 245, 0.92);
+}
+
+.pwa-install-banner-actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+html.pwa-install-visible .social-dock {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+html.is-pwa-installed .pwa-install-banner {
+  display: none !important;
+}
+
 /* ===== Guía instalar en iPhone (PWA) ===== */
 .ios-install-overlay {
   position: fixed;
@@ -5597,6 +5646,42 @@ body.daily-charge-open {
   transform: translateX(-50%) translateY(0);
 }
 
+.letter-toast {
+  position: fixed;
+  bottom: calc(clamp(0.85rem, 3vw, 1.5rem) + 58px + 0.55rem);
+  right: clamp(0.85rem, 3vw, 1.5rem);
+  left: auto;
+  transform: translateY(10px);
+  z-index: 1595;
+  padding: 0.75rem 1rem;
+  background: rgba(26, 16, 36, 0.94);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 120, 180, 0.45);
+  border-radius: 16px;
+  font-family: 'Quicksand', sans-serif;
+  font-size: clamp(0.78rem, 2.2vw, 0.88rem);
+  font-weight: 600;
+  color: var(--text-body);
+  box-shadow: 0 0 18px rgba(255, 88, 168, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  max-width: min(88vw, 320px);
+  text-align: left;
+  line-height: 1.35;
+}
+
+.letter-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.letter-toast:hover {
+  border-color: rgba(255, 140, 200, 0.65);
+}
+
 .music-autoplay-prompt {
   position: fixed;
   bottom: calc(clamp(0.85rem, 3vw, 1.5rem) + 58px);
@@ -9175,6 +9260,39 @@ body.casa-together-complete .nossa-casa-scene {
   min-width: 0;
 }
 
+.social-switch-profile-btn {
+  display: block;
+  width: 100%;
+  margin-top: 0.45rem;
+  font-size: 0.72rem;
+  opacity: 0.92;
+}
+
+.social-switch-profile-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.social-chat-lang-wrap {
+  margin: 0.35rem 0 0.55rem;
+}
+
+.social-chat-lang-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(255, 200, 230, 0.78);
+}
+
+.social-chat-lang-select {
+  width: 100%;
+  min-height: 2rem;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.55rem;
+}
+
 .social-profile-photo-btn {
   padding: 0;
   border: none;
@@ -9699,9 +9817,56 @@ body.image-crop-open {
   white-space: pre-wrap;
 }
 
+.social-chat-bubble-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin-top: 0.28rem;
+}
+
+.social-chat-translate-btn {
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 240, 250, 0.88);
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.72;
+  transition: opacity 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.social-chat-msg:hover .social-chat-translate-btn,
+.social-chat-translate-btn:focus-visible {
+  opacity: 1;
+}
+
+.social-chat-translate-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+  transform: scale(1.05);
+}
+
+.social-chat-translate-btn.is-loading {
+  opacity: 0.45;
+  cursor: wait;
+}
+
+.social-chat-msg.is-translated .social-chat-text {
+  font-style: italic;
+}
+
+.social-chat-msg.is-translated .social-chat-translate-btn {
+  opacity: 1;
+  background: rgba(125, 255, 176, 0.18);
+}
+
 .social-chat-time {
   display: block;
-  margin-top: 0.22rem;
+  margin-top: 0;
   font-size: 0.62rem;
   opacity: 0.72;
   text-align: right;
@@ -9800,11 +9965,163 @@ body.image-crop-open {
 
 .social-chat-form {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border-top: 1px solid rgba(255, 88, 168, 0.14);
+  background: rgba(8, 4, 14, 0.55);
+}
+
+.social-chat-form-row {
+  display: flex;
   align-items: center;
   gap: 0.45rem;
   padding: 0.55rem 0.65rem 0.65rem;
-  border-top: 1px solid rgba(255, 88, 168, 0.14);
-  background: rgba(8, 4, 14, 0.55);
+}
+
+.social-chat-reply {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.45rem 0.65rem 0;
+}
+
+.social-chat-reply.hidden {
+  display: none;
+}
+
+.social-chat-reply-main {
+  flex: 1;
+  min-width: 0;
+  padding: 0.42rem 0.55rem;
+  border-left: 3px solid rgba(255, 79, 163, 0.85);
+  border-radius: 0 10px 10px 0;
+  background: rgba(255, 79, 163, 0.1);
+}
+
+.social-chat-reply-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ffb8e8;
+  margin-bottom: 0.12rem;
+}
+
+.social-chat-reply-text {
+  display: block;
+  font-size: 0.74rem;
+  color: rgba(255, 220, 240, 0.82);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.social-chat-reply-cancel {
+  flex-shrink: 0;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 240, 250, 0.88);
+  cursor: pointer;
+  margin-top: 0.2rem;
+}
+
+.social-chat-reply-cancel:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.social-chat-bubble-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.18rem;
+  max-width: 100%;
+}
+
+.social-chat-msg.is-mine .social-chat-bubble-wrap {
+  flex-direction: row-reverse;
+}
+
+.social-chat-reply-btn {
+  flex-shrink: 0;
+  width: 1.45rem;
+  height: 1.45rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 220, 240, 0.72);
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.social-chat-msg:hover .social-chat-reply-btn,
+.social-chat-msg:focus-within .social-chat-reply-btn,
+.social-chat-reply-btn:focus-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (hover: none) {
+  .social-chat-reply-btn {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+}
+
+.social-chat-reply-btn:hover {
+  background: rgba(255, 79, 163, 0.28);
+  color: #fff;
+}
+
+.social-chat-quote {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.35rem;
+  padding: 0.32rem 0.45rem;
+  border: none;
+  border-left: 3px solid rgba(255, 120, 190, 0.75);
+  border-radius: 0 8px 8px 0;
+  background: rgba(0, 0, 0, 0.18);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.social-chat-msg.is-mine .social-chat-quote {
+  border-left-color: rgba(255, 255, 255, 0.55);
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.social-chat-quote-name {
+  display: block;
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #ffb8e8;
+  margin-bottom: 0.08rem;
+}
+
+.social-chat-msg.is-mine .social-chat-quote-name {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.social-chat-quote-text {
+  display: block;
+  font-size: 0.72rem;
+  opacity: 0.88;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.social-chat-msg.is-highlight .social-chat-bubble {
+  box-shadow: 0 0 0 2px rgba(255, 79, 163, 0.55), 0 2px 10px rgba(0, 0, 0, 0.22);
 }
 
 .social-chat-input {

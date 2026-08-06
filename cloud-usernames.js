@@ -175,13 +175,14 @@ export async function claimUsername(db, playerId, displayName, rawUsername) {
 export async function fetchPlayerProfile(db, playerId) {
   const snap = await getDoc(playerProfileRef(db, playerId));
   if (!snap.exists()) {
-    return { username: '', displayName: '', photoUrl: '' };
+    return { username: '', displayName: '', photoUrl: '', chatLang: '' };
   }
   const data = snap.data();
   return {
     username: typeof data.username === 'string' ? data.username : '',
     displayName: typeof data.displayName === 'string' ? data.displayName : '',
     photoUrl: typeof data.photoUrl === 'string' ? data.photoUrl : '',
+    chatLang: typeof data.chatLang === 'string' ? data.chatLang : '',
   };
 }
 
@@ -201,4 +202,22 @@ export async function setPlayerPhotoUrl(db, playerId, photoUrl) {
     await setDoc(globalPresenceRef(db, playerId), { photoUrl: url }, { merge: true });
   } catch (_) { /* ignore */ }
   return url;
+}
+
+/**
+ * @param {import('firebase/firestore').Firestore} db
+ * @param {string} playerId
+ * @param {string} chatLang pt | es | en
+ */
+export async function setPlayerChatLang(db, playerId, chatLang) {
+  if (!playerId) throw new Error('Jugador no identificado.');
+  const lang = String(chatLang || '').trim().toLowerCase();
+  if (!['pt', 'es', 'en'].includes(lang)) {
+    throw new Error('Idioma no válido.');
+  }
+  await setDoc(playerProfileRef(db, playerId), {
+    chatLang: lang,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+  return lang;
 }

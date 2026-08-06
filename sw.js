@@ -1,11 +1,25 @@
 /**
- * Service Worker — push FCM (site fechado) + clique na notificação.
+ * Service Worker — push FCM (site fechado) + clique na notificação + cache mínimo.
  */
 importScripts('firebase-config.js');
 importScripts('https://www.gstatic.com/firebasejs/11.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/11.8.0/firebase-messaging-compat.js');
 
 const SW_ORIGIN = self.SITE_ORIGIN || self.location.origin;
+const CACHE_SHELL = 'chocolate-shell-v1';
+const SHELL_ASSETS = [
+  'firebase-config.js',
+  'assets/app-icon-192.png',
+  'assets/cherry.png',
+];
+
+function shellUrl(path) {
+  try {
+    return new URL(path, self.registration.scope).href;
+  } catch (_) {
+    return `${SW_ORIGIN}/${path}`.replace(/([^:]\/)\/+/g, '$1');
+  }
+}
 
 function buildNotificationOptions(payload) {
   const n = payload?.notification || {};
@@ -67,12 +81,62 @@ if (self.FIREBASE_WEB_CONFIG) {
   messaging.onBackgroundMessage((payload) => showPushNotification(payload));
 }
 
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
   self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_SHELL).then((cache) => (
+      Promise.allSettled(SHELL_ASSETS.map((asset) => cache.add(shellUrl(asset))))
+    ))
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      caches.keys().then((keys) => Promise.all(
+        keys.filter((key) => key !== CACHE_SHELL).map((key) => caches.delete(key))
+      )),
+    ])
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(async () => {
+        const cache = await caches.open(CACHE_SHELL);
+        return cache.match(event.request)
+          || cache.match(shellUrl('index.html'))
+          || cache.match(shellUrl('./'));
+      })
+    );
+  }
+});
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({ type: 'push:resubscribe' });
+      });
+    })
+  );
+});
+
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag !== 'push-health-check') return;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({ type: 'push:resubscribe' });
+      });
+    })
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {
