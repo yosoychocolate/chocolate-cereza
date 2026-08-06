@@ -112,7 +112,8 @@ function normalizeUsernameInput(input) {
   return String(input || '').trim().toLowerCase().replace(/^@+/, '').replace(/[^a-z0-9_]/g, '').slice(0, 16);
 }
 
-async function resolvePartnerTarget(toNameOverride = '') {
+async function resolvePartnerTarget(toNameOverride = '', options = {}) {
+  const strict = !!options.strict;
   const cm = CloudManager || global.CloudManager;
   if (!cm) return null;
 
@@ -123,12 +124,20 @@ async function resolvePartnerTarget(toNameOverride = '') {
       const res = await cm.resolveUsernameToPlayerId?.(u);
       const playerId = res?.playerId || res?.room?.playerId;
       if (res?.success && playerId) return { id: playerId, name: `@${u}` };
+      if (!res?.success && res?.message) {
+        return { error: res.message, username: `@${u}` };
+      }
     } catch (_) { /* ignore */ }
     return null;
   };
 
   const override = await tryResolve(toNameOverride);
-  if (override) return override;
+  if (override?.id) return override;
+  if (strict) {
+    if (override?.error) return override;
+    const u = normalizeUsernameInput(toNameOverride);
+    return u ? { error: 'NOT_FOUND', username: `@${u}` } : null;
+  }
 
   try {
     const partner = cm.getPartnerPlayer?.();
@@ -137,10 +146,13 @@ async function resolvePartnerTarget(toNameOverride = '') {
 
   const saved = hubState.settings?.partnerUsername;
   const fromSaved = await tryResolve(saved);
-  if (fromSaved) return fromSaved;
+  if (fromSaved?.id) return fromSaved;
 
   const pn = getPartnerName();
-  if (pn.startsWith('@')) return tryResolve(pn.slice(1));
+  if (pn.startsWith('@')) {
+    const fromPartner = await tryResolve(pn.slice(1));
+    if (fromPartner?.id) return fromPartner;
+  }
 
   return null;
 }
@@ -638,6 +650,7 @@ async function addLetter(text) {
 
 async function addLetterExtended(opts) {
   const toField = (opts.toName || els.letterToInput?.value || '').trim();
+  const hasExplicitTo = !!toField;
   const letter = {
     fromPlayerId: getPlayerId(),
     fromName: getPlayerName(),
@@ -656,44 +669,46 @@ async function addLetterExtended(opts) {
     return false;
   }
 
-  if (mode === 'cloud' && CloudManager) {
-    const target = await resolvePartnerTarget(toField || letter.toName);
-    if (!target?.id) {
+  if (!CloudManager || mode !== 'cloud' || !CloudManager.isConnected?.()) {
+    showHubToast('Conecta tu cuenta en 👥 Amigos (crea tu @usuario) para enviar cartas.');
+    return false;
+  }
+
+  const target = await resolvePartnerTarget(toField || letter.toName, { strict: hasExplicitTo });
+  if (!target?.id) {
+    if (target?.username || hasExplicitTo) {
+      const who = target?.username || `@${normalizeUsernameInput(toField)}`;
+      showHubToast(`Usuario ${who} no encontrado — debe crear su @ en Amigos.`);
+    } else {
       showHubToast('Indica el @usuario de la persona (ej: cherry) 💌');
-      return false;
-    }
-    letter.toName = target.name || letter.toName;
-    if (target.name?.startsWith('@')) {
-      hubState.settings.partnerUsername = target.name.replace(/^@+/, '');
-      await persistSettings({ partnerUsername: hubState.settings.partnerUsername });
-    }
-    try {
-      const res = await CloudManager.sendPersonalLetter(target.id, letter);
-      if (res?.success) {
-        logGardenAction('letter');
-        global.AudioManager?.playUi?.('letter');
-        global.NossaCasa?.logActivity?.('letter', getPlayerName());
-        await refreshPersonalLetters();
-        global.NossaCasa?.refresh?.();
-        return true;
-      }
-      console.warn('[CoupleHub] sendPersonalLetter:', res?.error, res?.message);
-      showHubToast(res?.message || 'No se pudo enviar la carta.');
-    } catch (err) {
-      console.warn('[CoupleHub] sendPersonalLetter failed:', err);
-      showHubToast('Error al enviar la carta.');
     }
     return false;
   }
 
-  hubState.letters.unshift({ id: localId('letter'), createdAt: Date.now(), ...letter });
-  writeLocalHub(hubState);
-  renderLetters();
-  logGardenAction('letter');
-  global.AudioManager?.playUi?.('letter');
-  global.NossaCasa?.logActivity?.('letter', getPlayerName());
-  global.NossaCasa?.refresh?.();
-  return true;
+  letter.toName = target.name || letter.toName;
+  if (target.name?.startsWith('@')) {
+    hubState.settings.partnerUsername = target.name.replace(/^@+/, '');
+    await persistSettings({ partnerUsername: hubState.settings.partnerUsername });
+  }
+
+  try {
+    const res = await CloudManager.sendPersonalLetter(target.id, letter);
+    if (res?.success) {
+      logGardenAction('letter');
+      global.AudioManager?.playUi?.('letter');
+      global.NossaCasa?.logActivity?.('letter', getPlayerName());
+      await refreshPersonalLetters();
+      global.NossaCasa?.refresh?.();
+      showHubToast(`Carta enviada a ${letter.toName} 💌`);
+      return { ok: true, toName: letter.toName };
+    }
+    console.warn('[CoupleHub] sendPersonalLetter:', res?.error, res?.message);
+    showHubToast(res?.message || 'No se pudo enviar la carta.');
+  } catch (err) {
+    console.warn('[CoupleHub] sendPersonalLetter failed:', err);
+    showHubToast('Error al enviar la carta.');
+  }
+  return false;
 }
 
 async function removeLetter(letterId) {
@@ -761,6 +776,16 @@ function getInboxLetters(letters) {
       return l.toPlayerId === myId;
     }
     return true;
+  });
+}
+
+function getSentLetters(letters) {
+  const myId = getPlayerId();
+  return getVisibleLetters(letters).filter((l) => {
+    if (myId && myId !== 'local_player' && l.fromPlayerId) {
+      return l.fromPlayerId === myId;
+    }
+    return false;
   });
 }
 
@@ -1033,7 +1058,7 @@ function bindEvents() {
       return;
     }
     const ok = await addLetterExtended({ text, type: 'inbox', photoUrl });
-    if (ok === false) return;
+    if (!ok?.ok) return;
     if (els.letterInput) els.letterInput.value = '';
     if (els.letterFile) els.letterFile.value = '';
     if (els.letterFileName) els.letterFileName.textContent = 'Sin foto';
@@ -1041,7 +1066,6 @@ function bindEvents() {
       els.letterPhotoPreview.src = '';
       els.letterPhotoPreview.classList.add('hidden');
     }
-    showHubToast('Carta enviada 💌');
   });
 
   els.letterPickBtn?.addEventListener('click', () => els.letterFile?.click());
@@ -1262,6 +1286,7 @@ function cacheElements() {
     getMeta: getNossaCasaMeta,
     getVisibleLetters,
     getInboxLetters,
+    getSentLetters,
     formatLetterHeading,
     getPlayerName,
     getPartnerName,

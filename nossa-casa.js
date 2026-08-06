@@ -223,6 +223,7 @@
     markRead();
     const st = state();
     const visible = hub()?.getInboxLetters?.(st.letters) || hub()?.getVisibleLetters?.(st.letters) || [];
+    const sent = hub()?.getSentLetters?.(st.letters) || [];
     const pending = (st.letters || []).filter((l) => {
       if (l.type === 'scheduled' && l.deliverDate) {
         return new Date(l.deliverDate + 'T08:00:00').getTime() > Date.now();
@@ -252,6 +253,18 @@
       </article>`;
     }).join('') || '<p class="casa-empty">¡Buzón vacío — escribe la primera carta!</p>';
 
+    const sentList = sent.map((l) => {
+      const photoSrc = global.ImageUpload?.safeSrc?.(l.photoUrl) || '';
+      const photo = photoSrc ? `<img src="${esc(photoSrc)}" alt="" class="casa-mail-photo">` : '';
+      return `<article class="casa-mail-card is-sent" data-letter-id="${esc(l.id)}">
+        <header class="casa-mail-card-head">
+          <div><strong>${esc(hub()?.formatLetterHeading?.(l) || l.toName || 'Alguien')}</strong><time>${new Date(l.createdAt).toLocaleString('es')}</time></div>
+          <span class="casa-mail-sent-badge">✓ Enviada</span>
+        </header>
+        <p>${esc(l.text)}</p>${photo}
+      </article>`;
+    }).join('') || '<p class="casa-empty">Ninguna carta enviada todavía.</p>';
+
     const scheduled = pending.map((l) => {
       const when = l.type === 'capsule' ? `Abrir en ${l.openAfter}` : `Entregar el ${l.deliverDate}`;
       return `<li>🔒 ${esc(l.text?.slice(0, 40) || '…')} — <em>${esc(when)}</em></li>`;
@@ -261,6 +274,7 @@
       <div class="casa-mailbox-art">📬</div>
       <nav class="casa-subnav">
         <button type="button" class="is-active" data-mail-tab="inbox">Bandeja de entrada</button>
+        <button type="button" data-mail-tab="sent">Enviadas</button>
         <button type="button" data-mail-tab="write">Escribir</button>
         <button type="button" data-mail-tab="schedule">Programar</button>
         <button type="button" data-mail-tab="capsule">Cápsula</button>
@@ -268,6 +282,9 @@
       <div class="casa-mail-panel" data-mail-panel="inbox">
         <div class="casa-mail-list">${inbox}</div>
         ${pending.length ? `<ul class="casa-mail-pending"><li><strong>En espera:</strong></li>${scheduled}</ul>` : ''}
+      </div>
+      <div class="casa-mail-panel hidden" data-mail-panel="sent">
+        <div class="casa-mail-list">${sentList}</div>
       </div>
       <form class="casa-mail-panel casa-mail-compose hidden" data-mail-panel="write">
         <div class="casa-compose-card glass">
@@ -285,7 +302,7 @@
             <img class="casa-photo-preview" data-casa-photo-preview alt="Vista previa">
             <button type="button" class="casa-photo-clear" data-casa-photo-clear aria-label="Quitar foto">✕</button>
           </div>
-          <p class="casa-compose-hint">Toca «Elegir foto» — no pegues la ruta del PC.</p>
+          <p class="casa-compose-hint">El @usuario debe existir en 👥 Amigos. Toca «Elegir foto» — no pegues la ruta del PC.</p>
           <button type="submit" class="couple-btn couple-btn-primary casa-compose-send" data-casa-send-btn>
             Enviar cartita 💌
           </button>
@@ -340,17 +357,21 @@
     body.querySelector('[data-mail-panel="schedule"]')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
-      await hub()?.addLetterExtended?.({ text: fd.get('text'), type: 'scheduled', deliverDate: fd.get('deliverDate') });
-      hub()?.showToast?.('Carta programada 📅');
-      renderRoom('correio');
+      const result = await hub()?.addLetterExtended?.({ text: fd.get('text'), type: 'scheduled', deliverDate: fd.get('deliverDate'), toName: body.querySelector('#casa-mail-to')?.value?.trim() || '' });
+      if (result?.ok) {
+        hub()?.showToast?.('Carta programada 📅');
+        renderRoom('correio');
+      }
     });
 
     body.querySelector('[data-mail-panel="capsule"]')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
-      await hub()?.addLetterExtended?.({ text: fd.get('text'), type: 'capsule', openAfter: fd.get('openAfter') });
-      hub()?.showToast?.('Cápsula sellada ⏳');
-      renderRoom('correio');
+      const result = await hub()?.addLetterExtended?.({ text: fd.get('text'), type: 'capsule', openAfter: fd.get('openAfter'), toName: body.querySelector('#casa-mail-to')?.value?.trim() || '' });
+      if (result?.ok) {
+        hub()?.showToast?.('Cápsula sellada ⏳');
+        renderRoom('correio');
+      }
     });
 
     body.querySelector('.casa-mail-list')?.addEventListener('click', async (e) => {
@@ -760,11 +781,10 @@
 
     try {
       const toName = form.querySelector('[name="to"]')?.value?.trim() || '';
-      const ok = await hub()?.addLetterExtended?.({ text, type: 'inbox', photoUrl, toName });
-      if (ok === false) {
+      const result = await hub()?.addLetterExtended?.({ text, type: 'inbox', photoUrl, toName });
+      if (!result?.ok) {
         return;
       }
-      hub()?.showToast?.('Carta enviada 💌');
       const textInput = form.querySelector('[name="text"]');
       if (textInput) textInput.value = '';
       renderRoom('correio');
