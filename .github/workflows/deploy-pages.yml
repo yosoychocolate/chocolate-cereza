@@ -11,6 +11,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 # Só um workflow por vez — evita 2 deploys simultâneos no Pages.
 concurrency:
@@ -67,37 +68,81 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Wait for Pages deployment slot
+      - name: Clear stuck Pages deployments
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Verificando se há deploy anterior do Pages ainda em andamento..."
-          for attempt in $(seq 1 45); do
-            json=$(gh api "repos/${GITHUB_REPOSITORY}/pages/deployments?per_page=1" 2>/dev/null || echo '[]')
-            status=$(echo "$json" | jq -r '.[0].status // "none"')
-            deploy_id=$(echo "$json" | jq -r '.[0].id // ""')
-            echo "Tentativa ${attempt}/45 — último deploy: ${deploy_id:-n/a} status=${status}"
+          set -euo pipefail
 
-            if [ "$status" = "none" ] || [ "$status" = "success" ] || [ "$status" = "failure" ]; then
-              echo "Slot livre — pode publicar."
-              exit 0
-            fi
+          # Status reais da API do GitHub Pages (não confundir com queued/success).
+          is_active_status() {
+            case "$1" in
+              deployment_queued|deployment_in_progress|syncing_files|finished_file_sync|updating_pages|purging_cdn)
+                return 0
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
 
-            # Deploy preso na fila por muito tempo — cancela para liberar.
-            if [ "$status" = "queued" ] && [ "$attempt" -ge 8 ]; then
-              echo "Cancelando deploy enfileirado preso: ${deploy_id}"
-              gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${deploy_id}/cancel" || true
-              sleep 15
+          is_done_status() {
+            case "$1" in
+              succeed|deployment_failed|deployment_cancelled|deployment_content_failed|deployment_timeout)
+                return 0
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          echo "Verificando deploys do Pages antes de publicar..."
+          for attempt in $(seq 1 30); do
+            if ! json=$(gh api "repos/${GITHUB_REPOSITORY}/pages/deployments?per_page=10"); then
+              echo "Falha ao consultar deploys (tentativa ${attempt}/30)."
+              sleep 10
               continue
             fi
 
-            sleep 20
+            count=$(echo "$json" | jq 'length')
+            if [ "$count" -eq 0 ]; then
+              echo "Nenhum deploy anterior — slot livre."
+              exit 0
+            fi
+
+            echo "$json" | jq -r '.[] | "  id=\(.id) status=\(.status)"'
+
+            active_ids=""
+            while IFS= read -r line; do
+              id="${line%% *}"
+              status="${line#* status=}"
+              if is_active_status "$status"; then
+                active_ids="${active_ids} ${id}"
+              fi
+            done < <(echo "$json" | jq -r '.[] | "\(.id) status=\(.status)"')
+
+            if [ -z "${active_ids// /}" ]; then
+              latest=$(echo "$json" | jq -r '.[0].status // "unknown"')
+              if is_done_status "$latest" || [ "$latest" = "unknown" ]; then
+                echo "Slot livre (último status: ${latest})."
+                exit 0
+              fi
+              echo "Status inesperado: ${latest} — aguardando..."
+            else
+              echo "Cancelando deploy(s) ativo(s):${active_ids}"
+              for id in $active_ids; do
+                gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${id}/cancel" || true
+              done
+            fi
+
+            sleep 15
           done
 
-          echo "::error::Pages ainda ocupado após 15 min. Cancele manualmente em Settings → Pages ou aguarde."
+          echo "::error::Não foi possível liberar o slot do Pages após 7,5 min."
           exit 1
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        timeout-minutes: 15
+        timeout-minutes: 20
